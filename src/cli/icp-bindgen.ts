@@ -18,7 +18,7 @@ async function run(args: Args) {
   const { didFile, outDir } = args;
 
   console.log(cyan(`[${CLI_NAME}] Generating bindings...`));
-  await generate({ didFile, bindingsOutDir: outDir });
+  await generate({ didFile, outDir });
   console.log(
     cyan(`[${CLI_NAME}] Generated bindings successfully at`),
     green(outDir)

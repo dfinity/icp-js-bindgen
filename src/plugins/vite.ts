@@ -16,7 +16,7 @@ export function icpBindgen(options: Options): Plugin {
 
       console.log(
         cyan(`[${PLUGIN_NAME}] Generated bindings successfully at`),
-        green(options.bindingsOutDir)
+        green(options.outDir)
       );
     },
     configureServer(server) {

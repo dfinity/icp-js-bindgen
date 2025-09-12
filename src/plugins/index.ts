@@ -6,7 +6,7 @@ export interface Options {
   /**
    * The path to the directory where the bindings will be generated.
    */
-  bindingsOutDir: string;
+  outDir: string;
   /**
    * Disables watching for changes in the `.did` file when using the dev server.
    *

@@ -8,54 +8,54 @@ const DID_FILE_EXTENSION = ".did";
 
 type GenerateOptions = {
   didFile: string;
-  bindingsOutDir: string;
+  outDir: string;
 };
 
 export async function generate(options: GenerateOptions) {
   await wasmInit();
 
-  const { didFile, bindingsOutDir } = options;
+  const { didFile, outDir } = options;
   const didFilePath = resolve(didFile);
   const outputFileName = basename(didFile, DID_FILE_EXTENSION);
 
-  await emptyDir(bindingsOutDir);
-  await ensureDir(bindingsOutDir);
-  await ensureDir(resolve(bindingsOutDir, "declarations"));
+  await emptyDir(outDir);
+  await ensureDir(outDir);
+  await ensureDir(resolve(outDir, "declarations"));
 
   const result = wasmGenerate(didFilePath, outputFileName);
 
   await writeBindings({
     bindings: result,
-    bindingsOutDir,
+    outDir,
     outputFileName,
   });
 
-  await writeIndex(bindingsOutDir, outputFileName);
+  await writeIndex(outDir, outputFileName);
 }
 
 type WriteBindingsOptions = {
   bindings: WasmGenerateResult;
-  bindingsOutDir: string;
+  outDir: string;
   outputFileName: string;
 };
 
 export async function writeBindings({
   bindings,
-  bindingsOutDir,
+  outDir,
   outputFileName,
 }: WriteBindingsOptions) {
   const declarationsTsFile = resolve(
-    bindingsOutDir,
+    outDir,
     "declarations",
     `${outputFileName}.did.d.ts`
   );
   const declarationsJsFile = resolve(
-    bindingsOutDir,
+    outDir,
     "declarations",
     `${outputFileName}.did.js`
   );
-  const interfaceTsFile = resolve(bindingsOutDir, `${outputFileName}.d.ts`);
-  const serviceTsFile = resolve(bindingsOutDir, `${outputFileName}.ts`);
+  const interfaceTsFile = resolve(outDir, `${outputFileName}.d.ts`);
+  const serviceTsFile = resolve(outDir, `${outputFileName}.ts`);
 
   const declarationsTs = prepareBinding(bindings.declarations_ts);
   const declarationsJs = prepareBinding(bindings.declarations_js);
@@ -68,11 +68,8 @@ export async function writeBindings({
   await writeFile(serviceTsFile, serviceTs);
 }
 
-export async function writeIndex(
-  bindingsOutDir: string,
-  outputFileName: string
-) {
-  const indexFile = resolve(bindingsOutDir, "index.ts");
+export async function writeIndex(outDir: string, outputFileName: string) {
+  const indexFile = resolve(outDir, "index.ts");
 
   const index = indexBinding(outputFileName);
   await writeFile(indexFile, index);
