@@ -8,6 +8,12 @@ const CORE_RS_DIST_WASM_FILE = `./src/${CORE_RS_DIR}/dist/icp-js-bindgen_bg.wasm
 const CORE_RS_DIST_WASM_DECLARATIONS_FILE = `./src/${CORE_RS_DIR}/dist/icp-js-bindgen_bg.wasm.d.ts`;
 
 const config = defineConfig({
+  test: {
+    name: packageJson.name,
+    dir: "./tests",
+    watch: false,
+    typecheck: { enabled: true, tsconfig: "./tsconfig.test.json" },
+  },
   plugins: [
     viteStaticCopy({
       targets: [
@@ -30,18 +36,12 @@ const config = defineConfig({
       ],
     }),
   ],
-  test: {
-    name: packageJson.name,
-    dir: "./tests",
-    watch: false,
-    typecheck: { enabled: true, tsconfig: "./tsconfig.test.json" },
-  },
 });
 
 export default mergeConfig(
   config,
   tanstackViteConfig({
-    entry: ["./src/index.ts", "./src/core/index.ts"],
+    entry: ["./src/index.ts", "./src/core/index.ts", "./src/plugins/vite.ts"],
     srcDir: "./src",
     outDir: "./dist",
     tsconfigPath: "./tsconfig.json",

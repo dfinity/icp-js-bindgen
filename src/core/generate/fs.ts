@@ -1,4 +1,4 @@
-import { mkdir, rm } from "fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 
 export async function ensureDir(dir: string) {
   await mkdir(dir, { recursive: true });

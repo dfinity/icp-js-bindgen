@@ -1,8 +1,8 @@
-import { emptyDir, ensureDir } from "./fs";
 import { resolve, basename } from "node:path";
 import { writeFile } from "node:fs/promises";
-import { indexBinding, prepareBinding } from "./bindings";
-import { wasmGenerate, type WasmGenerateResult } from "./rs";
+import { emptyDir, ensureDir } from "./fs.ts";
+import { indexBinding, prepareBinding } from "./bindings.ts";
+import { wasmGenerate, wasmInit, type WasmGenerateResult } from "./rs.ts";
 
 const DID_FILE_EXTENSION = ".did";
 
@@ -12,6 +12,8 @@ type GenerateOptions = {
 };
 
 export async function generate(options: GenerateOptions) {
+  await wasmInit();
+
   const { didFile, bindingsOutDir } = options;
   const didFilePath = resolve(didFile);
   const outputFileName = basename(didFile, DID_FILE_EXTENSION);

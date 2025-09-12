@@ -1,4 +1,4 @@
-import { capitalizeFirstLetter } from "./string";
+import { capitalizeFirstLetter } from "./string.ts";
 
 const ESLINT_DISABLE_COMMENT = "/* eslint-disable */";
 const TS_NOCHECK_COMMENT = "// @ts-nocheck";

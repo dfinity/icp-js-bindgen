@@ -3,9 +3,32 @@
   "version": "0.0.1",
   "description": "Generate JavaScript bindings for IC canisters",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.cjs"
+    },
+    "./core": {
+      "types": "./dist/esm/core/index.d.ts",
+      "import": "./dist/esm/core/index.js",
+      "require": "./dist/cjs/core/index.cjs"
+    },
+    "./plugins/vite": {
+      "types": "./dist/esm/plugins/vite.d.ts",
+      "import": "./dist/esm/plugins/vite.js",
+      "require": "./dist/cjs/plugins/vite.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "wasm": "wasm-pack build ./src/core/generate/rs --target nodejs --out-name icp-js-bindgen --out-dir ./dist --dev --no-pack",
-    "build": "pnpm wasm && pnpm vite build",
+    "build:wasm": "wasm-pack build ./src/core/generate/rs --target web --out-name icp-js-bindgen --out-dir ./dist --dev --no-pack",
+    "build": "pnpm build:wasm && pnpm vite build",
     "test": "vitest"
   },
   "keywords": [],
