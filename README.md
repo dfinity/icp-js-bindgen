@@ -1,4 +1,4 @@
-# ICP SDK Bindgen
+# ICP JS SDK Bindgen
 
 Generate JavaScript bindings for IC canisters.
 

@@ -14,6 +14,9 @@ const config = defineConfig({
     watch: false,
     typecheck: { enabled: true, tsconfig: "./tsconfig.test.json" },
   },
+  define: {
+    __PKG_VERSION__: JSON.stringify(packageJson.version),
+  },
   plugins: [
     viteStaticCopy({
       targets: [
@@ -41,7 +44,12 @@ const config = defineConfig({
 export default mergeConfig(
   config,
   tanstackViteConfig({
-    entry: ["./src/index.ts", "./src/core/index.ts", "./src/plugins/vite.ts"],
+    entry: [
+      "./src/index.ts",
+      "./src/core/index.ts",
+      "./src/plugins/vite.ts",
+      "./src/cli/icp-bindgen.ts",
+    ],
     srcDir: "./src",
     outDir: "./dist",
     tsconfigPath: "./tsconfig.json",
