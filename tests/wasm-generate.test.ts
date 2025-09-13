@@ -1,8 +1,13 @@
-import { describe, it, expect } from "vitest";
-import { wasmGenerate } from "../src/core/generate/rs";
+import { describe, it, expect, beforeAll } from "vitest";
+import { wasmGenerate } from "../src/core/generate/rs.ts";
+import { testWasmInit } from "./utils/wasm.ts";
 
 const TESTS_ASSETS_DIR = "./tests/assets";
 const SNAPSHOTS_DIR = "./assets/snapshots";
+
+beforeAll(async () => {
+  await testWasmInit();
+});
 
 describe("wasmGenerate", () => {
   it("should generate a bindgen", async () => {

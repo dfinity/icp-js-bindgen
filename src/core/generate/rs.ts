@@ -1,17 +1,14 @@
-import init, {
-  start,
-  generate,
-  GenerateResult,
-} from "./rs/dist/icp-js-bindgen.js";
+import init, { start, generate } from "./rs/dist/icp-js-bindgen.js";
+import type { GenerateResult } from "./rs/dist/icp-js-bindgen.d.ts";
 
 let initialized = false;
 
-export async function wasmInit() {
+export async function wasmInit(...args: Parameters<typeof init>) {
   if (initialized) {
     return;
   }
 
-  await init();
+  await init(...args);
   initialized = true;
 }
 
