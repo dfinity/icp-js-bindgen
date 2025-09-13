@@ -3,12 +3,17 @@ import { writeFile } from "node:fs/promises";
 import { emptyDir, ensureDir } from "./fs.ts";
 import { indexBinding, prepareBinding } from "./bindings.ts";
 import { wasmGenerate, wasmInit, type WasmGenerateResult } from "./rs.ts";
+import {
+  type GenerateAdditionalFeaturesOptions,
+  generateAdditionalFeatures,
+} from "./features/index.ts";
 
 const DID_FILE_EXTENSION = ".did";
 
 type GenerateOptions = {
   didFile: string;
   outDir: string;
+  additionalFeatures?: GenerateAdditionalFeaturesOptions;
 };
 
 export async function generate(options: GenerateOptions) {
@@ -29,6 +34,13 @@ export async function generate(options: GenerateOptions) {
     outDir,
     outputFileName,
   });
+
+  if (options.additionalFeatures) {
+    await generateAdditionalFeatures(
+      options.additionalFeatures,
+      options.outDir
+    );
+  }
 
   await writeIndex(outDir, outputFileName);
 }
