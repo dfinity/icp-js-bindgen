@@ -33,7 +33,8 @@
     "build:wasm": "wasm-pack build ./src/core/generate/rs --target web --out-name icp-js-bindgen --out-dir ./dist --dev --no-pack",
     "build": "pnpm build:wasm && pnpm vite build",
     "test": "vitest",
-    "format": "biome format --write"
+    "codestyle:check": "biome check",
+    "codestyle:fix": "biome check --write"
   },
   "keywords": [],
   "author": "",

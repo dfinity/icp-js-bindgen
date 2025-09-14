@@ -1,9 +1,9 @@
 import { resolve } from 'node:path';
-import { type ViteDevServer } from 'vite';
-import { type Options } from '../index.ts';
+import type { ViteDevServer } from 'vite';
 import { generate } from '../../core/generate/index.ts';
-import { cyan, green } from './log.ts';
+import type { Options } from '../index.ts';
 import { VITE_PLUGIN_NAME } from './constants.ts';
+import { cyan, green } from './log.ts';
 
 export function watchDidFileChanges(server: ViteDevServer, options: Options) {
   const didFilePath = resolve(options.didFile);

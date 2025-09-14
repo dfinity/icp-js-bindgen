@@ -1,6 +1,6 @@
+import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { DISCLAIMER_COMMENT, ESLINT_DISABLE_COMMENT } from '../constants';
-import { writeFile } from 'node:fs/promises';
 
 const OUTPUT_CANISTER_ENV_FILE = 'canister-env.d.ts';
 

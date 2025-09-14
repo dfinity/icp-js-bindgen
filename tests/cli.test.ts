@@ -1,7 +1,7 @@
-import { beforeAll, describe, expect, it } from 'vitest';
-import { testWasmInit } from './utils/wasm.ts';
 import { execSync } from 'node:child_process';
+import { beforeAll, describe, expect, it } from 'vitest';
 import packageJson from '../package.json';
+import { testWasmInit } from './utils/wasm.ts';
 
 const BIN_FILE = packageJson.bin['icp-bindgen'];
 

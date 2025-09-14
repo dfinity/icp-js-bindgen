@@ -1,12 +1,12 @@
-import { resolve, basename } from 'node:path';
 import { writeFile } from 'node:fs/promises';
-import { emptyDir, ensureDir } from './fs.ts';
+import { basename, resolve } from 'node:path';
 import { indexBinding, prepareBinding } from './bindings.ts';
-import { wasmGenerate, wasmInit, type WasmGenerateResult } from './rs.ts';
 import {
   type GenerateAdditionalFeaturesOptions,
   generateAdditionalFeatures,
 } from './features/index.ts';
+import { emptyDir, ensureDir } from './fs.ts';
+import { type WasmGenerateResult, wasmGenerate, wasmInit } from './rs.ts';
 
 const DID_FILE_EXTENSION = '.did';
 

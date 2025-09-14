@@ -1,5 +1,5 @@
-import init, { start, generate } from './rs/dist/icp-js-bindgen.js';
 import type { GenerateResult } from './rs/dist/icp-js-bindgen.d.ts';
+import init, { generate, start } from './rs/dist/icp-js-bindgen.js';
 
 let initialized = false;
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { wasmGenerate } from '../src/core/generate/rs.ts';
 import { testWasmInit } from './utils/wasm.ts';
 

@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
-import { fs as memFs, vol } from 'memfs';
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { fs as memFs, vol } from 'memfs';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { generate } from '../src/core/generate/index.ts';
 import { testWasmInit } from './utils/wasm.ts';
 
