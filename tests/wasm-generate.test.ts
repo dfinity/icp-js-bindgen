@@ -3,7 +3,7 @@ import { wasmGenerate } from "../src/core/generate/rs.ts";
 import { testWasmInit } from "./utils/wasm.ts";
 
 const TESTS_ASSETS_DIR = "./tests/assets";
-const SNAPSHOTS_DIR = "./assets/snapshots";
+const SNAPSHOTS_DIR = "./assets/snapshots/wasm-generate";
 
 beforeAll(async () => {
   await testWasmInit();
