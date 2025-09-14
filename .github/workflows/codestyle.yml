@@ -1,0 +1,25 @@
+name: codestyle
+
+on:
+  merge_group:
+  pull_request:
+
+jobs:
+  lint:
+    name: lint:required
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: dfinity/ci-tools/actions/setup-pnpm@main
+
+      - name: Check JS Codestyle
+        run: pnpm codestyle:check
+
+      - name: Check Rust Linting
+        run: cargo clippy
+
+      - name: Check Rust formatting
+        run: cargo fmt -- --check
