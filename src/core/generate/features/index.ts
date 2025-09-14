@@ -1,4 +1,4 @@
-import { generateCanisterEnv } from "./canister-env.ts";
+import { generateCanisterEnv } from './canister-env.ts';
 
 export type GenerateAdditionalFeaturesOptions = {
   /**
@@ -14,7 +14,7 @@ export type GenerateAdditionalFeaturesOptions = {
 
 export async function generateAdditionalFeatures(
   options: GenerateAdditionalFeaturesOptions,
-  outDir: string
+  outDir: string,
 ) {
   if (options.canisterEnv) {
     await generateCanisterEnv(options.canisterEnv.variableNames, outDir);

@@ -1,12 +1,12 @@
-import path from "node:path";
-import { vi } from "vitest";
-import { wasmInit } from "../../src/core/generate/rs.ts";
+import path from 'node:path';
+import { vi } from 'vitest';
+import { wasmInit } from '../../src/core/generate/rs.ts';
 
-type NodeFsPromises = typeof import("node:fs/promises");
+type NodeFsPromises = typeof import('node:fs/promises');
 
 const WASM_PATH = path.resolve(
   import.meta.dirname,
-  "../../src/core/generate/rs/dist/icp-js-bindgen_bg.wasm"
+  '../../src/core/generate/rs/dist/icp-js-bindgen_bg.wasm',
 );
 
 export async function getWasm(): Promise<{
@@ -15,7 +15,7 @@ export async function getWasm(): Promise<{
 }> {
   const resolvedUrl = (await import(`${WASM_PATH}?url`)).default;
   const resolvedFilePath = `.${resolvedUrl}`;
-  const realFs = await vi.importActual<NodeFsPromises>("node:fs/promises");
+  const realFs = await vi.importActual<NodeFsPromises>('node:fs/promises');
   const wasm = await realFs.readFile(resolvedFilePath);
   return { wasm, resolvedFilePath };
 }

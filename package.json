@@ -32,13 +32,15 @@
   "scripts": {
     "build:wasm": "wasm-pack build ./src/core/generate/rs --target web --out-name icp-js-bindgen --out-dir ./dist --dev --no-pack",
     "build": "pnpm build:wasm && pnpm vite build",
-    "test": "vitest"
+    "test": "vitest",
+    "format": "biome format --write"
   },
   "keywords": [],
   "author": "",
   "license": "Apache-2.0",
   "packageManager": "pnpm@10.13.1",
   "devDependencies": {
+    "@biomejs/biome": "2.2.4",
     "@tanstack/config": "^0.20.1",
     "@types/node": "^24.3.1",
     "memfs": "^4.39.0",

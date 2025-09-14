@@ -1,14 +1,14 @@
-import { resolve, basename } from "node:path";
-import { writeFile } from "node:fs/promises";
-import { emptyDir, ensureDir } from "./fs.ts";
-import { indexBinding, prepareBinding } from "./bindings.ts";
-import { wasmGenerate, wasmInit, type WasmGenerateResult } from "./rs.ts";
+import { resolve, basename } from 'node:path';
+import { writeFile } from 'node:fs/promises';
+import { emptyDir, ensureDir } from './fs.ts';
+import { indexBinding, prepareBinding } from './bindings.ts';
+import { wasmGenerate, wasmInit, type WasmGenerateResult } from './rs.ts';
 import {
   type GenerateAdditionalFeaturesOptions,
   generateAdditionalFeatures,
-} from "./features/index.ts";
+} from './features/index.ts';
 
-const DID_FILE_EXTENSION = ".did";
+const DID_FILE_EXTENSION = '.did';
 
 type GenerateOptions = {
   didFile: string;
@@ -25,7 +25,7 @@ export async function generate(options: GenerateOptions) {
 
   await emptyDir(outDir);
   await ensureDir(outDir);
-  await ensureDir(resolve(outDir, "declarations"));
+  await ensureDir(resolve(outDir, 'declarations'));
 
   const result = wasmGenerate(didFilePath, outputFileName);
 
@@ -36,10 +36,7 @@ export async function generate(options: GenerateOptions) {
   });
 
   if (options.additionalFeatures) {
-    await generateAdditionalFeatures(
-      options.additionalFeatures,
-      options.outDir
-    );
+    await generateAdditionalFeatures(options.additionalFeatures, options.outDir);
   }
 
   await writeIndex(outDir, outputFileName);
@@ -51,21 +48,9 @@ type WriteBindingsOptions = {
   outputFileName: string;
 };
 
-export async function writeBindings({
-  bindings,
-  outDir,
-  outputFileName,
-}: WriteBindingsOptions) {
-  const declarationsTsFile = resolve(
-    outDir,
-    "declarations",
-    `${outputFileName}.did.d.ts`
-  );
-  const declarationsJsFile = resolve(
-    outDir,
-    "declarations",
-    `${outputFileName}.did.js`
-  );
+export async function writeBindings({ bindings, outDir, outputFileName }: WriteBindingsOptions) {
+  const declarationsTsFile = resolve(outDir, 'declarations', `${outputFileName}.did.d.ts`);
+  const declarationsJsFile = resolve(outDir, 'declarations', `${outputFileName}.did.js`);
   const interfaceTsFile = resolve(outDir, `${outputFileName}.d.ts`);
   const serviceTsFile = resolve(outDir, `${outputFileName}.ts`);
 
@@ -81,7 +66,7 @@ export async function writeBindings({
 }
 
 export async function writeIndex(outDir: string, outputFileName: string) {
-  const indexFile = resolve(outDir, "index.ts");
+  const indexFile = resolve(outDir, 'index.ts');
 
   const index = indexBinding(outputFileName);
   await writeFile(indexFile, index);

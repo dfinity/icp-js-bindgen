@@ -1,9 +1,9 @@
-import { type Plugin } from "vite";
-import { generate } from "../core/generate/index.ts";
-import type { Options } from "./index.ts";
-import { watchDidFileChanges } from "./utils/watch.ts";
-import { cyan, green } from "./utils/log.ts";
-import { VITE_PLUGIN_NAME } from "./utils/constants.ts";
+import { type Plugin } from 'vite';
+import { generate } from '../core/generate/index.ts';
+import type { Options } from './index.ts';
+import { watchDidFileChanges } from './utils/watch.ts';
+import { cyan, green } from './utils/log.ts';
+import { VITE_PLUGIN_NAME } from './utils/constants.ts';
 
 export function icpBindgen(options: Options): Plugin {
   return {
@@ -15,7 +15,7 @@ export function icpBindgen(options: Options): Plugin {
 
       console.log(
         cyan(`[${VITE_PLUGIN_NAME}] Generated bindings successfully at`),
-        green(options.outDir)
+        green(options.outDir),
       );
     },
     configureServer(server) {

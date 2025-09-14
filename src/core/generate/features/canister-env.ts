@@ -1,12 +1,12 @@
-import { resolve } from "node:path";
-import { DISCLAIMER_COMMENT, ESLINT_DISABLE_COMMENT } from "../constants";
-import { writeFile } from "node:fs/promises";
+import { resolve } from 'node:path';
+import { DISCLAIMER_COMMENT, ESLINT_DISABLE_COMMENT } from '../constants';
+import { writeFile } from 'node:fs/promises';
 
-const OUTPUT_CANISTER_ENV_FILE = "canister-env.d.ts";
+const OUTPUT_CANISTER_ENV_FILE = 'canister-env.d.ts';
 
 function envBinding(varNames: string[]): string {
   if (varNames.length === 0) {
-    return "";
+    return '';
   }
 
   // we don't want to disable typescript checks for this file
@@ -14,7 +14,7 @@ function envBinding(varNames: string[]): string {
   for (const varName of varNames) {
     env += `  readonly ["${varName}"]: string;\n`;
   }
-  env += "}";
+  env += '}';
   return env;
 }
 

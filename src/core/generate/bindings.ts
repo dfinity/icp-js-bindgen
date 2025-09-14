@@ -1,9 +1,5 @@
-import {
-  ESLINT_DISABLE_COMMENT,
-  TS_NOCHECK_COMMENT,
-  DISCLAIMER_COMMENT,
-} from "./constants.ts";
-import { capitalizeFirstLetter } from "./string.ts";
+import { ESLINT_DISABLE_COMMENT, TS_NOCHECK_COMMENT, DISCLAIMER_COMMENT } from './constants.ts';
+import { capitalizeFirstLetter } from './string.ts';
 
 export function prepareBinding(binding: string): string {
   return `${ESLINT_DISABLE_COMMENT}
