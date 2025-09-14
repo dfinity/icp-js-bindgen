@@ -1,6 +1,6 @@
 {
   "name": "@icp-sdk/bindgen",
-  "version": "0.0.1-alpha.1",
+  "version": "0.0.1-alpha.2",
   "description": "Generate JavaScript bindings for IC canisters",
   "type": "module",
   "exports": {
