@@ -14,7 +14,17 @@ export interface Options {
    */
   disableWatch?: boolean;
   /**
-   * The canister environment variable names to include in the `canister-env.d.ts` file.
+   * Additional features to generate bindings with.
    */
-  canisterEnvVariableNames?: string[];
+  additionalFeatures?: {
+    /**
+     * If defined, generates a `canister-env.d.ts` file according to the provided options.
+     */
+    canisterEnv?: {
+      /**
+       * The variable names to include in the `canister-env.d.ts` file.
+       */
+      variableNames: string[];
+    };
+  };
 }

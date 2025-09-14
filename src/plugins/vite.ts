@@ -11,7 +11,11 @@ export function icpBindgen(options: Options): Plugin {
     async buildStart() {
       console.log(cyan(`[${VITE_PLUGIN_NAME}] Generating bindings...`));
 
-      await generate(options);
+      await generate({
+        didFile: options.didFile,
+        outDir: options.outDir,
+        additionalFeatures: options.additionalFeatures,
+      });
 
       console.log(
         cyan(`[${VITE_PLUGIN_NAME}] Generated bindings successfully at`),
