@@ -1,3 +1,6 @@
+//! A port of https://github.com/dfinity/candid/blob/1ddf879f368f765145223c08bbe2c8c8f4782dcc/rust/candid_parser/src/typing.rs
+//! that uses Node.js's fs from [crate::fs] to read the imported files.
+
 use crate::fs::read_file_utf8;
 use candid::types::{ArgType, Field, Function, Type, TypeEnv, TypeInner};
 use candid_parser::{
