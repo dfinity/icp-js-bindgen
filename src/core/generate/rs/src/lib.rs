@@ -1,6 +1,6 @@
+mod bindings;
 mod fs;
 mod parser;
-mod bindings;
 
 use std::path::PathBuf;
 
@@ -34,21 +34,11 @@ pub fn generate(declarations: String, service_name: String) -> Result<GenerateRe
     let declarations_js = javascript::compile(&env, &actor);
     let declarations_ts = typescript::compile(&env, &actor, &prog);
 
-    let interface_ts = typescript_native::compile::compile(
-        &env,
-        &actor,
-        &service_name,
-        "interface",
-        &prog,
-    );
+    let interface_ts =
+        typescript_native::compile::compile(&env, &actor, &service_name, "interface", &prog);
 
-    let service_ts = typescript_native::compile::compile(
-        &env,
-        &actor,
-        &service_name,
-        "wrapper",
-        &prog,
-    );
+    let service_ts =
+        typescript_native::compile::compile(&env, &actor, &service_name, "wrapper", &prog);
 
     Ok(GenerateResult {
         declarations_js,

@@ -1,7 +1,7 @@
 use super::conversion_functions_generator::TopLevelNodes;
 use swc_core::common::{
+    BytePos, DUMMY_SP, Span,
     comments::{Comment, CommentKind},
-    BytePos, Span, DUMMY_SP,
 };
 
 // Simple monotonic position source for synthetic spans

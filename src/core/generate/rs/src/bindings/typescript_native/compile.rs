@@ -1,7 +1,7 @@
 use super::compile_interface::compile_interface;
 use super::compile_wrapper::compile_wrapper;
-use candid_parser::syntax::IDLMergedProg;
 use candid::types::{Type, TypeEnv};
+use candid_parser::syntax::IDLMergedProg;
 
 pub fn compile(
     env: &TypeEnv,

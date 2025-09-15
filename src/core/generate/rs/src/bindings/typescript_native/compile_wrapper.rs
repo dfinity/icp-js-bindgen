@@ -1,9 +1,9 @@
 use super::conversion_functions_generator::TypeConverter;
 use super::utils::{contains_unicode_characters, get_ident_guarded, get_ident_guarded_keyword_ok};
-use candid_parser::syntax::IDLMergedProg;
 use candid::types::internal::TypeKey;
 use candid::types::{Function, Type, TypeEnv, TypeInner};
-use swc_core::common::{SyntaxContext, DUMMY_SP};
+use candid_parser::syntax::IDLMergedProg;
+use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::*;
 
 use super::conversion_functions_generator::convert_multi_return_from_candid;
@@ -12,7 +12,7 @@ use super::new_typescript_native_types::convert_type_with_converter;
 use super::new_typescript_native_types::add_type_definitions;
 use super::preamble::imports::wrapper_imports;
 use super::preamble::options::{interface_options_utils, wrapper_options_utils};
-use super::utils::{render_ast, EnumDeclarations};
+use super::utils::{EnumDeclarations, render_ast};
 
 use super::comments::add_comments;
 use super::compile_interface::{interface_actor_service, interface_actor_var};

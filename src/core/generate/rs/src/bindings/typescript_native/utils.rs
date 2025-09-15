@@ -6,7 +6,7 @@ use swc_core::common::sync::Lrc;
 use swc_core::ecma::ast::TsEnumDecl;
 use swc_core::ecma::{
     ast::Module,
-    codegen::{text_writer::JsWriter, text_writer::WriteJs, Config, Emitter},
+    codegen::{Config, Emitter, text_writer::JsWriter, text_writer::WriteJs},
 };
 
 pub type EnumDeclarations = HashMap<Vec<Field>, (TsEnumDecl, String)>;
@@ -183,7 +183,7 @@ impl<W: WriteJs> WriteJs for NewlineAfterBlockComments<W> {
     }
 }
 
-use swc_core::common::{SyntaxContext, DUMMY_SP};
+use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::*;
 
 pub static KEYWORDS: [&str; 125] = [

@@ -2,10 +2,10 @@ use super::super::javascript::is_tuple;
 use super::comments::add_comments;
 use super::conversion_functions_generator::{TopLevelNodes, TypeConverter};
 use super::utils::{get_ident_guarded, get_ident_guarded_keyword_ok};
-use candid_parser::syntax::{self, IDLMergedProg, IDLType};
 use candid::types::{Field, Function, Label, Type, TypeEnv, TypeInner};
+use candid_parser::syntax::{self, IDLMergedProg, IDLType};
 use swc_core::common::Span;
-use swc_core::common::{SyntaxContext, DUMMY_SP};
+use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::*;
 
 // Helper function to determine if a type is recursively optional
@@ -67,23 +67,21 @@ pub fn create_interface_from_service(
                 TypeInner::Func(func) => {
                     create_method_signature(top_level_nodes, env, method_id, func, span)
                 }
-                TypeInner::Var(var_id) => {
-                    TsTypeElement::TsPropertySignature(TsPropertySignature {
-                        span,
-                        key: Box::new(Expr::Ident(get_ident_guarded(method_id))),
-                        computed: false,
-                        optional: false,
-                        readonly: false,
-                        type_ann: Some(Box::new(TsTypeAnn {
+                TypeInner::Var(var_id) => TsTypeElement::TsPropertySignature(TsPropertySignature {
+                    span,
+                    key: Box::new(Expr::Ident(get_ident_guarded(method_id))),
+                    computed: false,
+                    optional: false,
+                    readonly: false,
+                    type_ann: Some(Box::new(TsTypeAnn {
+                        span: DUMMY_SP,
+                        type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
                             span: DUMMY_SP,
-                            type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
-                                span: DUMMY_SP,
-                                type_name: TsEntityName::Ident(get_ident_guarded(var_id.as_str())),
-                                type_params: None,
-                            })),
+                            type_name: TsEntityName::Ident(get_ident_guarded(var_id.as_str())),
+                            type_params: None,
                         })),
-                    })
-                }
+                    })),
+                }),
                 _ => unreachable!(),
             }
         })

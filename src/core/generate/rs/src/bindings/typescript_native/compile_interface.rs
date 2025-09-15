@@ -2,15 +2,15 @@ use super::conversion_functions_generator::TypeConverter;
 use super::new_typescript_native_types::{add_type_definitions, create_interface_from_service};
 use super::preamble::imports::interface_imports;
 use super::preamble::options::interface_options_utils;
+use super::utils::EnumDeclarations;
 use super::utils::get_ident_guarded;
 use super::utils::render_ast;
-use super::utils::EnumDeclarations;
 use crate::bindings::typescript_native::comments::add_comments;
-use candid_parser::syntax::{IDLMergedProg, IDLType};
 use candid::types::{Type, TypeEnv, TypeInner};
+use candid_parser::syntax::{IDLMergedProg, IDLType};
 use std::collections::HashMap;
-use swc_core::common::Span;
 use swc_core::common::DUMMY_SP;
+use swc_core::common::Span;
 use swc_core::ecma::ast::*;
 
 pub fn compile_interface(
