@@ -1,9 +1,12 @@
 mod fs;
 mod parser;
+mod bindings;
 
 use std::path::PathBuf;
 
 use wasm_bindgen::prelude::*;
+
+use crate::bindings::{javascript, typescript, typescript_native};
 
 #[wasm_bindgen(start)]
 fn start() {
@@ -28,10 +31,10 @@ pub fn generate(declarations: String, service_name: String) -> Result<GenerateRe
     let input_path = PathBuf::from(declarations);
     let (env, actor, prog) = parser::check_file(input_path.as_path()).map_err(JsError::from)?;
 
-    let declarations_js = candid_parser::bindings::javascript::compile(&env, &actor);
-    let declarations_ts = candid_parser::bindings::typescript::compile(&env, &actor, &prog);
+    let declarations_js = javascript::compile(&env, &actor);
+    let declarations_ts = typescript::compile(&env, &actor, &prog);
 
-    let interface_ts = candid_parser::bindings::typescript_native::compile::compile(
+    let interface_ts = typescript_native::compile::compile(
         &env,
         &actor,
         &service_name,
@@ -39,7 +42,7 @@ pub fn generate(declarations: String, service_name: String) -> Result<GenerateRe
         &prog,
     );
 
-    let service_ts = candid_parser::bindings::typescript_native::compile::compile(
+    let service_ts = typescript_native::compile::compile(
         &env,
         &actor,
         &service_name,
