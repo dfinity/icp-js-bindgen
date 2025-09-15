@@ -1,4 +1,7 @@
-import { __PKG_NAME__ } from '../../constants.ts';
+/**
+ * Defined in package.json and injected by Vite. See vite.config.ts.
+ */
+declare const __PKG_NAME__: string;
 
 export const ESLINT_DISABLE_COMMENT = '/* eslint-disable */';
 export const TS_NOCHECK_COMMENT = '// @ts-nocheck';
