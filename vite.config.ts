@@ -11,6 +11,7 @@ const config = defineConfig({
   },
   define: {
     __PKG_VERSION__: JSON.stringify(packageJson.version),
+    __PKG_NAME__: JSON.stringify(packageJson.name),
   },
 });
 

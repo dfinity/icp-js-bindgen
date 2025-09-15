@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
+import { __PKG_VERSION__ } from '../constants.ts';
 import { generate } from '../core/generate/index.ts';
 import { cyan, green } from '../plugins/utils/log.ts';
-
-// defined in vite.config.ts
-declare const __PKG_VERSION__: string;
 
 const CLI_NAME = 'icp-bindgen';
 
