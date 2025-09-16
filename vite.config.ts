@@ -1,14 +1,8 @@
 import { tanstackViteConfig } from '@tanstack/config/vite';
-import { defineConfig, mergeConfig } from 'vitest/config';
+import { defineConfig, mergeConfig } from 'vite';
 import packageJson from './package.json';
 
 const config = defineConfig({
-  test: {
-    name: packageJson.name,
-    dir: './tests',
-    watch: false,
-    typecheck: { enabled: true, tsconfig: './tsconfig.test.json' },
-  },
   define: {
     __PKG_VERSION__: JSON.stringify(packageJson.version),
     __PKG_NAME__: JSON.stringify(packageJson.name),
@@ -26,6 +20,6 @@ export default mergeConfig(
     ],
     srcDir: './src',
     outDir: './dist',
-    tsconfigPath: './tsconfig.json',
+    tsconfigPath: './tsconfig.lib.json',
   }),
 );
