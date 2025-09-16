@@ -24,13 +24,11 @@ beforeEach(() => {
 });
 
 describe('generate', () => {
-  it('should generate a bindgen', async () => {
-    const helloWorldServiceName = 'hello_world';
-    const helloWorldDidFile = `${TESTS_ASSETS_DIR}/${helloWorldServiceName}.did`;
+  it.each(['hello_world', 'example'])('should generate a bindgen', async (serviceName) => {
+    const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 
-    await generate({ didFile: helloWorldDidFile, outDir: OUTPUT_DIR });
-
-    await expectGeneratedOutput(SNAPSHOTS_DIR, helloWorldServiceName);
+    await generate({ didFile, outDir: OUTPUT_DIR });
+    await expectGeneratedOutput(SNAPSHOTS_DIR, serviceName);
   });
 
   it('should generate a bindgen with canister env feature', async () => {

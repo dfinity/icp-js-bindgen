@@ -10,22 +10,21 @@ beforeAll(async () => {
 });
 
 describe('wasmGenerate', () => {
-  it('should generate a bindgen', async () => {
-    const helloWorldServiceName = 'hello_world';
-    const helloWorldDidFile = `${TESTS_ASSETS_DIR}/${helloWorldServiceName}.did`;
+  it.each(['hello_world', 'example'])('should generate a bindgen', async (serviceName) => {
+    const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 
-    const result = wasmGenerate(helloWorldDidFile, helloWorldServiceName);
+    const result = wasmGenerate(didFile, serviceName);
     await expect(result.declarations_js).toMatchFileSnapshot(
-      `${SNAPSHOTS_DIR}/${helloWorldServiceName}/declarations/${helloWorldServiceName}.did.js.snapshot`,
+      `${SNAPSHOTS_DIR}/${serviceName}/declarations/${serviceName}.did.js.snapshot`,
     );
     await expect(result.declarations_ts).toMatchFileSnapshot(
-      `${SNAPSHOTS_DIR}/${helloWorldServiceName}/declarations/${helloWorldServiceName}.did.d.ts.snapshot`,
+      `${SNAPSHOTS_DIR}/${serviceName}/declarations/${serviceName}.did.d.ts.snapshot`,
     );
     await expect(result.interface_ts).toMatchFileSnapshot(
-      `${SNAPSHOTS_DIR}/${helloWorldServiceName}/${helloWorldServiceName}.d.ts.snapshot`,
+      `${SNAPSHOTS_DIR}/${serviceName}/${serviceName}.d.ts.snapshot`,
     );
     await expect(result.service_ts).toMatchFileSnapshot(
-      `${SNAPSHOTS_DIR}/${helloWorldServiceName}/${helloWorldServiceName}.ts.snapshot`,
+      `${SNAPSHOTS_DIR}/${serviceName}/${serviceName}.ts.snapshot`,
     );
   });
 });
