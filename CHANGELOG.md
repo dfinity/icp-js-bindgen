@@ -2,6 +2,7 @@
 
 ### Feat
 
+- port bindgen code from candid_parser (#1)
 - use constants from vite build
 - additional features
 - log during watch
