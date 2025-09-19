@@ -8,9 +8,11 @@ import {
 import { emptyDir, ensureDir } from './fs.ts';
 import { type WasmGenerateResult, wasmGenerate, wasmInit } from './rs.ts';
 
+export type { GenerateAdditionalFeaturesOptions } from './features/index.ts';
+
 const DID_FILE_EXTENSION = '.did';
 
-type GenerateOptions = {
+export type GenerateOptions = {
   didFile: string;
   outDir: string;
   additionalFeatures?: GenerateAdditionalFeaturesOptions;
@@ -48,7 +50,7 @@ type WriteBindingsOptions = {
   outputFileName: string;
 };
 
-export async function writeBindings({ bindings, outDir, outputFileName }: WriteBindingsOptions) {
+async function writeBindings({ bindings, outDir, outputFileName }: WriteBindingsOptions) {
   const declarationsTsFile = resolve(outDir, 'declarations', `${outputFileName}.did.d.ts`);
   const declarationsJsFile = resolve(outDir, 'declarations', `${outputFileName}.did.js`);
   const interfaceTsFile = resolve(outDir, `${outputFileName}.d.ts`);
@@ -65,7 +67,7 @@ export async function writeBindings({ bindings, outDir, outputFileName }: WriteB
   await writeFile(serviceTsFile, serviceTs);
 }
 
-export async function writeIndex(outDir: string, outputFileName: string) {
+async function writeIndex(outDir: string, outputFileName: string) {
   const indexFile = resolve(outDir, 'index.ts');
 
   const index = indexBinding(outputFileName);
