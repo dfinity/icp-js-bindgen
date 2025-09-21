@@ -34,9 +34,7 @@ program
   .showSuggestionAfterError()
   .requiredOption('--did-file <path>', 'Path to the .did file to generate bindings from')
   .requiredOption('--out-dir <dir>', 'Directory where the bindings will be written')
-  .action(async (options: Args) => {
-    await run(options);
-  });
+  .action(run);
 
 program.parseAsync(process.argv).catch((error) => {
   console.error(error);

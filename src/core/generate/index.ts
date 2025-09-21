@@ -10,9 +10,25 @@ import { type WasmGenerateResult, wasmGenerate, wasmInit } from './rs.ts';
 
 const DID_FILE_EXTENSION = '.did';
 
-type GenerateOptions = {
+export type GenerateOptions = {
+  /**
+   * The path to the `.did` file.
+   */
   didFile: string;
+  /**
+   * The path to the directory where the bindings will be generated.
+   */
   outDir: string;
+  /**
+   * If `true`, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file.
+   * Useful to add to LLM's contexts' to give knowledge about what types are available in the service.
+   *
+   * @default false
+   */
+  interfaceDeclaration?: boolean;
+  /**
+   * Additional features to generate bindings with.
+   */
   additionalFeatures?: GenerateAdditionalFeaturesOptions;
 };
 
@@ -33,6 +49,7 @@ export async function generate(options: GenerateOptions) {
     bindings: result,
     outDir,
     outputFileName,
+    interfaceDeclaration: options.interfaceDeclaration,
   });
 
   if (options.additionalFeatures) {
@@ -46,23 +63,32 @@ type WriteBindingsOptions = {
   bindings: WasmGenerateResult;
   outDir: string;
   outputFileName: string;
+  interfaceDeclaration?: boolean;
 };
 
-export async function writeBindings({ bindings, outDir, outputFileName }: WriteBindingsOptions) {
+async function writeBindings({
+  bindings,
+  outDir,
+  outputFileName,
+  interfaceDeclaration,
+}: WriteBindingsOptions) {
   const declarationsTsFile = resolve(outDir, 'declarations', `${outputFileName}.did.d.ts`);
   const declarationsJsFile = resolve(outDir, 'declarations', `${outputFileName}.did.js`);
-  const interfaceTsFile = resolve(outDir, `${outputFileName}.d.ts`);
   const serviceTsFile = resolve(outDir, `${outputFileName}.ts`);
 
   const declarationsTs = prepareBinding(bindings.declarations_ts);
   const declarationsJs = prepareBinding(bindings.declarations_js);
-  const interfaceTs = prepareBinding(bindings.interface_ts);
   const serviceTs = prepareBinding(bindings.service_ts);
 
   await writeFile(declarationsTsFile, declarationsTs);
   await writeFile(declarationsJsFile, declarationsJs);
-  await writeFile(interfaceTsFile, interfaceTs);
   await writeFile(serviceTsFile, serviceTs);
+
+  if (interfaceDeclaration) {
+    const interfaceTsFile = resolve(outDir, `${outputFileName}.d.ts`);
+    const interfaceTs = prepareBinding(bindings.interface_ts);
+    await writeFile(interfaceTsFile, interfaceTs);
+  }
 }
 
 export async function writeIndex(outDir: string, outputFileName: string) {
