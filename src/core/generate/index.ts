@@ -21,7 +21,7 @@ export type GenerateOptions = {
   outDir: string;
   /**
    * If `true`, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file.
-   * Useful to add to LLM's contexts' to give knowledge about what types are available in the service.
+   * Useful to add to LLMs' contexts' to give knowledge about what types are available in the service.
    *
    * @default false
    */
