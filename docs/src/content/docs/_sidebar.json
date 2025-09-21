@@ -1,0 +1,51 @@
+[
+  {
+    "label": "Overview",
+    "link": "/"
+  },
+  {
+    "label": "Usage",
+    "collapsed": false,
+    "items": [
+      {
+        "label": "Plugins",
+        "collapsed": true,
+        "items": [
+          {
+            "label": "Vite",
+            "link": "/plugins/vite"
+          }
+        ]
+      },
+      {
+        "label": "CLI",
+        "link": "/cli"
+      },
+      {
+        "label": "Library",
+        "items": [
+          {
+            "label": "Overview",
+            "link": "/core"
+          },
+          {
+            "label": "API Reference",
+            "collapsed": true,
+            "autogenerate": {
+              "collapsed": true,
+              "directory": "core/api"
+            }
+          }
+        ]
+      },
+      {
+        "label": "Bindings Structure",
+        "link": "/structure"
+      }
+    ]
+  },
+  {
+    "label": "Changelog",
+    "link": "/changelog"
+  }
+]
