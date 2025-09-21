@@ -35,7 +35,7 @@ export type GenerateOptions = {
 export async function generate(options: GenerateOptions) {
   await wasmInit();
 
-  const { didFile, outDir } = options;
+  const { didFile, outDir, interfaceDeclaration = false } = options;
   const didFilePath = resolve(didFile);
   const outputFileName = basename(didFile, DID_FILE_EXTENSION);
 
@@ -49,7 +49,7 @@ export async function generate(options: GenerateOptions) {
     bindings: result,
     outDir,
     outputFileName,
-    interfaceDeclaration: options.interfaceDeclaration,
+    interfaceDeclaration,
   });
 
   if (options.additionalFeatures) {
@@ -63,7 +63,7 @@ type WriteBindingsOptions = {
   bindings: WasmGenerateResult;
   outDir: string;
   outputFileName: string;
-  interfaceDeclaration?: boolean;
+  interfaceDeclaration: boolean;
 };
 
 async function writeBindings({
@@ -91,7 +91,7 @@ async function writeBindings({
   }
 }
 
-export async function writeIndex(outDir: string, outputFileName: string) {
+async function writeIndex(outDir: string, outputFileName: string) {
   const indexFile = resolve(outDir, 'index.ts');
 
   const index = indexBinding(outputFileName);
