@@ -6,6 +6,8 @@ next: false
 
 The tool writes the files in the specified output directory with the following structure. Assuming you have a `<service-name>.did` file, `<service-name>` is used for the generated files.
 
+> Note: Generated code references `@icp-sdk/core` (agents, candid, principals). Install it in your app if you plan to compile/run the generated code. See `https://js.icp.build/core`.
+
 ## `declarations/`
 
 This folder contains the actual Candid JS bindings. It generates the same bindings that the [`dfx generate`](https://internetcomputer.org/docs/building-apps/developer-tools/dfx/dfx-generate) command was generating.
