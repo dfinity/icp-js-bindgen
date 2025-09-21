@@ -26,6 +26,15 @@ This file contains the TypeScript wrapper for the Candid JS bindings generated i
 
 This file contains the `createActor` function that can be used to instantiate the Candid JS bindings generated in [`declarations/<service-name>.did.js`](#declarationsservice-namedidjs).
 
+Here's an example of how to use the generated client:
+
+```ts
+import { createActor } from './bindings/hello_world';
+
+const actor = createActor('your-canister-id');
+const greeting = await actor.greet('World');
+```
+
 ## Optional files
 
 ### `<service-name>.d.ts`
