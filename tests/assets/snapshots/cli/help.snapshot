@@ -3,7 +3,10 @@ Usage: icp-bindgen [options]
 Generate JavaScript bindings for IC canisters
 
 Options:
-  -V, --version      output the version number
-  --did-file <path>  Path to the .did file to generate bindings from
-  --out-dir <dir>    Directory where the bindings will be written
-  -h, --help         display help for command
+  -V, --version            output the version number
+  --did-file <path>        Path to the .did file to generate bindings from
+  --out-dir <dir>          Directory where the bindings will be written
+  --interface-declaration  If set, generates a `<service-name>.d.ts` file that
+                           contains the same types of the `<service-name>.ts`
+                           file.
+  -h, --help               display help for command

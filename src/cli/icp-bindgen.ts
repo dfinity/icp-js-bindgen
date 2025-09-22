@@ -14,13 +14,14 @@ const CLI_NAME = 'icp-bindgen';
 type Args = {
   didFile: string;
   outDir: string;
+  interfaceDeclaration?: boolean;
 };
 
 async function run(args: Args) {
-  const { didFile, outDir } = args;
+  const { didFile, outDir, interfaceDeclaration } = args;
 
   console.log(cyan(`[${CLI_NAME}] Generating bindings...`));
-  await generate({ didFile, outDir });
+  await generate({ didFile, outDir, interfaceDeclaration });
   console.log(cyan(`[${CLI_NAME}] Generated bindings successfully at`), green(outDir));
 }
 
@@ -34,9 +35,11 @@ program
   .showSuggestionAfterError()
   .requiredOption('--did-file <path>', 'Path to the .did file to generate bindings from')
   .requiredOption('--out-dir <dir>', 'Directory where the bindings will be written')
-  .action(async (options: Args) => {
-    await run(options);
-  });
+  .option(
+    '--interface-declaration',
+    'If set, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file.',
+  )
+  .action(run);
 
 program.parseAsync(process.argv).catch((error) => {
   console.error(error);

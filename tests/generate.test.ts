@@ -28,8 +28,26 @@ describe('generate', () => {
     const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 
     await generate({ didFile, outDir: OUTPUT_DIR });
+
     await expectGeneratedOutput(SNAPSHOTS_DIR, serviceName);
+    expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.d.ts`)).toBe(false);
   });
+
+  it.each(['hello_world', 'example'])(
+    'should generate a bindgen with interface declaration',
+    async (serviceName) => {
+      const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+
+      await generate({ didFile, outDir: OUTPUT_DIR, interfaceDeclaration: true });
+
+      await expectGeneratedOutput(SNAPSHOTS_DIR, serviceName);
+
+      const interfaceTs = await readFileFromOutput(`${serviceName}.d.ts`);
+      await expect(interfaceTs).toMatchFileSnapshot(
+        `${SNAPSHOTS_DIR}/${serviceName}/${serviceName}.d.ts.snapshot`,
+      );
+    },
+  );
 
   it('should generate a bindgen with canister env feature', async () => {
     const helloWorldServiceName = 'hello_world';
@@ -56,6 +74,10 @@ async function readFileFromOutput(path: string): Promise<string> {
   return await readFile(resolve(OUTPUT_DIR, path), 'utf-8');
 }
 
+function fileExists(path: string): boolean {
+  return vol.existsSync(path);
+}
+
 async function expectGeneratedOutput(snapshotsDir: string, serviceName: string): Promise<void> {
   const generatedOutputDir = join(snapshotsDir, serviceName);
   const generatedOutputDeclarationsDir = join(generatedOutputDir, 'declarations');
@@ -68,11 +90,6 @@ async function expectGeneratedOutput(snapshotsDir: string, serviceName: string):
   const declarationsTs = await readFileFromOutput(`declarations/${serviceName}.did.d.ts`);
   await expect(declarationsTs).toMatchFileSnapshot(
     `${generatedOutputDeclarationsDir}/${serviceName}.did.d.ts.snapshot`,
-  );
-
-  const interfaceTs = await readFileFromOutput(`${serviceName}.d.ts`);
-  await expect(interfaceTs).toMatchFileSnapshot(
-    `${generatedOutputDir}/${serviceName}.d.ts.snapshot`,
   );
 
   const serviceTs = await readFileFromOutput(`${serviceName}.ts`);
