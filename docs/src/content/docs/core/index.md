@@ -5,7 +5,7 @@ prev: false
 
 Use the package as a library to generate bindings for a `.did` file in your own JS/TS scripts (Node.js, Bun, etc.).
 
-> **Note**: This library is meant to be used in browsers.
+> **Note**: The `@icp-sdk/bindgen` library is NOT meant to be used in browsers.
 
 ## Installation
 
