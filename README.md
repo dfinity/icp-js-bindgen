@@ -1,6 +1,6 @@
 # ICP JS SDK Bindgen
 
-Generate modern TypeScript bindings for Internet Computer (IC) canisters from Candid `.did` files.
+Generate modern TypeScript bindings for Internet Computer (IC) canisters from [Candid](https://github.com/dfinity/candid) `.did` files.
 
 The tool can be used in three ways:
 - [CLI](https://js.icp.build/bindgen/latest/cli)
@@ -47,7 +47,7 @@ For more info, see the [docs](https://js.icp.build/bindgen/).
 
 ## Contributing
 
-Contributions are welcome! Please see the [contributing guide](./CONTRIBUTING.md) for more information.
+Contributions are welcome! Please see the [contribution guide](./CONTRIBUTING.md) for more information.
 
 ## License
 
