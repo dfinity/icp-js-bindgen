@@ -8,6 +8,8 @@ import {
 import { emptyDir, ensureDir } from './fs.ts';
 import { type WasmGenerateResult, wasmGenerate, wasmInit } from './rs.ts';
 
+export type { GenerateAdditionalFeaturesOptions } from './features/index.ts';
+
 const DID_FILE_EXTENSION = '.did';
 
 export type GenerateOptions = {
@@ -32,6 +34,24 @@ export type GenerateOptions = {
   additionalFeatures?: GenerateAdditionalFeaturesOptions;
 };
 
+/**
+ * Generates the bindings for a `.did` file.
+ *
+ * For an explanation of the generated files, see the [Bindings Structure](https://js.icp.build/bindgen/latest/structure) docs page.
+ *
+ * @param options - The options for the generate function.
+ *
+ * @example
+ *
+ * Suppose we have a `.did` file in `./canisters/hello_world.did` and we want to generate bindings in `./src/bindings`.
+ *
+ * ```ts
+ * await generate({
+ *   didFile: './canisters/hello_world.did',
+ *   outDir: './src/bindings',
+ * });
+ * ```
+ */
 export async function generate(options: GenerateOptions) {
   await wasmInit();
 

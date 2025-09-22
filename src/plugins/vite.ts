@@ -16,6 +16,34 @@ export interface Options extends GenerateOptions {
   disableWatch?: boolean;
 }
 
+/**
+ * Vite plugin to generate bindings for a `.did` file during the build process.
+ *
+ * The plugin also watches the `.did` file in dev mode and regenerates the bindings on change.
+ * You can disable this behavior by setting `disableWatch` to `true`.
+ *
+ * For more info, see the [docs](https://js.icp.build/bindgen/latest/plugins/vite).
+ *
+ * @example
+ *
+ * Suppose we have a `.did` file in `./canisters/hello_world.did` and we want to generate bindings in `./src/bindings`.
+ *
+ * ```ts
+ * // vite.config.ts
+ * import { defineConfig } from 'vite';
+ * import { icpBindgen } from '@icp-sdk/bindgen/plugins/vite';
+ *
+ * export default defineConfig({
+ *   plugins: [
+ *     // ... other plugins
+ *     icpBindgen({
+ *       didFile: './canisters/hello_world.did',
+ *       outDir: './src/bindings',
+ *     }),
+ *   ],
+ * });
+ * ```
+ */
 export function icpBindgen(options: Options): Plugin {
   return {
     name: VITE_PLUGIN_NAME,
