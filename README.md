@@ -47,7 +47,7 @@ For more info, see the [docs](https://js.icp.build/bindgen/).
 
 ## Contributing
 
-Contributions are welcome! Please see the [contribution guide](./CONTRIBUTING.md) for more information.
+Contributions are welcome! Please see the [contribution guide](./.github/CONTRIBUTING.md) for more information.
 
 ## License
 
