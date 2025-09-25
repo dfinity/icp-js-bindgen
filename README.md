@@ -7,7 +7,7 @@ The tool can be used in three ways:
 - [Vite plugin](https://js.icp.build/bindgen/latest/plugins/vite)
 - [Library](https://js.icp.build/bindgen/latest/core)
 
-> Note: Generated code references `@icp-sdk/core` (agents, candid, principals). Install it in your app if you plan to compile/run the generated code. See `https://js.icp.build/core`.
+> Note: Generated code references `@icp-sdk/core` (agents, candid, principals). Install it in your app if you plan to compile/run the generated code. See [js.icp.build/core](https://js.icp.build/core).
 
 ## Install
 
