@@ -1,4 +1,4 @@
-use swc_core::common::{SyntaxContext, DUMMY_SP};
+use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::*;
 
 use crate::bindings::typescript_native::utils::get_ident_guarded;

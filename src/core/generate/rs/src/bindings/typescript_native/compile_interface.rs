@@ -239,7 +239,9 @@ fn add_create_actor_interface_exports(module: &mut Module, service_name: &str) {
                                 span: DUMMY_SP,
                                 type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
                                     span: DUMMY_SP,
-                                    type_name: TsEntityName::Ident(get_ident_guarded("CreateActorOptions")),
+                                    type_name: TsEntityName::Ident(get_ident_guarded(
+                                        "CreateActorOptions",
+                                    )),
                                     type_params: None,
                                 })),
                             })),

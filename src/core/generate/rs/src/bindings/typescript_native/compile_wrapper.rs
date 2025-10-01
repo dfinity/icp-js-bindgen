@@ -716,10 +716,7 @@ fn type_process_error_fn(module: &mut Module) {
         })));
 }
 
-fn add_create_actor_exports(
-    module: &mut Module,
-    service_name: &str,
-) {
+fn add_create_actor_exports(module: &mut Module, service_name: &str) {
     // CreateActorOptions interface
     let create_actor_options_interface = super::preamble::actor::create_actor_options_interface();
 
@@ -850,9 +847,7 @@ fn create_actor_function(service_name: &str) -> FnDecl {
     }
 }
 
-fn create_actor_function_body(
-    capitalized_service_name: &str,
-) -> Vec<Stmt> {
+fn create_actor_function_body(capitalized_service_name: &str) -> Vec<Stmt> {
     let span = DUMMY_SP;
 
     vec![
