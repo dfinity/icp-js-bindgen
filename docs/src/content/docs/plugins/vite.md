@@ -50,7 +50,7 @@ Options for controlling the generated output files.
 
 ##### `actor.disabled`
 
-If `true`, skips generating the actor file (`index.ts`) and service wrapper file (`<service-name>.ts`).
+If `true`, skips generating the actor file (`<service-name>.ts`).
 
 ##### `actor.interfaceFile`
 

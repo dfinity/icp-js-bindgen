@@ -47,7 +47,7 @@ program
   .requiredOption('--out-dir <dir>', 'Directory where the bindings will be written')
   .option(
     '--actor-disabled',
-    'If set, only generates the declarations folder, skipping the actor file (index.ts) and service wrapper file (<service-name>.ts).',
+    'If set, skips generating the actor file (<service-name>.ts).',
     false,
   )
   .option(

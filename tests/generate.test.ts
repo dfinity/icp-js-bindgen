@@ -67,7 +67,6 @@ describe('generate', () => {
       await expectGeneratedDeclarations(SNAPSHOTS_DIR, serviceName);
       expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.d.ts`)).toBe(false);
       expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.ts`)).toBe(false);
-      expect(fileExists(`${OUTPUT_DIR}/${serviceName}/index.ts`)).toBe(false);
     },
   );
 
@@ -91,7 +90,6 @@ describe('generate', () => {
       await expectGeneratedDeclarations(SNAPSHOTS_DIR, serviceName);
       expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.d.ts`)).toBe(false);
       expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.ts`)).toBe(false);
-      expect(fileExists(`${OUTPUT_DIR}/${serviceName}/index.ts`)).toBe(false);
     },
   );
 
@@ -180,7 +178,4 @@ async function expectGeneratedOutput(snapshotsDir: string, serviceName: string):
 
   const serviceTs = await readFileFromOutput(`${serviceName}.ts`);
   await expect(serviceTs).toMatchFileSnapshot(`${generatedOutputDir}/${serviceName}.ts.snapshot`);
-
-  const indexTs = await readFileFromOutput('index.ts');
-  await expect(indexTs).toMatchFileSnapshot(`${generatedOutputDir}/index.ts.snapshot`);
 }

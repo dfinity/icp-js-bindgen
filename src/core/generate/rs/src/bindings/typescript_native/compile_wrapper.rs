@@ -98,6 +98,11 @@ pub fn compile_wrapper(
 
     module.body.extend(actor_module.body);
 
+    // Add CreateActorOptions interface and createActor function if actor exists
+    if actor.is_some() {
+        add_create_actor_exports(&mut module, service_name);
+    }
+
     // Generate code from the AST
     render_ast(&module, &comments)
 }
@@ -739,4 +744,485 @@ fn type_process_error_fn(module: &mut Module) {
             span,
             decl: Decl::TsTypeAlias(Box::new(type_declaration)),
         })));
+}
+
+fn add_create_actor_exports(
+    module: &mut Module,
+    service_name: &str,
+) {
+    // CreateActorOptions interface
+    let create_actor_options_interface = TsInterfaceDecl {
+        span: DUMMY_SP,
+        id: Ident::new("CreateActorOptions".into(), DUMMY_SP, SyntaxContext::empty()),
+        declare: false,
+        type_params: None,
+        extends: vec![],
+        body: TsInterfaceBody {
+            span: DUMMY_SP,
+            body: vec![
+                TsTypeElement::TsPropertySignature(TsPropertySignature {
+                    span: DUMMY_SP,
+                    readonly: false,
+                    key: Box::new(Expr::Ident(Ident::new(
+                        "agent".into(),
+                        DUMMY_SP,
+                        SyntaxContext::empty(),
+                    ))),
+                    computed: false,
+                    optional: true,
+                    type_ann: Some(Box::new(TsTypeAnn {
+                        span: DUMMY_SP,
+                        type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
+                            span: DUMMY_SP,
+                            type_name: TsEntityName::Ident(Ident::new(
+                                "Agent".into(),
+                                DUMMY_SP,
+                                SyntaxContext::empty(),
+                            )),
+                            type_params: None,
+                        })),
+                    })),
+                }),
+                TsTypeElement::TsPropertySignature(TsPropertySignature {
+                    span: DUMMY_SP,
+                    readonly: false,
+                    key: Box::new(Expr::Ident(Ident::new(
+                        "agentOptions".into(),
+                        DUMMY_SP,
+                        SyntaxContext::empty(),
+                    ))),
+                    computed: false,
+                    optional: true,
+                    type_ann: Some(Box::new(TsTypeAnn {
+                        span: DUMMY_SP,
+                        type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
+                            span: DUMMY_SP,
+                            type_name: TsEntityName::Ident(Ident::new(
+                                "HttpAgentOptions".into(),
+                                DUMMY_SP,
+                                SyntaxContext::empty(),
+                            )),
+                            type_params: None,
+                        })),
+                    })),
+                }),
+                TsTypeElement::TsPropertySignature(TsPropertySignature {
+                    span: DUMMY_SP,
+                    readonly: false,
+                    key: Box::new(Expr::Ident(Ident::new(
+                        "actorOptions".into(),
+                        DUMMY_SP,
+                        SyntaxContext::empty(),
+                    ))),
+                    computed: false,
+                    optional: true,
+                    type_ann: Some(Box::new(TsTypeAnn {
+                        span: DUMMY_SP,
+                        type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
+                            span: DUMMY_SP,
+                            type_name: TsEntityName::Ident(Ident::new(
+                                "ActorConfig".into(),
+                                DUMMY_SP,
+                                SyntaxContext::empty(),
+                            )),
+                            type_params: None,
+                        })),
+                    })),
+                }),
+            ],
+        },
+    };
+
+    module
+        .body
+        .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+            span: DUMMY_SP,
+            decl: Decl::TsInterface(Box::new(create_actor_options_interface)),
+        })));
+
+    // createActor function
+    let create_actor_function = create_actor_function(service_name);
+
+    module
+        .body
+        .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+            span: DUMMY_SP,
+            decl: Decl::Fn(create_actor_function),
+        })));
+}
+
+fn create_actor_function(service_name: &str) -> FnDecl {
+    let span = DUMMY_SP;
+
+    let capitalized_service_name = service_name
+        .chars()
+        .next()
+        .map_or(String::new(), |c| c.to_uppercase().collect::<String>())
+        + &service_name[1..];
+
+    FnDecl {
+        ident: Ident::new("createActor".into(), span, SyntaxContext::empty()),
+        declare: false,
+        function: Box::new(swc_core::ecma::ast::Function {
+            params: vec![
+                // canisterId: string
+                Param {
+                    span,
+                    decorators: vec![],
+                    pat: Pat::Ident(BindingIdent {
+                        id: Ident::new("canisterId".into(), span, SyntaxContext::empty()),
+                        type_ann: Some(Box::new(TsTypeAnn {
+                            span,
+                            type_ann: Box::new(TsType::TsKeywordType(TsKeywordType {
+                                span,
+                                kind: TsKeywordTypeKind::TsStringKeyword,
+                            })),
+                        })),
+                    }),
+                },
+                // options: CreateActorOptions = {}
+                Param {
+                    span,
+                    decorators: vec![],
+                    pat: Pat::Assign(AssignPat {
+                        span,
+                        left: Box::new(Pat::Ident(BindingIdent {
+                            id: Ident::new("options".into(), span, SyntaxContext::empty()),
+                            type_ann: Some(Box::new(TsTypeAnn {
+                                span,
+                                type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
+                                    span,
+                                    type_name: TsEntityName::Ident(Ident::new(
+                                        "CreateActorOptions".into(),
+                                        span,
+                                        SyntaxContext::empty(),
+                                    )),
+                                    type_params: None,
+                                })),
+                            })),
+                        })),
+                        right: Box::new(Expr::Object(ObjectLit {
+                            span,
+                            props: vec![],
+                        })),
+                    }),
+                },
+                // processError?: ProcessErrorFn
+                Param {
+                    span,
+                    decorators: vec![],
+                    pat: Pat::Ident(BindingIdent {
+                        id: Ident {
+                            span,
+                            sym: "processError".into(),
+                            optional: true,
+                            ctxt: SyntaxContext::empty(),
+                        },
+                        type_ann: Some(Box::new(TsTypeAnn {
+                            span,
+                            type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
+                                span,
+                                type_name: TsEntityName::Ident(Ident::new(
+                                    "ProcessErrorFn".into(),
+                                    span,
+                                    SyntaxContext::empty(),
+                                )),
+                                type_params: None,
+                            })),
+                        })),
+                    }),
+                },
+            ],
+            decorators: vec![],
+            span,
+            body: Some(BlockStmt {
+                span,
+                stmts: create_actor_function_body(&capitalized_service_name),
+                ctxt: SyntaxContext::empty(),
+            }),
+            is_generator: false,
+            is_async: false,
+            type_params: None,
+            return_type: Some(Box::new(TsTypeAnn {
+                span,
+                type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
+                    span,
+                    type_name: TsEntityName::Ident(Ident::new(
+                        capitalized_service_name.into(),
+                        span,
+                        SyntaxContext::empty(),
+                    )),
+                    type_params: None,
+                })),
+            })),
+            ctxt: SyntaxContext::empty(),
+        }),
+    }
+}
+
+fn create_actor_function_body(
+    capitalized_service_name: &str,
+) -> Vec<Stmt> {
+    let span = DUMMY_SP;
+
+    vec![
+        // const agent = options.agent || HttpAgent.createSync({ ...options.agentOptions });
+        Stmt::Decl(Decl::Var(Box::new(VarDecl {
+            span,
+            kind: VarDeclKind::Const,
+            declare: false,
+            decls: vec![VarDeclarator {
+                span,
+                name: Pat::Ident(BindingIdent {
+                    id: Ident::new("agent".into(), span, SyntaxContext::empty()),
+                    type_ann: None,
+                }),
+                init: Some(Box::new(Expr::Bin(BinExpr {
+                    span,
+                    op: BinaryOp::LogicalOr,
+                    left: Box::new(Expr::Member(MemberExpr {
+                        span,
+                        obj: Box::new(Expr::Ident(Ident::new(
+                            "options".into(),
+                            span,
+                            SyntaxContext::empty(),
+                        ))),
+                        prop: MemberProp::Ident(IdentName {
+                            span,
+                            sym: "agent".into(),
+                        }),
+                    })),
+                    right: Box::new(Expr::Call(CallExpr {
+                        span,
+                        callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
+                            span,
+                            obj: Box::new(Expr::Ident(Ident::new(
+                                "HttpAgent".into(),
+                                span,
+                                SyntaxContext::empty(),
+                            ))),
+                            prop: MemberProp::Ident(IdentName {
+                                span,
+                                sym: "createSync".into(),
+                            }),
+                        }))),
+                        args: vec![ExprOrSpread {
+                            spread: None,
+                            expr: Box::new(Expr::Object(ObjectLit {
+                                span,
+                                props: vec![PropOrSpread::Spread(SpreadElement {
+                                    dot3_token: span,
+                                    expr: Box::new(Expr::Member(MemberExpr {
+                                        span,
+                                        obj: Box::new(Expr::Ident(Ident::new(
+                                            "options".into(),
+                                            span,
+                                            SyntaxContext::empty(),
+                                        ))),
+                                        prop: MemberProp::Ident(IdentName {
+                                            span,
+                                            sym: "agentOptions".into(),
+                                        }),
+                                    })),
+                                })],
+                            })),
+                        }],
+                        type_args: None,
+                        ctxt: SyntaxContext::empty(),
+                    })),
+                }))),
+                definite: false,
+            }],
+            ctxt: SyntaxContext::empty(),
+        }))),
+        // if (options.agent && options.agentOptions) { console.warn(...) }
+        Stmt::If(IfStmt {
+            span,
+            test: Box::new(Expr::Bin(BinExpr {
+                span,
+                op: BinaryOp::LogicalAnd,
+                left: Box::new(Expr::Member(MemberExpr {
+                    span,
+                    obj: Box::new(Expr::Ident(Ident::new(
+                        "options".into(),
+                        span,
+                        SyntaxContext::empty(),
+                    ))),
+                    prop: MemberProp::Ident(IdentName {
+                        span,
+                        sym: "agent".into(),
+                    }),
+                })),
+                right: Box::new(Expr::Member(MemberExpr {
+                    span,
+                    obj: Box::new(Expr::Ident(Ident::new(
+                        "options".into(),
+                        span,
+                        SyntaxContext::empty(),
+                    ))),
+                    prop: MemberProp::Ident(IdentName {
+                        span,
+                        sym: "agentOptions".into(),
+                    }),
+                })),
+            })),
+            cons: Box::new(Stmt::Block(BlockStmt {
+                span,
+                stmts: vec![Stmt::Expr(ExprStmt {
+                    span,
+                    expr: Box::new(Expr::Call(CallExpr {
+                        span,
+                        callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
+                            span,
+                            obj: Box::new(Expr::Ident(Ident::new(
+                                "console".into(),
+                                span,
+                                SyntaxContext::empty(),
+                            ))),
+                            prop: MemberProp::Ident(IdentName {
+                                span,
+                                sym: "warn".into(),
+                            }),
+                        }))),
+                        args: vec![ExprOrSpread {
+                            spread: None,
+                            expr: Box::new(Expr::Lit(Lit::Str(Str {
+                                span,
+                                value: "Detected both agent and agentOptions passed to createActor. Ignoring agentOptions and proceeding with the provided agent.".into(),
+                                raw: None,
+                            }))),
+                        }],
+                        type_args: None,
+                        ctxt: SyntaxContext::empty(),
+                    })),
+                })],
+                ctxt: SyntaxContext::empty(),
+            })),
+            alt: None,
+        }),
+        // const actor = Actor.createActor<_SERVICE>(idlFactory, { agent, canisterId, ...options.actorOptions });
+        Stmt::Decl(Decl::Var(Box::new(VarDecl {
+            span,
+            kind: VarDeclKind::Const,
+            declare: false,
+            decls: vec![VarDeclarator {
+                span,
+                name: Pat::Ident(BindingIdent {
+                    id: Ident::new("actor".into(), span, SyntaxContext::empty()),
+                    type_ann: None,
+                }),
+                init: Some(Box::new(Expr::Call(CallExpr {
+                    span,
+                    callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
+                        span,
+                        obj: Box::new(Expr::Ident(Ident::new(
+                            "Actor".into(),
+                            span,
+                            SyntaxContext::empty(),
+                        ))),
+                        prop: MemberProp::Ident(IdentName {
+                            span,
+                            sym: "createActor".into(),
+                        }),
+                    }))),
+                    args: vec![
+                        ExprOrSpread {
+                            spread: None,
+                            expr: Box::new(Expr::Ident(Ident::new(
+                                "idlFactory".into(),
+                                span,
+                                SyntaxContext::empty(),
+                            ))),
+                        },
+                        ExprOrSpread {
+                            spread: None,
+                            expr: Box::new(Expr::Object(ObjectLit {
+                                span,
+                                props: vec![
+                                    PropOrSpread::Prop(Box::new(Prop::Shorthand(Ident::new(
+                                        "agent".into(),
+                                        span,
+                                        SyntaxContext::empty(),
+                                    )))),
+                                    PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                                        key: PropName::Ident(IdentName {
+                                            span,
+                                            sym: "canisterId".into(),
+                                        }),
+                                        value: Box::new(Expr::Ident(Ident::new(
+                                            "canisterId".into(),
+                                            span,
+                                            SyntaxContext::empty(),
+                                        ))),
+                                    }))),
+                                    PropOrSpread::Spread(SpreadElement {
+                                        dot3_token: span,
+                                        expr: Box::new(Expr::Member(MemberExpr {
+                                            span,
+                                            obj: Box::new(Expr::Ident(Ident::new(
+                                                "options".into(),
+                                                span,
+                                                SyntaxContext::empty(),
+                                            ))),
+                                            prop: MemberProp::Ident(IdentName {
+                                                span,
+                                                sym: "actorOptions".into(),
+                                            }),
+                                        })),
+                                    }),
+                                ],
+                            })),
+                        },
+                    ],
+                    type_args: Some(Box::new(TsTypeParamInstantiation {
+                        span,
+                        params: vec![Box::new(TsType::TsTypeRef(TsTypeRef {
+                            span,
+                            type_name: TsEntityName::Ident(Ident::new(
+                                "_SERVICE".into(),
+                                span,
+                                SyntaxContext::empty(),
+                            )),
+                            type_params: None,
+                        }))],
+                    })),
+                    ctxt: SyntaxContext::empty(),
+                }))),
+                definite: false,
+            }],
+            ctxt: SyntaxContext::empty(),
+        }))),
+        // return new Service(actor, processError);
+        Stmt::Return(ReturnStmt {
+            span,
+            arg: Some(Box::new(Expr::New(NewExpr {
+                span,
+                callee: Box::new(Expr::Ident(Ident::new(
+                    capitalized_service_name.into(),
+                    span,
+                    SyntaxContext::empty(),
+                ))),
+                args: Some(vec![
+                    ExprOrSpread {
+                        spread: None,
+                        expr: Box::new(Expr::Ident(Ident::new(
+                            "actor".into(),
+                            span,
+                            SyntaxContext::empty(),
+                        ))),
+                    },
+                    ExprOrSpread {
+                        spread: None,
+                        expr: Box::new(Expr::Ident(Ident::new(
+                            "processError".into(),
+                            span,
+                            SyntaxContext::empty(),
+                        ))),
+                    },
+                ]),
+                type_args: None,
+                ctxt: SyntaxContext::empty(),
+            }))),
+        }),
+    ]
 }
