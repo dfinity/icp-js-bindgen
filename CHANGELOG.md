@@ -2,6 +2,7 @@
 
 ### Feat
 
+- `output` option (#16)
 - `interfaceDeclaration` flag (#11)
 - port bindgen code from candid_parser (#1)
 - use constants from vite build
