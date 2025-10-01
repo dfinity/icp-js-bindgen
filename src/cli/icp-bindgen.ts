@@ -3,7 +3,7 @@
 import { Command } from 'commander';
 import { BIN_NAME, PACKAGE_VERSION } from '../core/constants.ts';
 import { generate } from '../core/generate/index.ts';
-import { cyan, green } from '../plugins/utils/log.ts';
+import { cyan, green, red } from '../plugins/utils/log.ts';
 
 type Args = {
   didFile: string;
@@ -48,6 +48,13 @@ program
   .action(run);
 
 program.parseAsync(process.argv).catch((error) => {
-  console.error(error);
+  let errorMessage = '';
+  if (error instanceof Error) {
+    errorMessage = error.message;
+  } else {
+    errorMessage = String(error);
+  }
+  console.error(red(`[${BIN_NAME}] Error: ${errorMessage}`));
+
   process.exitCode = 1;
 });
