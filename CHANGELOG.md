@@ -2,6 +2,7 @@
 
 ### Feat
 
+- overwrite output only with `force` (#38)
 - output package version in generated bindings (#33)
 
 ### Fix
