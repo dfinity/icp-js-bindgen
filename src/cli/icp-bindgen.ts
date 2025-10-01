@@ -1,15 +1,9 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
+import { BIN_NAME, PACKAGE_VERSION } from '../core/constants.ts';
 import { generate } from '../core/generate/index.ts';
 import { cyan, green } from '../plugins/utils/log.ts';
-
-/**
- * Defined in package.json and injected by Vite. See vite.config.ts.
- */
-declare const __PKG_VERSION__: string;
-
-const CLI_NAME = 'icp-bindgen';
 
 type Args = {
   didFile: string;
@@ -21,7 +15,7 @@ type Args = {
 async function run(args: Args) {
   const { didFile, outDir, actorInterfaceFile, actorDisabled } = args;
 
-  console.log(cyan(`[${CLI_NAME}] Generating bindings...`));
+  console.log(cyan(`[${BIN_NAME}] Generating bindings...`));
   await generate({
     didFile,
     outDir,
@@ -32,14 +26,14 @@ async function run(args: Args) {
       },
     },
   });
-  console.log(cyan(`[${CLI_NAME}] Generated bindings successfully at`), green(outDir));
+  console.log(cyan(`[${BIN_NAME}] Generated bindings successfully at`), green(outDir));
 }
 
 const program = new Command();
 
 program
-  .name(CLI_NAME)
-  .version(__PKG_VERSION__)
+  .name(BIN_NAME)
+  .version(PACKAGE_VERSION)
   .description('Generate JavaScript bindings for IC canisters')
   .showHelpAfterError()
   .showSuggestionAfterError()

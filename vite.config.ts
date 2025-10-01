@@ -6,6 +6,7 @@ const config = defineConfig({
   define: {
     __PKG_VERSION__: JSON.stringify(packageJson.version),
     __PKG_NAME__: JSON.stringify(packageJson.name),
+    __BIN_NAME__: JSON.stringify(Object.keys(packageJson.bin)[0]),
   },
 });
 
