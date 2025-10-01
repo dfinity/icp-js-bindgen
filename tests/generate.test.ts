@@ -11,6 +11,16 @@ vi.mock('node:fs/promises', () => ({
   ...memFs.promises,
 }));
 
+// We need to mock the version to avoid updating snapshots on every release
+vi.mock('../src/core/constants.ts', async () => {
+  const constants = await vi.importActual('../src/core/constants.ts');
+
+  return {
+    ...constants,
+    PACKAGE_VERSION: 'TEST-VERSION',
+  };
+});
+
 const TESTS_ASSETS_DIR = './tests/assets';
 const OUTPUT_DIR = 'output';
 const SNAPSHOTS_DIR = './snapshots/generate';
