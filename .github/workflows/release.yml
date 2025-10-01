@@ -49,8 +49,6 @@ jobs:
       - name: Prepare version
         id: ver
         run: |
-          echo "major_minor_version=v${{ steps.extract-version.outputs.major }}.${{ steps.extract-version.outputs.minor }}" >> $GITHUB_OUTPUT
-          echo "major_minor_patch_version=v${{ steps.extract-version.outputs.major }}.${{ steps.extract-version.outputs.minor }}.${{ steps.extract-version.outputs.patch }}" >> $GITHUB_OUTPUT
           echo "major_minor_patch_version_tag=${{ steps.extract-version.outputs.major }}.${{ steps.extract-version.outputs.minor }}.${{ steps.extract-version.outputs.patch }}" >> $GITHUB_OUTPUT
 
       - name: Build NPM package
