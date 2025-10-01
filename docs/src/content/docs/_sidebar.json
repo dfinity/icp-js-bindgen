@@ -13,13 +13,21 @@
         "items": [
           {
             "label": "Vite",
-            "link": "/plugins/vite"
+            "collapsed": true,
+            "autogenerate": {
+              "collapsed": true,
+              "directory": "plugins/vite"
+            }
           }
         ]
       },
       {
         "label": "CLI",
-        "link": "/cli"
+        "collapsed": true,
+        "autogenerate": {
+          "collapsed": true,
+          "directory": "cli"
+        }
       },
       {
         "label": "Library",

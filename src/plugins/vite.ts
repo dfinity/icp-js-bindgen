@@ -1,3 +1,37 @@
+/**
+ * The Vite plugin is used to generate bindings for a `.did` file during the build process.
+ *
+ * ## Installation
+ *
+ * ```bash
+ * npm install -D @icp-sdk/bindgen
+ * ```
+ *
+ * ## Usage
+ *
+ * Suppose you have a `./canisters/hello_world.did` file, and you want to output the generated bindings for your Vite app in the `src/bindings/` folder.
+ * Here's how the plugin configuration would look like:
+ *
+ * ```ts title="vite.config.ts"
+ * import { defineConfig } from "vite";
+ * import { icpBindgen } from '@icp-sdk/bindgen/plugins/vite';
+ *
+ * export default defineConfig({
+ *   plugins: [
+ *     // ... other plugins
+ *     icpBindgen({
+ *       didFile: './canisters/hello_world.did',
+ *       outDir: './src/bindings',
+ *     }),
+ *   ],
+ * });
+ * ```
+ *
+ * For an explanation of the generated files, see the [Bindings Structure](https://js.icp.build/bindgen/latest/structure/) page.
+ *
+ * @module plugins/vite
+ */
+
 import type { Plugin } from 'vite';
 import { type GenerateOptions, generate } from '../core/generate/index.ts';
 import { VITE_PLUGIN_NAME } from './utils/constants.ts';
@@ -43,6 +77,8 @@ export interface Options extends GenerateOptions {
  *   ],
  * });
  * ```
+ *
+ * @ignore
  */
 export function icpBindgen(options: Options): Plugin {
   return {
