@@ -31,11 +31,11 @@ pub fn is_recursive_optional(
         }
         Opt(inner) => {
             // If we have an optional type, check its inner type
-            if let Var(id) = inner.as_ref() {
-                if visited.contains(id.as_str()) {
-                    // Found recursive optional
-                    return true;
-                }
+            if let Var(id) = inner.as_ref()
+                && visited.contains(id.as_str())
+            {
+                // Found recursive optional
+                return true;
             }
             is_recursive_optional(env, inner, visited)
         }
@@ -746,11 +746,11 @@ fn find_field<'a>(
 ) -> (Span, Option<&'a syntax::IDLType>) {
     let mut span = DUMMY_SP;
     let mut syntax_field_ty = None;
-    if let Some(bs) = fields {
-        if let Some(field) = bs.iter().find(|b| b.label == *label) {
-            span = add_comments(top_level_nodes, &field.docs);
-            syntax_field_ty = Some(&field.typ);
-        }
+    if let Some(bs) = fields
+        && let Some(field) = bs.iter().find(|b| b.label == *label)
+    {
+        span = add_comments(top_level_nodes, &field.docs);
+        syntax_field_ty = Some(&field.typ);
     };
     (span, syntax_field_ty)
 }

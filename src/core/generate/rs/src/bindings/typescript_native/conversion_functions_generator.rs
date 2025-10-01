@@ -334,42 +334,43 @@ impl<'a> TypeConverter<'a> {
         }
 
         // Check for recursive option types (Some<T> | None pattern)
-        if let TypeInner::Var(id) = inner.as_ref() {
-            if let Ok(inner_type) = self.env.find_type(id) {
-                let mut visited = std::collections::HashSet::new();
-                let is_recursive = is_recursive_optional(self.env, inner_type, &mut visited);
+        if let TypeInner::Var(id) = inner.as_ref()
+            && let Ok(inner_type) = self.env.find_type(id)
+        {
+            let mut visited = std::collections::HashSet::new();
+            let is_recursive = is_recursive_optional(self.env, inner_type, &mut visited);
 
-                if is_recursive {
-                    // For recursive patterns using Some/None, check for __kind__ property
-                    // Generate conversion function for the inner type
-                    let inner_function_name = self.get_to_candid_function_name(inner);
-                    self.generate_to_candid_function(inner, &inner_function_name);
+            if is_recursive {
+                // For recursive patterns using Some/None, check for __kind__ property
+                // Generate conversion function for the inner type
+                let inner_function_name = self.get_to_candid_function_name(inner);
+                self.generate_to_candid_function(inner, &inner_function_name);
 
-                    return Expr::Cond(CondExpr {
+                return Expr::Cond(CondExpr {
+                    span: DUMMY_SP,
+                    test: Box::new(Expr::Bin(BinExpr {
                         span: DUMMY_SP,
-                        test: Box::new(Expr::Bin(BinExpr {
+                        op: BinaryOp::EqEqEq,
+                        left: Box::new(Expr::Member(MemberExpr {
                             span: DUMMY_SP,
-                            op: BinaryOp::EqEqEq,
-                            left: Box::new(Expr::Member(MemberExpr {
-                                span: DUMMY_SP,
-                                obj: Box::new(self.create_ident(param_name)),
-                                prop: MemberProp::Ident(
-                                    Ident::new("__kind__".into(), DUMMY_SP, SyntaxContext::empty())
-                                        .into(),
-                                ),
-                            })),
-                            right: Box::new(Expr::Lit(Lit::Str(Str {
-                                span: DUMMY_SP,
-                                value: "None".into(),
-                                raw: None,
-                            }))),
+                            obj: Box::new(self.create_ident(param_name)),
+                            prop: MemberProp::Ident(
+                                Ident::new("__kind__".into(), DUMMY_SP, SyntaxContext::empty())
+                                    .into(),
+                            ),
                         })),
-                        cons: Box::new(self.create_call("candid_none", vec![])),
-                        alt: Box::new(self.create_call(
-                            "candid_some",
-                            vec![self.create_arg(self.create_call(
-                                &inner_function_name,
-                                vec![self.create_arg(Expr::Member(MemberExpr {
+                        right: Box::new(Expr::Lit(Lit::Str(Str {
+                            span: DUMMY_SP,
+                            value: "None".into(),
+                            raw: None,
+                        }))),
+                    })),
+                    cons: Box::new(self.create_call("candid_none", vec![])),
+                    alt: Box::new(self.create_call(
+                        "candid_some",
+                        vec![self.create_arg(self.create_call(
+                            &inner_function_name,
+                            vec![self.create_arg(Expr::Member(MemberExpr {
                                     span: DUMMY_SP,
                                     obj: Box::new(self.create_ident(param_name)),
                                     prop: MemberProp::Ident(
@@ -381,10 +382,9 @@ impl<'a> TypeConverter<'a> {
                                         .into(),
                                     ),
                                 }))],
-                            ))],
-                        )),
-                    });
-                }
+                        ))],
+                    )),
+                });
             }
         }
 
@@ -917,12 +917,10 @@ impl<'a> TypeConverter<'a> {
             let body_expr = self.generate_from_candid_body(ty, param_name);
             if let Some(Stmt::Decl(Decl::Fn(fn_decl))) =
                 self.generated_functions.get_mut(function_name)
+                && let Some(BlockStmt { stmts, .. }) = &mut fn_decl.function.body
+                && let Some(Stmt::Return(ret)) = stmts.last_mut()
             {
-                if let Some(BlockStmt { stmts, .. }) = &mut fn_decl.function.body {
-                    if let Some(Stmt::Return(ret)) = stmts.last_mut() {
-                        ret.arg = Some(Box::new(body_expr));
-                    }
-                }
+                ret.arg = Some(Box::new(body_expr));
             }
         }
 
@@ -1002,59 +1000,59 @@ impl<'a> TypeConverter<'a> {
 
     fn convert_opt_from_candid_body(&mut self, inner: &Type, param_name: &str) -> Expr {
         // Check for recursive option types (Some<T> | None pattern)
-        if let TypeInner::Var(id) = inner.as_ref() {
-            if let Ok(inner_type) = self.env.find_type(id) {
-                let mut visited = std::collections::HashSet::new();
-                let is_recursive = is_recursive_optional(self.env, inner_type, &mut visited);
+        if let TypeInner::Var(id) = inner.as_ref()
+            && let Ok(inner_type) = self.env.find_type(id)
+        {
+            let mut visited = std::collections::HashSet::new();
+            let is_recursive = is_recursive_optional(self.env, inner_type, &mut visited);
 
-                if is_recursive {
-                    // Get or create a reference to the inner type conversion function
-                    let inner_function_name = self.get_from_candid_function_name(inner);
-                    self.generate_from_candid_function(inner, &inner_function_name);
+            if is_recursive {
+                // Get or create a reference to the inner type conversion function
+                let inner_function_name = self.get_from_candid_function_name(inner);
+                self.generate_from_candid_function(inner, &inner_function_name);
 
-                    // For recursive options, convert from [] | [value] to Some/None
-                    return Expr::Cond(CondExpr {
+                // For recursive options, convert from [] | [value] to Some/None
+                return Expr::Cond(CondExpr {
+                    span: DUMMY_SP,
+                    test: Box::new(Expr::Bin(BinExpr {
                         span: DUMMY_SP,
-                        test: Box::new(Expr::Bin(BinExpr {
+                        op: BinaryOp::EqEqEq,
+                        left: Box::new(Expr::Member(MemberExpr {
                             span: DUMMY_SP,
-                            op: BinaryOp::EqEqEq,
-                            left: Box::new(Expr::Member(MemberExpr {
+                            obj: Box::new(self.create_ident(param_name)),
+                            prop: MemberProp::Ident(
+                                Ident::new("length".into(), DUMMY_SP, SyntaxContext::empty())
+                                    .into(),
+                            ),
+                        })),
+                        right: Box::new(Expr::Lit(Lit::Num(Number {
+                            span: DUMMY_SP,
+                            value: 0.0,
+                            raw: None,
+                        }))),
+                    })),
+                    // Return None for empty array
+                    cons: Box::new(self.create_call("none", vec![])),
+                    // Return Some for non-empty array with recursive conversion
+                    alt: Box::new(self.create_call(
+                        "some",
+                        vec![self.create_arg(self.create_call(
+                            &inner_function_name,
+                            vec![self.create_arg(Expr::Member(MemberExpr {
                                 span: DUMMY_SP,
                                 obj: Box::new(self.create_ident(param_name)),
-                                prop: MemberProp::Ident(
-                                    Ident::new("length".into(), DUMMY_SP, SyntaxContext::empty())
-                                        .into(),
-                                ),
-                            })),
-                            right: Box::new(Expr::Lit(Lit::Num(Number {
-                                span: DUMMY_SP,
-                                value: 0.0,
-                                raw: None,
-                            }))),
-                        })),
-                        // Return None for empty array
-                        cons: Box::new(self.create_call("none", vec![])),
-                        // Return Some for non-empty array with recursive conversion
-                        alt: Box::new(self.create_call(
-                            "some",
-                            vec![self.create_arg(self.create_call(
-                                &inner_function_name,
-                                vec![self.create_arg(Expr::Member(MemberExpr {
+                                prop: MemberProp::Computed(ComputedPropName {
                                     span: DUMMY_SP,
-                                    obj: Box::new(self.create_ident(param_name)),
-                                    prop: MemberProp::Computed(ComputedPropName {
+                                    expr: Box::new(Expr::Lit(Lit::Num(Number {
                                         span: DUMMY_SP,
-                                        expr: Box::new(Expr::Lit(Lit::Num(Number {
-                                            span: DUMMY_SP,
-                                            value: 0.0,
-                                            raw: None,
-                                        }))),
-                                    }),
-                                }))],
-                            ))],
-                        )),
-                    });
-                }
+                                        value: 0.0,
+                                        raw: None,
+                                    }))),
+                                }),
+                            }))],
+                        ))],
+                    )),
+                });
             }
         }
 
@@ -1690,12 +1688,10 @@ impl<'a> TypeConverter<'a> {
             let body_expr = self.generate_to_candid_body(ty, param_name);
             if let Some(Stmt::Decl(Decl::Fn(fn_decl))) =
                 self.generated_functions.get_mut(function_name)
+                && let Some(BlockStmt { stmts, .. }) = &mut fn_decl.function.body
+                && let Some(Stmt::Return(ret)) = stmts.last_mut()
             {
-                if let Some(BlockStmt { stmts, .. }) = &mut fn_decl.function.body {
-                    if let Some(Stmt::Return(ret)) = stmts.last_mut() {
-                        ret.arg = Some(Box::new(body_expr));
-                    }
-                }
+                ret.arg = Some(Box::new(body_expr));
             }
         }
 
