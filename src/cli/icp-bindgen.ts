@@ -45,11 +45,7 @@ program
   .showSuggestionAfterError()
   .requiredOption('--did-file <path>', 'Path to the .did file to generate bindings from')
   .requiredOption('--out-dir <dir>', 'Directory where the bindings will be written')
-  .option(
-    '--actor-disabled',
-    'If set, only generates the declarations folder, skipping the actor file (index.ts) and service wrapper file (<service-name>.ts).',
-    false,
-  )
+  .option('--actor-disabled', 'If set, skips generating the actor file (<service-name>.ts).', false)
   .option(
     '--actor-interface-file',
     'If set, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file. Has no effect if `--actor-disabled` is set.',

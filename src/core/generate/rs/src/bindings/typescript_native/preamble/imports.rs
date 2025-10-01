@@ -46,12 +46,20 @@ fn old_bindings_imports(module: &mut Module, service_name: &str) {
         .body
         .push(ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
             span: DUMMY_SP,
-            specifiers: vec![ImportSpecifier::Named(ImportNamedSpecifier {
-                span: DUMMY_SP,
-                local: Ident::new("_SERVICE".into(), DUMMY_SP, SyntaxContext::empty()),
-                imported: None,
-                is_type_only: true,
-            })],
+            specifiers: vec![
+                ImportSpecifier::Named(ImportNamedSpecifier {
+                    span: DUMMY_SP,
+                    local: Ident::new("idlFactory".into(), DUMMY_SP, SyntaxContext::empty()),
+                    imported: None,
+                    is_type_only: false,
+                }),
+                ImportSpecifier::Named(ImportNamedSpecifier {
+                    span: DUMMY_SP,
+                    local: Ident::new("_SERVICE".into(), DUMMY_SP, SyntaxContext::empty()),
+                    imported: None,
+                    is_type_only: true,
+                }),
+            ],
             src: Box::new(Str {
                 span: DUMMY_SP,
                 value: format!("./declarations/{}.did", dashed_name).into(),
@@ -126,6 +134,18 @@ fn wrapper_core_agent_imports(module: &mut Module) {
     let import_decl = ImportDecl {
         span: DUMMY_SP,
         specifiers: vec![
+            ImportSpecifier::Named(ImportNamedSpecifier {
+                span: DUMMY_SP,
+                local: Ident::new("Actor".into(), DUMMY_SP, SyntaxContext::empty()),
+                imported: None,
+                is_type_only: false,
+            }),
+            ImportSpecifier::Named(ImportNamedSpecifier {
+                span: DUMMY_SP,
+                local: Ident::new("HttpAgent".into(), DUMMY_SP, SyntaxContext::empty()),
+                imported: None,
+                is_type_only: false,
+            }),
             ImportSpecifier::Named(ImportNamedSpecifier {
                 span: DUMMY_SP,
                 local: Ident::new("HttpAgentOptions".into(), DUMMY_SP, SyntaxContext::empty()),

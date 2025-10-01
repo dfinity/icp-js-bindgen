@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
-import { indexBinding, prepareBinding } from './bindings.ts';
+import { prepareBinding } from './bindings.ts';
 import {
   type GenerateAdditionalFeaturesOptions,
   generateAdditionalFeatures,
@@ -17,12 +17,12 @@ const DID_FILE_EXTENSION = '.did';
  */
 export type GenerateOutputOptions = {
   /**
-   * Options for controlling the generated `index.ts` and `<service-name>.ts` files.
+   * Options for controlling the generated actor files.
    */
   actor?:
     | {
         /**
-         * If `true`, skips generating the actor file (`index.ts`) and service wrapper file (`<service-name>.ts`).
+         * If `true`, skips generating the actor file (`<service-name>.ts`).
          *
          * @default false
          */
@@ -141,18 +141,10 @@ async function writeBindings({ bindings, outDir, outputFileName, output }: Write
   const serviceTsFile = resolve(outDir, `${outputFileName}.ts`);
   const serviceTs = prepareBinding(bindings.service_ts);
   await writeFile(serviceTsFile, serviceTs);
-  await writeIndex(outDir, outputFileName);
 
   if (output.actor?.interfaceFile) {
     const interfaceTsFile = resolve(outDir, `${outputFileName}.d.ts`);
     const interfaceTs = prepareBinding(bindings.interface_ts);
     await writeFile(interfaceTsFile, interfaceTs);
   }
-}
-
-async function writeIndex(outDir: string, outputFileName: string) {
-  const indexFile = resolve(outDir, 'index.ts');
-
-  const index = indexBinding(outputFileName);
-  await writeFile(indexFile, index);
 }

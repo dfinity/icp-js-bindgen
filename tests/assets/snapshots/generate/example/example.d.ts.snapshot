@@ -209,3 +209,10 @@ export interface exampleInterface {
     */
     bbbbb(arg0: b): Promise<void>;
 }
+export type ProcessErrorFn = (error: unknown) => never;
+export interface CreateActorOptions {
+    agent?: Agent;
+    agentOptions?: HttpAgentOptions;
+    actorOptions?: ActorConfig;
+}
+export declare function createActor(canisterId: string, options: CreateActorOptions = {}, processError?: ProcessErrorFn): Example;

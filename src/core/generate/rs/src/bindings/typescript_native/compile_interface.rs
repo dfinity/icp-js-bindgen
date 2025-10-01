@@ -90,6 +90,11 @@ pub fn compile_interface(
 
     module.body.extend(actor_module.body);
 
+    // Add CreateActorOptions interface and createActor function declaration if actor exists
+    if actor.is_some() {
+        add_create_actor_interface_exports(&mut module, service_name);
+    }
+
     // Generate code from the AST
     render_ast(&module, &comments)
 }
@@ -176,5 +181,120 @@ pub fn interface_actor_var(module: &mut Module, type_id: &str, service_name: &st
         .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
             span,
             decl: Decl::TsInterface(Box::new(interface)),
+        })));
+}
+
+fn add_create_actor_interface_exports(module: &mut Module, service_name: &str) {
+    let capitalized_service_name = service_name
+        .chars()
+        .next()
+        .map_or(String::new(), |c| c.to_uppercase().collect::<String>())
+        + &service_name[1..];
+
+    let type_process_error_fn = super::preamble::actor::process_error_fn_type();
+    module
+        .body
+        .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+            span: DUMMY_SP,
+            decl: Decl::TsTypeAlias(Box::new(type_process_error_fn)),
+        })));
+
+    // CreateActorOptions interface
+    let create_actor_options_interface = super::preamble::actor::create_actor_options_interface();
+    module
+        .body
+        .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+            span: DUMMY_SP,
+            decl: Decl::TsInterface(Box::new(create_actor_options_interface)),
+        })));
+
+    // createActor function declaration (no implementation)
+    let create_actor_fn_decl = FnDecl {
+        ident: get_ident_guarded("createActor"),
+        declare: true,
+        function: Box::new(swc_core::ecma::ast::Function {
+            params: vec![
+                Param {
+                    span: DUMMY_SP,
+                    decorators: vec![],
+                    pat: Pat::Ident(BindingIdent {
+                        id: get_ident_guarded("canisterId"),
+                        type_ann: Some(Box::new(TsTypeAnn {
+                            span: DUMMY_SP,
+                            type_ann: Box::new(TsType::TsKeywordType(TsKeywordType {
+                                span: DUMMY_SP,
+                                kind: TsKeywordTypeKind::TsStringKeyword,
+                            })),
+                        })),
+                    }),
+                },
+                Param {
+                    span: DUMMY_SP,
+                    decorators: vec![],
+                    pat: Pat::Assign(AssignPat {
+                        span: DUMMY_SP,
+                        left: Box::new(Pat::Ident(BindingIdent {
+                            id: get_ident_guarded("options"),
+                            type_ann: Some(Box::new(TsTypeAnn {
+                                span: DUMMY_SP,
+                                type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
+                                    span: DUMMY_SP,
+                                    type_name: TsEntityName::Ident(get_ident_guarded(
+                                        "CreateActorOptions",
+                                    )),
+                                    type_params: None,
+                                })),
+                            })),
+                        })),
+                        right: Box::new(Expr::Object(ObjectLit {
+                            span: DUMMY_SP,
+                            props: vec![],
+                        })),
+                    }),
+                },
+                Param {
+                    span: DUMMY_SP,
+                    decorators: vec![],
+                    pat: Pat::Ident(BindingIdent {
+                        id: Ident {
+                            span: DUMMY_SP,
+                            sym: "processError".into(),
+                            optional: true,
+                            ctxt: swc_core::common::SyntaxContext::empty(),
+                        },
+                        type_ann: Some(Box::new(TsTypeAnn {
+                            span: DUMMY_SP,
+                            type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
+                                span: DUMMY_SP,
+                                type_name: TsEntityName::Ident(get_ident_guarded("ProcessErrorFn")),
+                                type_params: None,
+                            })),
+                        })),
+                    }),
+                },
+            ],
+            decorators: vec![],
+            span: DUMMY_SP,
+            body: None, // No implementation for interface
+            is_generator: false,
+            is_async: false,
+            type_params: None,
+            return_type: Some(Box::new(TsTypeAnn {
+                span: DUMMY_SP,
+                type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
+                    span: DUMMY_SP,
+                    type_name: TsEntityName::Ident(get_ident_guarded(&capitalized_service_name)),
+                    type_params: None,
+                })),
+            })),
+            ctxt: swc_core::common::SyntaxContext::empty(),
+        }),
+    };
+
+    module
+        .body
+        .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+            span: DUMMY_SP,
+            decl: Decl::Fn(create_actor_fn_decl),
         })));
 }
