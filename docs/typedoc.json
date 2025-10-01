@@ -1,6 +1,10 @@
 {
   "$schema": "https://typedoc-plugin-markdown.org/schema.json",
-  "entryPoints": ["../src/core/index.ts"],
+  "entryPoints": [
+    "../src/core/index.ts",
+    "../src/cli/icp-bindgen.ts",
+    "../src/plugins/vite.ts"
+  ],
   "tsconfig": "../tsconfig.json",
   "readme": "none",
   "out": "src/content/tmp",
