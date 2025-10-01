@@ -16,11 +16,11 @@ fn find_field<'a>(
 ) -> (RcDoc<'a>, Option<&'a syntax::IDLType>) {
     let mut docs = RcDoc::nil();
     let mut syntax_field_ty = None;
-    if let Some(bs) = fields {
-        if let Some(field) = bs.iter().find(|b| b.label == *label) {
-            docs = pp_docs(&field.docs);
-            syntax_field_ty = Some(&field.typ);
-        }
+    if let Some(bs) = fields
+        && let Some(field) = bs.iter().find(|b| b.label == *label)
+    {
+        docs = pp_docs(&field.docs);
+        syntax_field_ty = Some(&field.typ);
     };
     (docs, syntax_field_ty)
 }
@@ -231,10 +231,10 @@ fn pp_service<'a>(
 ) -> RcDoc<'a> {
     let methods = serv.iter().map(|(id, func)| {
         let mut docs = RcDoc::nil();
-        if let Some(bs) = syntax {
-            if let Some(b) = bs.iter().find(|b| &b.id == id) {
-                docs = pp_docs(&b.docs);
-            }
+        if let Some(bs) = syntax
+            && let Some(b) = bs.iter().find(|b| &b.id == id)
+        {
+            docs = pp_docs(&b.docs);
         }
         let func = match func.as_ref() {
             TypeInner::Func(func) => pp_function(env, func),

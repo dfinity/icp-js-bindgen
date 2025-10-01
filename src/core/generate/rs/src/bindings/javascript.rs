@@ -255,9 +255,8 @@ pub fn compile(env: &TypeEnv, actor: &Option<Type>) -> String {
             let def_list: Vec<_> = env.to_sorted_iter().map(|pair| pair.0.as_str()).collect();
             let recs = infer_rec(env, &def_list).unwrap();
             let doc = pp_defs(env, &def_list, &recs, true);
-            let result = pp_imports().append(doc).pretty(LINE_WIDTH).to_string();
 
-            result
+            pp_imports().append(doc).pretty(LINE_WIDTH).to_string()
         }
         Some(actor) => {
             let def_list = chase_actor(env, actor).unwrap();
