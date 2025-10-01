@@ -13,7 +13,7 @@ vi.mock('node:fs/promises', () => ({
 
 const TESTS_ASSETS_DIR = './tests/assets';
 const OUTPUT_DIR = 'output';
-const SNAPSHOTS_DIR = './assets/snapshots/generate';
+const SNAPSHOTS_DIR = './snapshots/generate';
 
 beforeAll(async () => {
   await testWasmInit();
