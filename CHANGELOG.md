@@ -1,3 +1,14 @@
+## Unreleased
+
+### Feat
+
+- overwrite output only with `force` (#38)
+- output package version in generated bindings (#33)
+
+### Fix
+
+- print error message in cli (#36)
+
 ## 0.1.0-beta.2 (2025-10-01)
 
 ### Feat
