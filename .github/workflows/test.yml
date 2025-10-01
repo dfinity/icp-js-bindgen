@@ -4,6 +4,10 @@ on:
   merge_group:
   pull_request:
 
+env:
+  SCCACHE_GHA_ENABLED: 'true'
+  RUSTC_WRAPPER: 'sccache'
+
 jobs:
   unit_test:
     name: unit_test:required
@@ -14,6 +18,9 @@ jobs:
 
       - name: Setup PNPM
         uses: dfinity/ci-tools/actions/setup-pnpm@main
+
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # v0.0.9
 
       - name: Rust Test
         run: cargo test
