@@ -15,8 +15,9 @@ export type GenerateAdditionalFeaturesOptions = {
 export async function generateAdditionalFeatures(
   options: GenerateAdditionalFeaturesOptions,
   outDir: string,
+  force: boolean,
 ) {
   if (options.canisterEnv) {
-    await generateCanisterEnv(options.canisterEnv.variableNames, outDir);
+    await generateCanisterEnv(options.canisterEnv.variableNames, outDir, force);
   }
 }

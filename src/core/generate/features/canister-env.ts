@@ -1,6 +1,6 @@
-import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { DISCLAIMER_COMMENT, ESLINT_DISABLE_COMMENT } from '../constants';
+import { writeFileSafe } from '../fs.ts';
 
 const OUTPUT_CANISTER_ENV_FILE = 'canister-env.d.ts';
 
@@ -18,7 +18,7 @@ function envBinding(varNames: string[]): string {
   return env;
 }
 
-export async function generateCanisterEnv(varNames: string[], outDir: string) {
+export async function generateCanisterEnv(varNames: string[], outDir: string, force: boolean) {
   const canisterEnv = envBinding(varNames);
-  await writeFile(resolve(outDir, OUTPUT_CANISTER_ENV_FILE), canisterEnv);
+  await writeFileSafe(resolve(outDir, OUTPUT_CANISTER_ENV_FILE), canisterEnv, force);
 }
