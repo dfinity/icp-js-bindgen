@@ -10,18 +10,18 @@ type Args = {
   outDir: string;
   actorInterfaceFile?: boolean;
   actorDisabled?: boolean;
-  clean?: boolean;
+  noClean?: boolean;
 };
 
 async function run(args: Args) {
-  const { didFile, outDir, actorInterfaceFile, actorDisabled, clean } = args;
+  const { didFile, outDir, actorInterfaceFile, actorDisabled, noClean } = args;
 
   console.log(cyan(`[${BIN_NAME}] Generating bindings...`));
   await generate({
     didFile,
     outDir,
     output: {
-      clean,
+      clean: !noClean,
       actor: {
         disabled: actorDisabled,
         interfaceFile: actorInterfaceFile,
@@ -47,7 +47,7 @@ program
     'If set, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file. Has no effect if `--actor-disabled` is set.',
     false,
   )
-  .option('--clean', 'Clean the output directory before generating the bindings.', true)
+  .option('--no-clean', 'Do not clean the output directory before generating the bindings.', false)
   .action(run);
 
 program.parseAsync(process.argv).catch((error) => {

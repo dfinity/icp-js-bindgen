@@ -12,6 +12,6 @@ Options:
                           contains the same types of the `<service-name>.ts`
                           file. Has no effect if `--actor-disabled` is set.
                           (default: false)
-  --clean                 Clean the output directory before generating the
-                          bindings. (default: true)
+  --no-clean              Do not clean the output directory before generating
+                          the bindings.
   -h, --help              display help for command

@@ -42,6 +42,6 @@ npx @icp-sdk/bindgen --did-file ./canisters/hello_world.did --out-dir ./src/bind
 - `--out-dir <dir>`: Directory where the bindings will be written
 - `--actor-interface-file`: If set, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file. Has no effect if `--actor-disabled` is set. (default: `false`)
 - `--actor-disabled`: If set, skips generating the actor file (`<service-name>.ts`). (default: `false`)
-- `--clean`: Clean the output directory before generating the bindings. (default: `true`)
+- `--no-clean`: Do not clean the output directory before generating the bindings. (default: `false`)
 
 > **Note**: The CLI does not support additional features yet.
