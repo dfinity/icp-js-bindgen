@@ -22,11 +22,11 @@ This file contains the actual Candid JS bindings, that allow encoding and decodi
 
 ## `<service-name>.ts`
 
-This file contains the TypeScript wrapper for the Candid JS bindings generated in [`declarations/<service-name>.did.js`](#declarationsservice-namedidjs). It offers a more idiomatic and type-safe TypeScript interface over the Candid JS bindings. Set the [`output.declarationsOnly`](./core/api/type-aliases/GenerateOutputOptions.md#declarationsOnly) option to `true` to skip generating this file.
+This file contains the TypeScript wrapper for the Candid JS bindings generated in [`declarations/<service-name>.did.js`](#declarationsservice-namedidjs). It offers a more idiomatic and type-safe TypeScript interface over the Candid JS bindings. Set the [`output.disableActor`](./core/api/type-aliases/GenerateOutputOptions.md#disableActor) option to `true` to skip generating this file.
 
 ## `index.ts`
 
-This file contains the `createActor` function that can be used to instantiate the Candid JS bindings generated in [`declarations/<service-name>.did.js`](#declarationsservice-namedidjs). Set the [`output.declarationsOnly`](./core/api/type-aliases/GenerateOutputOptions.md#declarationsOnly) option to `true` to skip generating this file.
+This file contains the `createActor` function that can be used to instantiate the Candid JS bindings generated in [`declarations/<service-name>.did.js`](#declarationsservice-namedidjs). Set the [`output.disableActor`](./core/api/type-aliases/GenerateOutputOptions.md#disableActor) option to `true` to skip generating this file.
 
 Here's an example of how to use the generated client:
 

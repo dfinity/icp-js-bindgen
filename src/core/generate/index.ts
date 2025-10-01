@@ -24,12 +24,12 @@ export type GenerateOutputOptions = {
    *
    * @default false
    */
-  declarationsOnly?: boolean;
+  disableActor?: boolean;
   /**
    * If `true`, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file.
    * Useful to add to LLMs' contexts' to give knowledge about what types are available in the service.
    *
-   * If `true`, {@link GenerateOutputOptions.declarationsOnly} must be `false`.
+   * If `true`, {@link GenerateOutputOptions.disableActor} must be `false`.
    *
    * @default false
    */
@@ -85,7 +85,7 @@ export async function generate(options: GenerateOptions) {
     didFile,
     outDir,
     output = {
-      declarationsOnly: false,
+      disableActor: false,
       interfaceFile: false,
     },
   } = options;
@@ -128,7 +128,7 @@ async function writeBindings({ bindings, outDir, outputFileName, output }: Write
   await writeFile(declarationsTsFile, declarationsTs);
   await writeFile(declarationsJsFile, declarationsJs);
 
-  if (output.declarationsOnly) {
+  if (output.disableActor) {
     return;
   }
 
@@ -152,7 +152,7 @@ async function writeIndex(outDir: string, outputFileName: string) {
 }
 
 function validateOptions(options: GenerateOptions) {
-  if (options.output?.declarationsOnly && options.output?.interfaceFile) {
-    throw new Error('Cannot generate an interface file when generating the declarations only');
+  if (options.output?.disableActor && options.output?.interfaceFile) {
+    throw new Error('Cannot generate an interface file when generating the actor is disabled');
   }
 }

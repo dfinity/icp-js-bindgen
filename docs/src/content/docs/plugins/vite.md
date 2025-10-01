@@ -48,7 +48,7 @@ The directory where the bindings will be written.
 
 Options for controlling the generated output files.
 
-##### `declarationsOnly`
+##### `disableActor`
 
 If `true`, only generates the declarations folder and skips generating the actor file (`index.ts`) and service wrapper file (`<service-name>.ts`).
 
@@ -59,7 +59,7 @@ If `true`, only generates the declarations folder and skips generating the actor
 If `true`, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file.
 Useful to add to LLMs' contexts' to give knowledge about what types are available in the service.
 
-> **Note**: If `true`, [`declarationsOnly`](#declarationsOnly) must be `false`.
+> **Note**: If `true`, [`disableActor`](#disableActor) must be `false`.
 
 #### `additionalFeatures`
 

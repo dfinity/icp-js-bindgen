@@ -41,7 +41,6 @@ npx @icp-sdk/bindgen --did-file ./canisters/hello_world.did --out-dir ./src/bind
 - `--did-file <path>`: Path to the `.did` file to generate bindings from
 - `--out-dir <dir>`: Directory where the bindings will be written
 - `--interface-declaration`: If set, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file.
-- `--declarations-only`: If set, only generates the declarations folder, skipping the actor file (`index.ts`) and service wrapper file (`<service-name>.ts`)
+- `--disable-actor`: If set, only generates the declarations folder, skipping the actor file (`index.ts`) and service wrapper file (`<service-name>.ts`)
 
 > **Note**: The CLI does not support additional features yet.
-> **Note**: If your `.did` file is located inside the output directory, it will be temporarily copied during generation to avoid being deleted.

@@ -61,7 +61,7 @@ describe('generate', () => {
       await generate({
         didFile,
         outDir: OUTPUT_DIR,
-        output: { declarationsOnly: true },
+        output: { disableActor: true },
       });
 
       await expectGeneratedDeclarations(SNAPSHOTS_DIR, serviceName);
@@ -80,9 +80,9 @@ describe('generate', () => {
         generate({
           didFile,
           outDir: OUTPUT_DIR,
-          output: { declarationsOnly: true, interfaceFile: true },
+          output: { disableActor: true, interfaceFile: true },
         }),
-      ).rejects.toThrow('Cannot generate an interface file when generating the declarations only');
+      ).rejects.toThrow('Cannot generate an interface file when generating the actor is disabled');
 
       expect(fileExists(`${OUTPUT_DIR}/${serviceName}/declarations/${serviceName}.did.d.ts`)).toBe(
         false,
