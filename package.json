@@ -2,6 +2,35 @@
   "name": "@icp-sdk/bindgen",
   "version": "0.1.0-beta.0",
   "description": "Generate TypeScript bindings for Candid",
+  "author": "DFINITY Stiftung <sdk@dfinity.org>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dfinity/icp-js-bindgen.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dfinity/icp-js-bindgen/issues"
+  },
+  "keywords": [
+    "internet computer",
+    "icp",
+    "bindgen",
+    "codegen",
+    "candid",
+    "did",
+    "bindings",
+    "typescript",
+    "javascript"
+  ],
+  "bin": {
+    "icp-bindgen": "./dist/esm/cli/icp-bindgen.js"
+  },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md",
+    "LICENSE"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -20,31 +49,21 @@
       "require": "./dist/cjs/plugins/vite.cjs"
     }
   },
-  "bin": {
-    "icp-bindgen": "./dist/esm/cli/icp-bindgen.js"
-  },
-  "files": [
-    "dist",
-    "package.json",
-    "README.md",
-    "LICENSE"
-  ],
   "scripts": {
     "build:wasm": "wasm-pack build ./src/core/generate/rs --target web --out-name icp-js-bindgen --out-dir ./dist ${RS_MODE_FLAG:---release} --no-pack",
-    "build": "pnpm build:wasm && pnpm vite build",
+    "build": "pnpm build:wasm && pnpm vite build && pnpm lint:package",
     "test": "vitest",
     "codestyle:check": "biome check",
-    "codestyle:fix": "biome check --write"
+    "codestyle:fix": "biome check --write",
+    "lint:package": "publint --strict"
   },
-  "keywords": [],
-  "author": "",
-  "license": "Apache-2.0",
   "packageManager": "pnpm@10.13.1",
   "devDependencies": {
     "@biomejs/biome": "2.2.4",
     "@tanstack/config": "^0.20.1",
     "@types/node": "^24.3.1",
     "memfs": "^4.39.0",
+    "publint": "^0.3.13",
     "vite": "^7.1.5",
     "vitest": "3.2.4",
     "wasm-pack": "^0.13.1"
