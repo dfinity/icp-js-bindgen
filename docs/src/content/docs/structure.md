@@ -22,11 +22,11 @@ This file contains the actual Candid JS bindings, that allow encoding and decodi
 
 ## `<service-name>.ts`
 
-This file contains the TypeScript wrapper for the Candid JS bindings generated in [`declarations/<service-name>.did.js`](#declarationsservice-namedidjs). It offers a more idiomatic and type-safe TypeScript interface over the Candid JS bindings.
+This file contains the TypeScript wrapper for the Candid JS bindings generated in [`declarations/<service-name>.did.js`](#declarationsservice-namedidjs). It offers a more idiomatic and type-safe TypeScript interface over the Candid JS bindings. Set the [`output.declarationsOnly`](./core/api/type-aliases/GenerateOutputOptions.md#declarationsOnly) option to `true` to skip generating this file.
 
 ## `index.ts`
 
-This file contains the `createActor` function that can be used to instantiate the Candid JS bindings generated in [`declarations/<service-name>.did.js`](#declarationsservice-namedidjs).
+This file contains the `createActor` function that can be used to instantiate the Candid JS bindings generated in [`declarations/<service-name>.did.js`](#declarationsservice-namedidjs). Set the [`output.declarationsOnly`](./core/api/type-aliases/GenerateOutputOptions.md#declarationsOnly) option to `true` to skip generating this file.
 
 Here's an example of how to use the generated client:
 
@@ -41,7 +41,7 @@ const greeting = await actor.greet('World');
 
 ### `<service-name>.d.ts`
 
-This file contains the same TypeScript types as [`<service-name>.ts`](#service-namets). It is typically used to add to LLMs' contexts' to give knowledge about what types are available in the service. Set the [`interfaceDeclaration`](./core/api/type-aliases/GenerateOptions.md#interfaceDeclaration) option to `true` to generate this file.
+This file contains the same TypeScript types as [`<service-name>.ts`](#service-namets). It is typically used to add to LLMs' contexts' to give knowledge about what types are available in the service. Set the [`output.interfaceFile`](./core/api/type-aliases/GenerateOutputOptions.md#interfaceFile) option to `true` to generate this file.
 
 ### `canister-env.d.ts`
 

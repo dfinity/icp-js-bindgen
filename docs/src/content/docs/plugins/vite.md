@@ -44,6 +44,23 @@ The path to the `.did` file to generate bindings from.
 
 The directory where the bindings will be written.
 
+#### `output`
+
+Options for controlling the generated output files.
+
+##### `declarationsOnly`
+
+If `true`, only generates the declarations folder and skips generating the actor file (`index.ts`) and service wrapper file (`<service-name>.ts`).
+
+> **Note**: If `true`, [`interfaceFile`](#interfaceFile) must be `false`.
+
+##### `interfaceFile`
+
+If `true`, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file.
+Useful to add to LLMs' contexts' to give knowledge about what types are available in the service.
+
+> **Note**: If `true`, [`declarationsOnly`](#declarationsOnly) must be `false`.
+
 #### `additionalFeatures`
 
 Additional features to generate bindings with.
