@@ -1,5 +1,9 @@
 ## Unreleased
 
+### Feat
+
+- output package version in generated bindings (#33)
+
 ## 0.1.0-beta.1 (2025-10-01)
 
 ## 0.1.0-beta.0 (2025-10-01)
