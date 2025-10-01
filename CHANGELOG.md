@@ -2,6 +2,7 @@
 
 ### Feat
 
+- merge the service wrapper file and the index file (#20)
 - `output` option (#16)
 - `interfaceDeclaration` flag (#11)
 - port bindgen code from candid_parser (#1)
