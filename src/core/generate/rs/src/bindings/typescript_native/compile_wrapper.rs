@@ -706,42 +706,12 @@ fn create_actor_method(
 }
 
 fn type_process_error_fn(module: &mut Module) {
-    let span = DUMMY_SP;
-
-    let type_declaration = TsTypeAliasDecl {
-        span,
-        declare: false,
-        id: Ident::new("ProcessErrorFn".into(), span, SyntaxContext::empty()),
-        type_params: None,
-        type_ann: Box::new(TsType::TsFnOrConstructorType(
-            TsFnOrConstructorType::TsFnType(TsFnType {
-                span,
-                params: vec![TsFnParam::Ident(BindingIdent {
-                    id: Ident::new("error".into(), span, SyntaxContext::empty()),
-                    type_ann: Some(Box::new(TsTypeAnn {
-                        span,
-                        type_ann: Box::new(TsType::TsKeywordType(TsKeywordType {
-                            span,
-                            kind: TsKeywordTypeKind::TsUnknownKeyword,
-                        })),
-                    })),
-                })],
-                type_params: None,
-                type_ann: Box::new(TsTypeAnn {
-                    span,
-                    type_ann: Box::new(TsType::TsKeywordType(TsKeywordType {
-                        span,
-                        kind: TsKeywordTypeKind::TsNeverKeyword,
-                    })),
-                }),
-            }),
-        )),
-    };
+    let type_declaration = super::preamble::actor::process_error_fn_type();
 
     module
         .body
         .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-            span,
+            span: DUMMY_SP,
             decl: Decl::TsTypeAlias(Box::new(type_declaration)),
         })));
 }
@@ -751,87 +721,7 @@ fn add_create_actor_exports(
     service_name: &str,
 ) {
     // CreateActorOptions interface
-    let create_actor_options_interface = TsInterfaceDecl {
-        span: DUMMY_SP,
-        id: Ident::new("CreateActorOptions".into(), DUMMY_SP, SyntaxContext::empty()),
-        declare: false,
-        type_params: None,
-        extends: vec![],
-        body: TsInterfaceBody {
-            span: DUMMY_SP,
-            body: vec![
-                TsTypeElement::TsPropertySignature(TsPropertySignature {
-                    span: DUMMY_SP,
-                    readonly: false,
-                    key: Box::new(Expr::Ident(Ident::new(
-                        "agent".into(),
-                        DUMMY_SP,
-                        SyntaxContext::empty(),
-                    ))),
-                    computed: false,
-                    optional: true,
-                    type_ann: Some(Box::new(TsTypeAnn {
-                        span: DUMMY_SP,
-                        type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
-                            span: DUMMY_SP,
-                            type_name: TsEntityName::Ident(Ident::new(
-                                "Agent".into(),
-                                DUMMY_SP,
-                                SyntaxContext::empty(),
-                            )),
-                            type_params: None,
-                        })),
-                    })),
-                }),
-                TsTypeElement::TsPropertySignature(TsPropertySignature {
-                    span: DUMMY_SP,
-                    readonly: false,
-                    key: Box::new(Expr::Ident(Ident::new(
-                        "agentOptions".into(),
-                        DUMMY_SP,
-                        SyntaxContext::empty(),
-                    ))),
-                    computed: false,
-                    optional: true,
-                    type_ann: Some(Box::new(TsTypeAnn {
-                        span: DUMMY_SP,
-                        type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
-                            span: DUMMY_SP,
-                            type_name: TsEntityName::Ident(Ident::new(
-                                "HttpAgentOptions".into(),
-                                DUMMY_SP,
-                                SyntaxContext::empty(),
-                            )),
-                            type_params: None,
-                        })),
-                    })),
-                }),
-                TsTypeElement::TsPropertySignature(TsPropertySignature {
-                    span: DUMMY_SP,
-                    readonly: false,
-                    key: Box::new(Expr::Ident(Ident::new(
-                        "actorOptions".into(),
-                        DUMMY_SP,
-                        SyntaxContext::empty(),
-                    ))),
-                    computed: false,
-                    optional: true,
-                    type_ann: Some(Box::new(TsTypeAnn {
-                        span: DUMMY_SP,
-                        type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
-                            span: DUMMY_SP,
-                            type_name: TsEntityName::Ident(Ident::new(
-                                "ActorConfig".into(),
-                                DUMMY_SP,
-                                SyntaxContext::empty(),
-                            )),
-                            type_params: None,
-                        })),
-                    })),
-                }),
-            ],
-        },
-    };
+    let create_actor_options_interface = super::preamble::actor::create_actor_options_interface();
 
     module
         .body
