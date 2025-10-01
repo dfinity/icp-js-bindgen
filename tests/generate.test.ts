@@ -153,6 +153,54 @@ describe('generate', () => {
       `${SNAPSHOTS_DIR}/${helloWorldServiceName}/canister-env.d.ts.snapshot`,
     );
   });
+
+  it('should clean the output directory if clean is true', async () => {
+    const helloWorldServiceName = 'hello_world';
+    const helloWorldDidFile = `${TESTS_ASSETS_DIR}/${helloWorldServiceName}.did`;
+
+    // Add a file to the output directory, and assert that it is cleaned
+    vol.mkdirSync(OUTPUT_DIR, { recursive: true });
+    vol.writeFileSync(`${OUTPUT_DIR}/other.txt`, 'other', { encoding: 'utf-8' });
+    expect(fileExists(`${OUTPUT_DIR}/other.txt`)).toBe(true);
+
+    // Test with clean default
+    await generate({
+      didFile: helloWorldDidFile,
+      outDir: OUTPUT_DIR,
+    });
+
+    await expectGeneratedOutput(SNAPSHOTS_DIR, helloWorldServiceName);
+    expect(fileExists(`${OUTPUT_DIR}/other.txt`)).toBe(false);
+
+    // Test with clean explicitly set to true
+    await generate({
+      didFile: helloWorldDidFile,
+      outDir: OUTPUT_DIR,
+      output: { clean: true },
+    });
+
+    await expectGeneratedOutput(SNAPSHOTS_DIR, helloWorldServiceName);
+    expect(fileExists(`${OUTPUT_DIR}/other.txt`)).toBe(false);
+  });
+
+  it('should not clean the output directory if clean is false', async () => {
+    const helloWorldServiceName = 'hello_world';
+    const helloWorldDidFile = `${TESTS_ASSETS_DIR}/${helloWorldServiceName}.did`;
+
+    // Add a file to the output directory, and assert that it is not cleaned
+    vol.mkdirSync(OUTPUT_DIR, { recursive: true });
+    vol.writeFileSync(`${OUTPUT_DIR}/other.txt`, 'other', { encoding: 'utf-8' });
+    expect(fileExists(`${OUTPUT_DIR}/other.txt`)).toBe(true);
+
+    await generate({
+      didFile: helloWorldDidFile,
+      outDir: OUTPUT_DIR,
+      output: { clean: false },
+    });
+
+    await expectGeneratedOutput(SNAPSHOTS_DIR, helloWorldServiceName);
+    expect(fileExists(`${OUTPUT_DIR}/other.txt`)).toBe(true);
+  });
 });
 
 async function readFileFromOutput(path: string): Promise<string> {

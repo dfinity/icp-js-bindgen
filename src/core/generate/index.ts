@@ -17,6 +17,12 @@ const DID_FILE_EXTENSION = '.did';
  */
 export type GenerateOutputOptions = {
   /**
+   * It `true`, cleans the output directory before generating the bindings.
+   *
+   * @default true
+   */
+  clean?: boolean;
+  /**
    * Options for controlling the generated actor files.
    */
   actor?:
@@ -89,6 +95,7 @@ export async function generate(options: GenerateOptions) {
     didFile,
     outDir,
     output = {
+      clean: true,
       actor: {
         disabled: false,
         interfaceFile: false,
@@ -100,7 +107,9 @@ export async function generate(options: GenerateOptions) {
   const outputFileName = basename(didFile, DID_FILE_EXTENSION);
 
   await ensureDir(outDir);
-  await emptyDirWithFilter(outDir, (path) => !path.endsWith(DID_FILE_EXTENSION));
+  if (output.clean) {
+    await emptyDirWithFilter(outDir, (path) => !path.endsWith(DID_FILE_EXTENSION));
+  }
   await ensureDir(resolve(outDir, 'declarations'));
 
   const result = wasmGenerate(didFilePath, outputFileName);
