@@ -69,7 +69,7 @@ jobs:
           ref: icp-pages
           path: icp-pages
 
-      - name: Assemble docs
+      - name: Assemble docs for version ${{ steps.ver.outputs.major_minor_version }}
         uses: dfinity/ci-tools/actions/assemble-docs@main
         with:
           assets_dir: 'docs/dist/${{ steps.ver.outputs.major_minor_version }}'
@@ -78,7 +78,7 @@ jobs:
           version_label: ${{ steps.ver.outputs.major_minor_version }}
           version_in_title: ${{ steps.ver.outputs.major_minor_patch_version }}
 
-      - name: Assemble docs
+      - name: Assemble docs for version latest
         uses: dfinity/ci-tools/actions/assemble-docs@main
         with:
           assets_dir: 'docs/dist/latest'
