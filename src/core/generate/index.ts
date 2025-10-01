@@ -17,23 +17,29 @@ const DID_FILE_EXTENSION = '.did';
  */
 export type GenerateOutputOptions = {
   /**
-   * If `true`, only generates the declarations folder.
-   * Skips generating the actor file (`index.ts`) and service wrapper file (`<service-name>.ts`).
-   *
-   * If `true`, {@link GenerateOutputOptions.interfaceFile} must be `false`.
-   *
-   * @default false
+   * Options for controlling the generated `index.ts` and `<service-name>.ts` files.
    */
-  disableActor?: boolean;
-  /**
-   * If `true`, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file.
-   * Useful to add to LLMs' contexts' to give knowledge about what types are available in the service.
-   *
-   * If `true`, {@link GenerateOutputOptions.disableActor} must be `false`.
-   *
-   * @default false
-   */
-  interfaceFile?: boolean;
+  actor?:
+    | {
+        /**
+         * If `true`, skips generating the actor file (`index.ts`) and service wrapper file (`<service-name>.ts`).
+         *
+         * @default false
+         */
+        disabled: true;
+      }
+    | {
+        disabled?: false;
+        /**
+         * If `true`, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file.
+         * Useful to add to LLMs' contexts' to give knowledge about what types are available in the service.
+         *
+         * Has no effect if `disabled` is `true`.
+         *
+         * @default false
+         */
+        interfaceFile?: boolean;
+      };
 };
 
 /**
@@ -79,14 +85,14 @@ export type GenerateOptions = {
 export async function generate(options: GenerateOptions) {
   await wasmInit();
 
-  validateOptions(options);
-
   const {
     didFile,
     outDir,
     output = {
-      disableActor: false,
-      interfaceFile: false,
+      actor: {
+        disabled: false,
+        interfaceFile: false,
+      },
     },
   } = options;
 
@@ -128,7 +134,7 @@ async function writeBindings({ bindings, outDir, outputFileName, output }: Write
   await writeFile(declarationsTsFile, declarationsTs);
   await writeFile(declarationsJsFile, declarationsJs);
 
-  if (output.disableActor) {
+  if (output.actor?.disabled) {
     return;
   }
 
@@ -137,7 +143,7 @@ async function writeBindings({ bindings, outDir, outputFileName, output }: Write
   await writeFile(serviceTsFile, serviceTs);
   await writeIndex(outDir, outputFileName);
 
-  if (output.interfaceFile) {
+  if (output.actor?.interfaceFile) {
     const interfaceTsFile = resolve(outDir, `${outputFileName}.d.ts`);
     const interfaceTs = prepareBinding(bindings.interface_ts);
     await writeFile(interfaceTsFile, interfaceTs);
@@ -149,10 +155,4 @@ async function writeIndex(outDir: string, outputFileName: string) {
 
   const index = indexBinding(outputFileName);
   await writeFile(indexFile, index);
-}
-
-function validateOptions(options: GenerateOptions) {
-  if (options.output?.disableActor && options.output?.interfaceFile) {
-    throw new Error('Cannot generate an interface file when generating the actor is disabled');
-  }
 }

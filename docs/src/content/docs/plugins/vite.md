@@ -48,18 +48,16 @@ The directory where the bindings will be written.
 
 Options for controlling the generated output files.
 
-##### `disableActor`
+##### `actor.disabled`
 
-If `true`, only generates the declarations folder and skips generating the actor file (`index.ts`) and service wrapper file (`<service-name>.ts`).
+If `true`, skips generating the actor file (`index.ts`) and service wrapper file (`<service-name>.ts`).
 
-> **Note**: If `true`, [`interfaceFile`](#interfaceFile) must be `false`.
-
-##### `interfaceFile`
+##### `actor.interfaceFile`
 
 If `true`, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file.
 Useful to add to LLMs' contexts' to give knowledge about what types are available in the service.
 
-> **Note**: If `true`, [`disableActor`](#disableActor) must be `false`.
+> **Note**: Has no effect if `actor.disabled` is `true`.
 
 #### `additionalFeatures`
 

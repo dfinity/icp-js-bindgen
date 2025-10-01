@@ -41,7 +41,7 @@ describe('generate', () => {
       await generate({
         didFile,
         outDir: OUTPUT_DIR,
-        output: { interfaceFile: true },
+        output: { actor: { interfaceFile: true } },
       });
 
       await expectGeneratedOutput(SNAPSHOTS_DIR, serviceName);
@@ -61,7 +61,7 @@ describe('generate', () => {
       await generate({
         didFile,
         outDir: OUTPUT_DIR,
-        output: { disableActor: true },
+        output: { actor: { disabled: true } },
       });
 
       await expectGeneratedDeclarations(SNAPSHOTS_DIR, serviceName);
@@ -72,24 +72,26 @@ describe('generate', () => {
   );
 
   it.each(['hello_world', 'example'])(
-    'should throw when generating an interface file with declarations only',
+    'should ignore other options when generating a bindgen with actor disabled',
     async (serviceName) => {
       const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 
-      await expect(
-        generate({
-          didFile,
-          outDir: OUTPUT_DIR,
-          output: { disableActor: true, interfaceFile: true },
-        }),
-      ).rejects.toThrow('Cannot generate an interface file when generating the actor is disabled');
+      await generate({
+        didFile,
+        outDir: OUTPUT_DIR,
+        output: {
+          actor: {
+            disabled: true,
+            // @ts-expect-error - the interface does not allow this, but we want to test that it is ignored at runtime
+            interfaceFile: true,
+          },
+        },
+      });
 
-      expect(fileExists(`${OUTPUT_DIR}/${serviceName}/declarations/${serviceName}.did.d.ts`)).toBe(
-        false,
-      );
-      expect(fileExists(`${OUTPUT_DIR}/${serviceName}/declarations/${serviceName}.did.js`)).toBe(
-        false,
-      );
+      await expectGeneratedDeclarations(SNAPSHOTS_DIR, serviceName);
+      expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.d.ts`)).toBe(false);
+      expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.ts`)).toBe(false);
+      expect(fileExists(`${OUTPUT_DIR}/${serviceName}/index.ts`)).toBe(false);
     },
   );
 
