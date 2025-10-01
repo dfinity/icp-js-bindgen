@@ -5,7 +5,7 @@ import { testWasmInit } from './utils/wasm.ts';
 
 const BIN_FILE = packageJson.bin['icp-bindgen'];
 
-const SNAPSHOTS_DIR = './assets/snapshots/cli';
+const SNAPSHOTS_DIR = './snapshots/cli';
 
 beforeAll(async () => {
   await testWasmInit();
