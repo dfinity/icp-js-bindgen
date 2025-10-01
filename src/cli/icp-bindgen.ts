@@ -14,14 +14,24 @@ const CLI_NAME = 'icp-bindgen';
 type Args = {
   didFile: string;
   outDir: string;
-  interfaceDeclaration?: boolean;
+  actorInterfaceFile?: boolean;
+  actorDisabled?: boolean;
 };
 
 async function run(args: Args) {
-  const { didFile, outDir, interfaceDeclaration } = args;
+  const { didFile, outDir, actorInterfaceFile, actorDisabled } = args;
 
   console.log(cyan(`[${CLI_NAME}] Generating bindings...`));
-  await generate({ didFile, outDir, interfaceDeclaration });
+  await generate({
+    didFile,
+    outDir,
+    output: {
+      actor: {
+        disabled: actorDisabled,
+        interfaceFile: actorInterfaceFile,
+      },
+    },
+  });
   console.log(cyan(`[${CLI_NAME}] Generated bindings successfully at`), green(outDir));
 }
 
@@ -36,8 +46,14 @@ program
   .requiredOption('--did-file <path>', 'Path to the .did file to generate bindings from')
   .requiredOption('--out-dir <dir>', 'Directory where the bindings will be written')
   .option(
-    '--interface-declaration',
-    'If set, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file.',
+    '--actor-disabled',
+    'If set, only generates the declarations folder, skipping the actor file (index.ts) and service wrapper file (<service-name>.ts).',
+    false,
+  )
+  .option(
+    '--actor-interface-file',
+    'If set, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file. Has no effect if `--actor-disabled` is set.',
+    false,
   )
   .action(run);
 

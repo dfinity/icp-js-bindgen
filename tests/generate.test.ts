@@ -38,7 +38,11 @@ describe('generate', () => {
     async (serviceName) => {
       const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 
-      await generate({ didFile, outDir: OUTPUT_DIR, interfaceDeclaration: true });
+      await generate({
+        didFile,
+        outDir: OUTPUT_DIR,
+        output: { actor: { interfaceFile: true } },
+      });
 
       await expectGeneratedOutput(SNAPSHOTS_DIR, serviceName);
 
@@ -48,6 +52,79 @@ describe('generate', () => {
       );
     },
   );
+
+  it.each(['hello_world', 'example'])(
+    'should generate a bindgen with declarations only',
+    async (serviceName) => {
+      const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+
+      await generate({
+        didFile,
+        outDir: OUTPUT_DIR,
+        output: { actor: { disabled: true } },
+      });
+
+      await expectGeneratedDeclarations(SNAPSHOTS_DIR, serviceName);
+      expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.d.ts`)).toBe(false);
+      expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.ts`)).toBe(false);
+      expect(fileExists(`${OUTPUT_DIR}/${serviceName}/index.ts`)).toBe(false);
+    },
+  );
+
+  it.each(['hello_world', 'example'])(
+    'should ignore other options when generating a bindgen with actor disabled',
+    async (serviceName) => {
+      const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+
+      await generate({
+        didFile,
+        outDir: OUTPUT_DIR,
+        output: {
+          actor: {
+            disabled: true,
+            // @ts-expect-error - the interface does not allow this, but we want to test that it is ignored at runtime
+            interfaceFile: true,
+          },
+        },
+      });
+
+      await expectGeneratedDeclarations(SNAPSHOTS_DIR, serviceName);
+      expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.d.ts`)).toBe(false);
+      expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.ts`)).toBe(false);
+      expect(fileExists(`${OUTPUT_DIR}/${serviceName}/index.ts`)).toBe(false);
+    },
+  );
+
+  it('should preserve the .did file', async () => {
+    const { readFile: realReadFile } =
+      await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+
+    const serviceName = 'hello_world';
+    const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+    const originalDidFileContent = await realReadFile(didFile, 'utf-8');
+
+    // We simulate a .did file in the output directory
+    const didFilePath = `${OUTPUT_DIR}/${serviceName}.did`;
+    vol.mkdirSync(OUTPUT_DIR, { recursive: true });
+    vol.writeFileSync(didFilePath, originalDidFileContent, { encoding: 'utf-8' });
+    // We also add another (unused) .did file to check that all of them are preserved
+    const otherDidFilePath = `${OUTPUT_DIR}/other.did`;
+    vol.writeFileSync(otherDidFilePath, 'other', { encoding: 'utf-8' });
+
+    // Assert before and after the generation
+    expect(fileExists(didFilePath)).toBe(true);
+    expect(fileExists(otherDidFilePath)).toBe(true);
+
+    await generate({
+      // We must use the file that exists in the real filesystem
+      // because wasm reads from the real filesystem
+      didFile,
+      outDir: OUTPUT_DIR,
+    });
+
+    expect(fileExists(didFilePath)).toBe(true);
+    expect(fileExists(otherDidFilePath)).toBe(true);
+  });
 
   it('should generate a bindgen with canister env feature', async () => {
     const helloWorldServiceName = 'hello_world';
@@ -78,7 +155,10 @@ function fileExists(path: string): boolean {
   return vol.existsSync(path);
 }
 
-async function expectGeneratedOutput(snapshotsDir: string, serviceName: string): Promise<void> {
+async function expectGeneratedDeclarations(
+  snapshotsDir: string,
+  serviceName: string,
+): Promise<void> {
   const generatedOutputDir = join(snapshotsDir, serviceName);
   const generatedOutputDeclarationsDir = join(generatedOutputDir, 'declarations');
 
@@ -91,6 +171,12 @@ async function expectGeneratedOutput(snapshotsDir: string, serviceName: string):
   await expect(declarationsTs).toMatchFileSnapshot(
     `${generatedOutputDeclarationsDir}/${serviceName}.did.d.ts.snapshot`,
   );
+}
+
+async function expectGeneratedOutput(snapshotsDir: string, serviceName: string): Promise<void> {
+  const generatedOutputDir = join(snapshotsDir, serviceName);
+
+  await expectGeneratedDeclarations(snapshotsDir, serviceName);
 
   const serviceTs = await readFileFromOutput(`${serviceName}.ts`);
   await expect(serviceTs).toMatchFileSnapshot(`${generatedOutputDir}/${serviceName}.ts.snapshot`);

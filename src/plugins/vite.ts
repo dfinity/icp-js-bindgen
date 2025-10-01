@@ -53,6 +53,7 @@ export function icpBindgen(options: Options): Plugin {
       await generate({
         didFile: options.didFile,
         outDir: options.outDir,
+        output: options.output,
         additionalFeatures: options.additionalFeatures,
       });
 

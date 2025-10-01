@@ -5,13 +5,46 @@ import {
   type GenerateAdditionalFeaturesOptions,
   generateAdditionalFeatures,
 } from './features/index.ts';
-import { emptyDir, ensureDir } from './fs.ts';
+import { emptyDirWithFilter, ensureDir } from './fs.ts';
 import { type WasmGenerateResult, wasmGenerate, wasmInit } from './rs.ts';
 
 export type { GenerateAdditionalFeaturesOptions } from './features/index.ts';
 
 const DID_FILE_EXTENSION = '.did';
 
+/**
+ * Options for controlling the generated output files.
+ */
+export type GenerateOutputOptions = {
+  /**
+   * Options for controlling the generated `index.ts` and `<service-name>.ts` files.
+   */
+  actor?:
+    | {
+        /**
+         * If `true`, skips generating the actor file (`index.ts`) and service wrapper file (`<service-name>.ts`).
+         *
+         * @default false
+         */
+        disabled: true;
+      }
+    | {
+        disabled?: false;
+        /**
+         * If `true`, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file.
+         * Useful to add to LLMs' contexts' to give knowledge about what types are available in the service.
+         *
+         * Has no effect if `disabled` is `true`.
+         *
+         * @default false
+         */
+        interfaceFile?: boolean;
+      };
+};
+
+/**
+ * Options for the {@link generate} function.
+ */
 export type GenerateOptions = {
   /**
    * The path to the `.did` file.
@@ -22,12 +55,9 @@ export type GenerateOptions = {
    */
   outDir: string;
   /**
-   * If `true`, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file.
-   * Useful to add to LLMs' contexts' to give knowledge about what types are available in the service.
-   *
-   * @default false
+   * Options for controlling the generated output files.
    */
-  interfaceDeclaration?: boolean;
+  output?: GenerateOutputOptions;
   /**
    * Additional features to generate bindings with.
    */
@@ -55,12 +85,22 @@ export type GenerateOptions = {
 export async function generate(options: GenerateOptions) {
   await wasmInit();
 
-  const { didFile, outDir, interfaceDeclaration = false } = options;
+  const {
+    didFile,
+    outDir,
+    output = {
+      actor: {
+        disabled: false,
+        interfaceFile: false,
+      },
+    },
+  } = options;
+
   const didFilePath = resolve(didFile);
   const outputFileName = basename(didFile, DID_FILE_EXTENSION);
 
-  await emptyDir(outDir);
   await ensureDir(outDir);
+  await emptyDirWithFilter(outDir, (path) => !path.endsWith(DID_FILE_EXTENSION));
   await ensureDir(resolve(outDir, 'declarations'));
 
   const result = wasmGenerate(didFilePath, outputFileName);
@@ -69,42 +109,41 @@ export async function generate(options: GenerateOptions) {
     bindings: result,
     outDir,
     outputFileName,
-    interfaceDeclaration,
+    output,
   });
 
   if (options.additionalFeatures) {
     await generateAdditionalFeatures(options.additionalFeatures, options.outDir);
   }
-
-  await writeIndex(outDir, outputFileName);
 }
 
 type WriteBindingsOptions = {
   bindings: WasmGenerateResult;
   outDir: string;
   outputFileName: string;
-  interfaceDeclaration: boolean;
+  output: GenerateOutputOptions;
 };
 
-async function writeBindings({
-  bindings,
-  outDir,
-  outputFileName,
-  interfaceDeclaration,
-}: WriteBindingsOptions) {
+async function writeBindings({ bindings, outDir, outputFileName, output }: WriteBindingsOptions) {
   const declarationsTsFile = resolve(outDir, 'declarations', `${outputFileName}.did.d.ts`);
   const declarationsJsFile = resolve(outDir, 'declarations', `${outputFileName}.did.js`);
-  const serviceTsFile = resolve(outDir, `${outputFileName}.ts`);
 
   const declarationsTs = prepareBinding(bindings.declarations_ts);
   const declarationsJs = prepareBinding(bindings.declarations_js);
-  const serviceTs = prepareBinding(bindings.service_ts);
 
   await writeFile(declarationsTsFile, declarationsTs);
   await writeFile(declarationsJsFile, declarationsJs);
-  await writeFile(serviceTsFile, serviceTs);
 
-  if (interfaceDeclaration) {
+  if (output.actor?.disabled) {
+    return;
+  }
+
+  const serviceTsFile = resolve(outDir, `${outputFileName}.ts`);
+  const serviceTs = prepareBinding(bindings.service_ts);
+  await writeFile(serviceTsFile, serviceTs);
+  await writeIndex(outDir, outputFileName);
+
+  if (output.actor?.interfaceFile) {
     const interfaceTsFile = resolve(outDir, `${outputFileName}.d.ts`);
     const interfaceTs = prepareBinding(bindings.interface_ts);
     await writeFile(interfaceTsFile, interfaceTs);
