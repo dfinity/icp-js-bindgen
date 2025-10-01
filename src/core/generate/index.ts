@@ -1,11 +1,10 @@
-import { writeFile } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
 import { prepareBinding } from './bindings.ts';
 import {
   type GenerateAdditionalFeaturesOptions,
   generateAdditionalFeatures,
 } from './features/index.ts';
-import { emptyDirWithFilter, ensureDir } from './fs.ts';
+import { ensureDir, writeFileSafe } from './fs.ts';
 import { type WasmGenerateResult, wasmGenerate, wasmInit } from './rs.ts';
 
 export type { GenerateAdditionalFeaturesOptions } from './features/index.ts';
@@ -16,6 +15,12 @@ const DID_FILE_EXTENSION = '.did';
  * Options for controlling the generated output files.
  */
 export type GenerateOutputOptions = {
+  /**
+   * If `true`, overwrite existing files. If `false`, abort on collisions.
+   *
+   * @default false
+   */
+  force?: boolean;
   /**
    * Options for controlling the generated actor files.
    */
@@ -89,18 +94,19 @@ export async function generate(options: GenerateOptions) {
     didFile,
     outDir,
     output = {
+      force: false,
       actor: {
         disabled: false,
         interfaceFile: false,
       },
     },
   } = options;
+  const force = Boolean(output.force); // ensure force is a boolean
 
   const didFilePath = resolve(didFile);
   const outputFileName = basename(didFile, DID_FILE_EXTENSION);
 
   await ensureDir(outDir);
-  await emptyDirWithFilter(outDir, (path) => !path.endsWith(DID_FILE_EXTENSION));
   await ensureDir(resolve(outDir, 'declarations'));
 
   const result = wasmGenerate(didFilePath, outputFileName);
@@ -110,10 +116,11 @@ export async function generate(options: GenerateOptions) {
     outDir,
     outputFileName,
     output,
+    force,
   });
 
   if (options.additionalFeatures) {
-    await generateAdditionalFeatures(options.additionalFeatures, options.outDir);
+    await generateAdditionalFeatures(options.additionalFeatures, options.outDir, force);
   }
 }
 
@@ -122,17 +129,24 @@ type WriteBindingsOptions = {
   outDir: string;
   outputFileName: string;
   output: GenerateOutputOptions;
+  force: boolean;
 };
 
-async function writeBindings({ bindings, outDir, outputFileName, output }: WriteBindingsOptions) {
+async function writeBindings({
+  bindings,
+  outDir,
+  outputFileName,
+  output,
+  force,
+}: WriteBindingsOptions) {
   const declarationsTsFile = resolve(outDir, 'declarations', `${outputFileName}.did.d.ts`);
   const declarationsJsFile = resolve(outDir, 'declarations', `${outputFileName}.did.js`);
 
   const declarationsTs = prepareBinding(bindings.declarations_ts);
   const declarationsJs = prepareBinding(bindings.declarations_js);
 
-  await writeFile(declarationsTsFile, declarationsTs);
-  await writeFile(declarationsJsFile, declarationsJs);
+  await writeFileSafe(declarationsTsFile, declarationsTs, force);
+  await writeFileSafe(declarationsJsFile, declarationsJs, force);
 
   if (output.actor?.disabled) {
     return;
@@ -140,11 +154,11 @@ async function writeBindings({ bindings, outDir, outputFileName, output }: Write
 
   const serviceTsFile = resolve(outDir, `${outputFileName}.ts`);
   const serviceTs = prepareBinding(bindings.service_ts);
-  await writeFile(serviceTsFile, serviceTs);
+  await writeFileSafe(serviceTsFile, serviceTs, force);
 
   if (output.actor?.interfaceFile) {
     const interfaceTsFile = resolve(outDir, `${outputFileName}.d.ts`);
     const interfaceTs = prepareBinding(bindings.interface_ts);
-    await writeFile(interfaceTsFile, interfaceTs);
+    await writeFileSafe(interfaceTsFile, interfaceTs, force);
   }
 }

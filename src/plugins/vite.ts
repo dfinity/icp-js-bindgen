@@ -1,13 +1,21 @@
-import type { Plugin } from 'vite';
-import { type GenerateOptions, generate } from '../core/generate/index.ts';
+import { resolve } from 'node:path';
+import type { Plugin, ViteDevServer } from 'vite';
+import {
+  type GenerateOptions,
+  type GenerateOutputOptions,
+  generate,
+} from '../core/generate/index.ts';
 import { VITE_PLUGIN_NAME } from './utils/constants.ts';
 import { cyan, green } from './utils/log.ts';
-import { watchDidFileChanges } from './utils/watch.ts';
 
 /**
  * Options for the Vite plugin.
  */
-export interface Options extends GenerateOptions {
+export interface Options extends Omit<GenerateOptions, 'output'> {
+  /**
+   * Options for controlling the generated output files.
+   */
+  output?: Omit<GenerateOutputOptions, 'force'>;
   /**
    * Disables watching for changes in the `.did` file when using the dev server.
    *
@@ -48,19 +56,7 @@ export function icpBindgen(options: Options): Plugin {
   return {
     name: VITE_PLUGIN_NAME,
     async buildStart() {
-      console.log(cyan(`[${VITE_PLUGIN_NAME}] Generating bindings...`));
-
-      await generate({
-        didFile: options.didFile,
-        outDir: options.outDir,
-        output: options.output,
-        additionalFeatures: options.additionalFeatures,
-      });
-
-      console.log(
-        cyan(`[${VITE_PLUGIN_NAME}] Generated bindings successfully at`),
-        green(options.outDir),
-      );
+      await run(options);
     },
     configureServer(server) {
       if (!options.disableWatch) {
@@ -69,4 +65,35 @@ export function icpBindgen(options: Options): Plugin {
     },
     sharedDuringBuild: true,
   };
+}
+
+function watchDidFileChanges(server: ViteDevServer, options: Options) {
+  const didFilePath = resolve(options.didFile);
+
+  server.watcher.add(didFilePath);
+  server.watcher.on('change', async (changedPath) => {
+    if (resolve(changedPath) === resolve(didFilePath)) {
+      await run(options);
+    }
+  });
+}
+
+async function run(options: Options) {
+  console.log(cyan(`[${VITE_PLUGIN_NAME}] Generating bindings...`));
+
+  await generate({
+    didFile: options.didFile,
+    outDir: options.outDir,
+    output: {
+      ...options.output,
+      // We want to overwrite existing files in the build process
+      force: true,
+    },
+    additionalFeatures: options.additionalFeatures,
+  });
+
+  console.log(
+    cyan(`[${VITE_PLUGIN_NAME}] Generated bindings successfully at`),
+    green(options.outDir),
+  );
 }

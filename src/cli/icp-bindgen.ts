@@ -10,16 +10,18 @@ type Args = {
   outDir: string;
   actorInterfaceFile?: boolean;
   actorDisabled?: boolean;
+  force?: boolean;
 };
 
 async function run(args: Args) {
-  const { didFile, outDir, actorInterfaceFile, actorDisabled } = args;
+  const { didFile, outDir, actorInterfaceFile, actorDisabled, force } = args;
 
   console.log(cyan(`[${BIN_NAME}] Generating bindings...`));
   await generate({
     didFile,
     outDir,
     output: {
+      force,
       actor: {
         disabled: actorDisabled,
         interfaceFile: actorInterfaceFile,
@@ -45,6 +47,7 @@ program
     'If set, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file. Has no effect if `--actor-disabled` is set.',
     false,
   )
+  .option('--force', 'If set, overwrite existing files instead of aborting.', false)
   .action(run);
 
 program.parseAsync(process.argv).catch((error) => {

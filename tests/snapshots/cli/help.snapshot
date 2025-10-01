@@ -12,4 +12,6 @@ Options:
                           contains the same types of the `<service-name>.ts`
                           file. Has no effect if `--actor-disabled` is set.
                           (default: false)
+  --force                 If set, overwrite existing files instead of aborting.
+                          (default: false)
   -h, --help              display help for command

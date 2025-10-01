@@ -153,6 +153,75 @@ describe('generate', () => {
       `${SNAPSHOTS_DIR}/${helloWorldServiceName}/canister-env.d.ts.snapshot`,
     );
   });
+
+  it('should abort on existing files unless output.force is true', async () => {
+    const serviceName = 'hello_world';
+    const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+
+    // Pre-create a conflicting declarations file
+    vol.mkdirSync(`${OUTPUT_DIR}/declarations`, { recursive: true });
+    vol.writeFileSync(`${OUTPUT_DIR}/declarations/${serviceName}.did.d.ts`, '// existing', {
+      encoding: 'utf-8',
+    });
+
+    await expect(
+      generate({
+        didFile,
+        outDir: OUTPUT_DIR,
+      }),
+    ).rejects.toThrow(
+      new RegExp(
+        `The generated file already exists: .*declarations\\/${serviceName}\\.did\\.d\\.ts. To overwrite it, use the \`force\` option.`,
+        'i',
+      ),
+    );
+
+    // With force, it should overwrite and succeed
+    await expect(
+      generate({
+        didFile,
+        outDir: OUTPUT_DIR,
+        output: { force: true },
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('should abort feature file write on collision unless output.force is true', async () => {
+    const serviceName = 'example';
+    const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+
+    // Pre-create canister-env to trigger collision in additional features
+    vol.mkdirSync(OUTPUT_DIR, { recursive: true });
+    vol.writeFileSync(`${OUTPUT_DIR}/canister-env.d.ts`, '// existing', { encoding: 'utf-8' });
+
+    await expect(
+      generate({
+        didFile,
+        outDir: OUTPUT_DIR,
+        additionalFeatures: {
+          canisterEnv: {
+            variableNames: ['IC_CANISTER_ID:backend'],
+          },
+        },
+      }),
+    ).rejects.toThrow(
+      /The generated file already exists: .*canister-env\.d\.ts. To overwrite it, use the `force` option./i,
+    );
+
+    // With force, it should overwrite and succeed
+    await expect(
+      generate({
+        didFile,
+        outDir: OUTPUT_DIR,
+        output: { force: true },
+        additionalFeatures: {
+          canisterEnv: {
+            variableNames: ['IC_CANISTER_ID:backend'],
+          },
+        },
+      }),
+    ).resolves.toBeUndefined();
+  });
 });
 
 async function readFileFromOutput(path: string): Promise<string> {
