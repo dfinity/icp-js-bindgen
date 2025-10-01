@@ -48,6 +48,10 @@ The directory where the bindings will be written.
 
 Options for controlling the generated output files.
 
+##### `clean`
+
+If `true`, cleans the output directory before generating the bindings.
+
 ##### `actor.disabled`
 
 If `true`, skips generating the actor file (`<service-name>.ts`).
