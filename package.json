@@ -35,7 +35,10 @@
   "types": "./dist/esm/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/esm/index.d.ts",
+      "types": {
+        "import": "./dist/esm/index.d.ts",
+        "require": "./dist/cjs/index.d.cts"
+      },
       "import": "./dist/esm/index.js",
       "require": "./dist/cjs/index.cjs"
     },
