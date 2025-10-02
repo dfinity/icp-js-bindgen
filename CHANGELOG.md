@@ -1,3 +1,9 @@
+## Unreleased
+
+### Fix
+
+- use interface in type declarations (#51)
+
 ## 0.1.0-beta.3 (2025-10-02)
 
 ### Fix
