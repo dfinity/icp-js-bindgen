@@ -47,7 +47,7 @@ pub fn is_recursive_optional(
 pub fn create_interface_from_service(
     top_level_nodes: &mut TopLevelNodes,
     env: &TypeEnv,
-    id: &str,
+    service_name: &str,
     syntax: Option<&IDLType>,
     serv: &[(String, Type)],
 ) -> TsInterfaceDecl {
@@ -90,7 +90,7 @@ pub fn create_interface_from_service(
     TsInterfaceDecl {
         span: DUMMY_SP,
         declare: false,
-        id: get_ident_guarded(&format!("{}Interface", id)),
+        id: service_interface_ident(service_name),
         type_params: None,
         extends: vec![],
         body: TsInterfaceBody {
@@ -701,8 +701,8 @@ pub fn add_type_definitions(
                 TypeInner::Var(inner_id) => {
                     let inner_type = env.rec_find_type(inner_id).unwrap();
                     let inner_name = match inner_type.as_ref() {
-                        TypeInner::Service(_) => format!("{}Interface", inner_id),
-                        _ => inner_id.as_str().to_string(),
+                        TypeInner::Service(_) => service_interface_ident(inner_id.as_str()),
+                        _ => get_ident_guarded(inner_id.as_str()),
                     };
                     let type_alias = TsTypeAliasDecl {
                         span: DUMMY_SP,
@@ -711,7 +711,7 @@ pub fn add_type_definitions(
                         type_params: None,
                         type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
                             span: DUMMY_SP,
-                            type_name: TsEntityName::Ident(get_ident_guarded(&inner_name)),
+                            type_name: TsEntityName::Ident(inner_name),
                             type_params: None,
                         })),
                     };
@@ -1102,4 +1102,8 @@ fn create_function_type_ref() -> TsType {
         })
         .collect(),
     })
+}
+
+pub fn service_interface_ident(service_name: &str) -> Ident {
+    get_ident_guarded(&format!("{}Interface", service_name))
 }

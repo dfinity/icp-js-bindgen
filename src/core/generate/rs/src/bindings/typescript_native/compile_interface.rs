@@ -1,5 +1,7 @@
 use super::conversion_functions_generator::TypeConverter;
-use super::new_typescript_native_types::{add_type_definitions, create_interface_from_service};
+use super::new_typescript_native_types::{
+    add_type_definitions, create_interface_from_service, service_interface_ident,
+};
 use super::preamble::imports::interface_imports;
 use super::preamble::options::interface_options_utils;
 use super::utils::EnumDeclarations;
@@ -161,14 +163,11 @@ pub fn interface_actor_var(module: &mut Module, type_id: &str, service_name: &st
     let interface = TsInterfaceDecl {
         span: DUMMY_SP,
         declare: false,
-        id: get_ident_guarded(&format!("{}Interface", service_name)),
+        id: service_interface_ident(service_name),
         type_params: None,
         extends: vec![TsExprWithTypeArgs {
             span: DUMMY_SP,
-            expr: Box::new(Expr::Ident(get_ident_guarded(&format!(
-                "{}Interface",
-                type_id
-            )))),
+            expr: Box::new(Expr::Ident(service_interface_ident(type_id))),
             type_args: None,
         }],
         body: TsInterfaceBody {
@@ -185,12 +184,6 @@ pub fn interface_actor_var(module: &mut Module, type_id: &str, service_name: &st
 }
 
 fn add_create_actor_interface_exports(module: &mut Module, service_name: &str) {
-    let capitalized_service_name = service_name
-        .chars()
-        .next()
-        .map_or(String::new(), |c| c.to_uppercase().collect::<String>())
-        + &service_name[1..];
-
     let type_process_error_fn = super::preamble::actor::process_error_fn_type();
     module
         .body
@@ -283,7 +276,7 @@ fn add_create_actor_interface_exports(module: &mut Module, service_name: &str) {
                 span: DUMMY_SP,
                 type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
                     span: DUMMY_SP,
-                    type_name: TsEntityName::Ident(get_ident_guarded(&capitalized_service_name)),
+                    type_name: TsEntityName::Ident(service_interface_ident(service_name)),
                     type_params: None,
                 })),
             })),

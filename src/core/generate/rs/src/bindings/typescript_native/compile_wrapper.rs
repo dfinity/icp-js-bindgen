@@ -7,7 +7,7 @@ use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::*;
 
 use super::conversion_functions_generator::convert_multi_return_from_candid;
-use super::new_typescript_native_types::convert_type_with_converter;
+use super::new_typescript_native_types::{convert_type_with_converter, service_interface_ident};
 
 use super::new_typescript_native_types::add_type_definitions;
 use super::preamble::imports::wrapper_imports;
@@ -377,10 +377,7 @@ fn create_actor_class(
             super_type_params: None,
             implements: vec![TsExprWithTypeArgs {
                 span: DUMMY_SP,
-                expr: Box::new(Expr::Ident(get_ident_guarded(&format!(
-                    "{}Interface",
-                    service_name
-                )))),
+                expr: Box::new(Expr::Ident(service_interface_ident(service_name))),
                 type_args: None,
             }],
             is_abstract: false,

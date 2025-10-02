@@ -26,4 +26,4 @@ export interface CreateActorOptions {
     agentOptions?: HttpAgentOptions;
     actorOptions?: ActorConfig;
 }
-export declare function createActor(canisterId: string, options: CreateActorOptions = {}, processError?: ProcessErrorFn): Hello_world;
+export declare function createActor(canisterId: string, options: CreateActorOptions = {}, processError?: ProcessErrorFn): hello_worldInterface;
