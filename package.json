@@ -1,6 +1,6 @@
 {
   "name": "@icp-sdk/bindgen",
-  "version": "0.1.0-beta.3",
+  "version": "0.1.0-beta.4",
   "description": "Generate TypeScript bindings for Candid",
   "author": "DFINITY Stiftung <sdk@dfinity.org>",
   "license": "Apache-2.0",
