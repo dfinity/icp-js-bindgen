@@ -1,5 +1,9 @@
 ## Unreleased
 
+### Fix
+
+- ignore inline comments or separated by newlines  (#46)
+
 ## 0.1.0-beta.2 (2025-10-01)
 
 ### Feat
