@@ -1,6 +1,10 @@
+// ignored comment
+
 import service "import/recursion.did";
 import "import/a.did";
 import service "import/b/b.did";
+
+// ignored comment
 
 // Doc comment for prim type
 type my_type = principal;
@@ -11,6 +15,9 @@ type List = opt record {
   // Doc comment for List tail
   tail: List
 };
+
+// ignored comment
+
 type f = func (List, func (int32) -> (int64)) -> (opt List, res);
 // Doc comment for broker service
 type broker = service {
@@ -24,14 +31,14 @@ type nested = record {
   // Doc comment for nested record
   record {nat;int;};
   record { nat; 0x2a:nat; nat8; };
-  42:nat;
-  40:nat;
+  42:nat; // ignored comment
+  40:nat;// ignored comment
   variant{ A; 0x2a; B; C };
 };
 // Doc comment for res type
 type res = variant {
   // Doc comment for Ok variant
-  Ok: record{int;nat};
+  Ok: record{int;nat}; // ignored comment
   // Doc comment for Err variant
   Err: record{
     // Doc comment for error field in Err variant,
