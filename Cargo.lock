@@ -218,7 +218,7 @@ dependencies = [
 [[package]]
 name = "candid"
 version = "0.10.19"
-source = "git+https://github.com/dfinity/candid?branch=next#d4eb018f0e10f9042b371ce942b9b09ded9d663a"
+source = "git+https://github.com/dfinity/candid?branch=next#096e356b08e57011f55b6c4bd321243684b494c5"
 dependencies = [
  "anyhow",
  "binread",
@@ -242,7 +242,7 @@ dependencies = [
 [[package]]
 name = "candid_derive"
 version = "0.10.19"
-source = "git+https://github.com/dfinity/candid?branch=next#d4eb018f0e10f9042b371ce942b9b09ded9d663a"
+source = "git+https://github.com/dfinity/candid?branch=next#096e356b08e57011f55b6c4bd321243684b494c5"
 dependencies = [
  "lazy_static",
  "proc-macro2",
@@ -253,7 +253,7 @@ dependencies = [
 [[package]]
 name = "candid_parser"
 version = "0.2.1"
-source = "git+https://github.com/dfinity/candid?branch=next#d4eb018f0e10f9042b371ce942b9b09ded9d663a"
+source = "git+https://github.com/dfinity/candid?branch=next#096e356b08e57011f55b6c4bd321243684b494c5"
 dependencies = [
  "anyhow",
  "candid",
@@ -687,7 +687,7 @@ dependencies = [
 [[package]]
 name = "ic_principal"
 version = "0.1.1"
-source = "git+https://github.com/dfinity/candid?branch=next#d4eb018f0e10f9042b371ce942b9b09ded9d663a"
+source = "git+https://github.com/dfinity/candid?branch=next#096e356b08e57011f55b6c4bd321243684b494c5"
 dependencies = [
  "arbitrary",
  "crc32fast",
