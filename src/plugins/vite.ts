@@ -115,7 +115,7 @@ function watchDidFileChanges(server: ViteDevServer, options: Options) {
 }
 
 async function run(options: Options) {
-  console.log(cyan(`[${VITE_PLUGIN_NAME}] Generating bindings...`));
+  console.log(cyan(`[${VITE_PLUGIN_NAME}] Generating bindings from`), green(options.didFile));
 
   await generate({
     didFile: options.didFile,
@@ -128,8 +128,5 @@ async function run(options: Options) {
     additionalFeatures: options.additionalFeatures,
   });
 
-  console.log(
-    cyan(`[${VITE_PLUGIN_NAME}] Generated bindings successfully at`),
-    green(options.outDir),
-  );
+  console.log(cyan(`[${VITE_PLUGIN_NAME}] Bindings generated at`), green(options.outDir));
 }

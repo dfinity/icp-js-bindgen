@@ -64,7 +64,7 @@ type Args = {
 async function run(args: Args) {
   const { didFile, outDir, actorInterfaceFile, actorDisabled, force } = args;
 
-  console.log(cyan(`[${BIN_NAME}] Generating bindings...`));
+  console.log(cyan(`[${BIN_NAME}] Generating bindings from`), green(didFile));
   await generate({
     didFile,
     outDir,
@@ -76,7 +76,7 @@ async function run(args: Args) {
       },
     },
   });
-  console.log(cyan(`[${BIN_NAME}] Generated bindings successfully at`), green(outDir));
+  console.log(cyan(`[${BIN_NAME}] Bindings generated at`), green(outDir));
 }
 
 const program = new Command();
