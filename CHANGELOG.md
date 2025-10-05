@@ -1,3 +1,9 @@
+## Unreleased
+
+### Fix
+
+- improve logs (#55)
+
 ## 0.1.0-beta.4 (2025-10-02)
 
 ### Fix
