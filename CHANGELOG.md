@@ -1,5 +1,9 @@
 ## Unreleased
 
+### Fix
+
+- doc comment above the variant field (#61)
+
 ## 0.1.0-beta.5 (2025-10-05)
 
 ### Fix
