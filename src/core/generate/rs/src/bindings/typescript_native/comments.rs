@@ -1,7 +1,7 @@
 use super::conversion_functions_generator::TopLevelNodes;
 use swc_core::common::{
     BytePos, DUMMY_SP, Span,
-    comments::{Comment, CommentKind},
+    comments::{Comment, CommentKind, Comments},
 };
 
 // Simple monotonic position source for synthetic spans
@@ -24,19 +24,13 @@ fn make_comment(docs: &[String]) -> Option<Comment> {
         None
     } else {
         // Join all doc lines into a single block comment, with each line prefixed by a space
-        let mut comment_text = String::new();
-        comment_text.push_str("*\n");
+        let mut comment_text = String::from("*\n");
         for line in docs {
-            comment_text.push(' ');
-            comment_text.push_str(&format!("* {}", line));
-            comment_text.push('\n');
-        }
-        // Remove trailing newline
-        if comment_text.ends_with('\n') {
-            comment_text.pop();
+            comment_text.push_str(&format!(" * {}\n", line));
         }
 
-        comment_text.push('\n');
+        // Add a space at the end to align the block comment final line ("*/") properly
+        comment_text.push(' ');
 
         Some(Comment {
             span: DUMMY_SP,
@@ -47,7 +41,6 @@ fn make_comment(docs: &[String]) -> Option<Comment> {
 }
 
 pub fn add_comments(top_level_nodes: &mut TopLevelNodes, docs: &[String]) -> Span {
-    use swc_core::common::comments::Comments;
     let (_, comments, cursor) = top_level_nodes;
     match docs.len() {
         0 => DUMMY_SP,
