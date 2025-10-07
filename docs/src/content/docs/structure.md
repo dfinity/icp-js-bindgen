@@ -38,9 +38,3 @@ const greeting = await actor.greet('World');
 ### `<service-name>.d.ts`
 
 This file contains the same TypeScript types as [`<service-name>.ts`](#service-namets). It is typically used to add to LLMs' contexts' to give knowledge about what types are available in the service. Set the [`output.actor.interfaceFile`](./core/api/type-aliases/GenerateOutputOptions.md#interfaceFile) option to `true` to generate this file.
-
-### `canister-env.d.ts`
-
-This file contains the strongly-typed canister environment variables. It is typically used make the `@icp-sdk/canister-env` package more type-safe. configure the [`additionalFeatures.canisterEnv`](./core/api/type-aliases/GenerateAdditionalFeaturesOptions.md#canisterEnv) option to generate this file.
-
-> Not supported by the CLI yet.

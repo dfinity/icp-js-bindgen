@@ -1,13 +1,7 @@
 import { basename, resolve } from 'node:path';
 import { prepareBinding } from './bindings.ts';
-import {
-  type GenerateAdditionalFeaturesOptions,
-  generateAdditionalFeatures,
-} from './features/index.ts';
 import { ensureDir, writeFileSafe } from './fs.ts';
 import { type WasmGenerateResult, wasmGenerate, wasmInit } from './rs.ts';
-
-export type { GenerateAdditionalFeaturesOptions } from './features/index.ts';
 
 const DID_FILE_EXTENSION = '.did';
 
@@ -63,10 +57,6 @@ export type GenerateOptions = {
    * Options for controlling the generated output files.
    */
   output?: GenerateOutputOptions;
-  /**
-   * Additional features to generate bindings with.
-   */
-  additionalFeatures?: GenerateAdditionalFeaturesOptions;
 };
 
 /**
@@ -118,10 +108,6 @@ export async function generate(options: GenerateOptions) {
     output,
     force,
   });
-
-  if (options.additionalFeatures) {
-    await generateAdditionalFeatures(options.additionalFeatures, options.outDir, force);
-  }
 }
 
 type WriteBindingsOptions = {
