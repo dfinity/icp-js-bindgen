@@ -567,7 +567,7 @@ fn create_variant_type(
 
                         // Create the __kind__ property
                         let kind_prop = TsTypeElement::TsPropertySignature(TsPropertySignature {
-                            span,
+                            span: DUMMY_SP,
                             readonly: false,
                             key: Box::new(Expr::Ident(Ident::new(
                                 "__kind__".into(),
@@ -589,12 +589,13 @@ fn create_variant_type(
                             })),
                         });
 
-                        // Create the value property
+                        // Create the value property (with doc comment)
                         let value_prop = create_property_signature_for_variant(
                             top_level_nodes,
                             env,
                             f,
                             syntax_field_ty,
+                            span,
                         );
 
                         Box::new(TsType::TsTypeLit(TsTypeLit {
@@ -874,6 +875,7 @@ fn create_property_signature_for_variant(
     env: &TypeEnv,
     field: &Field,
     syntax: Option<&IDLType>,
+    span: Span,
 ) -> TsTypeElement {
     let field_name = match &*field.id {
         Label::Named(str) => Box::new(Expr::Ident(get_ident_guarded_keyword_ok(str))),
@@ -913,7 +915,7 @@ fn create_property_signature_for_variant(
     };
 
     TsTypeElement::TsPropertySignature(TsPropertySignature {
-        span: DUMMY_SP,
+        span,
         readonly: false,
         key: field_name,
         computed: false,

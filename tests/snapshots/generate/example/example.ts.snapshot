@@ -52,10 +52,10 @@ function record_opt_to_undefined<T>(arg: T | null): T | undefined {
     return arg == null ? undefined : arg;
 }
 export type my_variant = {
+    __kind__: "a";
     /**
      * Doc comment for my_variant field a
     */
-    __kind__: "a";
     a: {
         /**
          * Doc comment for my_variant field a field b
@@ -63,10 +63,10 @@ export type my_variant = {
         b: string;
     };
 } | {
+    __kind__: "c";
     /**
      * Doc comment for my_variant field c
     */
-    __kind__: "c";
     c: {
         d: string;
         e: Array<{
@@ -91,16 +91,16 @@ export interface nested {
     _42_: bigint;
 }
 export type res = {
+    __kind__: "Ok";
     /**
      * Doc comment for Ok variant
     */
-    __kind__: "Ok";
     Ok: [bigint, bigint];
 } | {
+    __kind__: "Err";
     /**
      * Doc comment for Err variant
     */
-    __kind__: "Err";
     Err: {
         /**
          * Doc comment for error field in Err variant,
@@ -120,18 +120,18 @@ export type nested_res = {
 } | {
     __kind__: "Err";
     Err: {
+        __kind__: "Ok";
         /**
          * Doc comment for Ok in nested variant
         */
-        __kind__: "Ok";
         Ok: {
             content: string;
         };
     } | {
+        __kind__: "Err";
         /**
          * Doc comment for Err in nested variant
         */
-        __kind__: "Err";
         Err: [bigint];
     };
 };
