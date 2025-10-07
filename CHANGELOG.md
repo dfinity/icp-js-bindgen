@@ -1,3 +1,9 @@
+## Unreleased
+
+### Feat
+
+- remove additional features (#67)
+
 ## 0.1.0-beta.6 (2025-10-07)
 
 ### Fix
