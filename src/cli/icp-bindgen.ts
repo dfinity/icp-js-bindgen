@@ -43,8 +43,6 @@
  * - `--actor-disabled`: If set, skips generating the actor file (`<service-name>.ts`). (default: `false`)
  * - `--force`: If set, overwrite existing files instead of aborting. (default: `false`)
  *
- * > **Note**: The CLI does not support additional features yet.
- *
  * @module cli
  */
 

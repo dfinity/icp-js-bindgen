@@ -125,7 +125,6 @@ async function run(options: Options) {
       // We want to overwrite existing files in the build process
       force: true,
     },
-    additionalFeatures: options.additionalFeatures,
   });
 
   console.log(cyan(`[${VITE_PLUGIN_NAME}] Bindings generated at`), green(options.outDir));
