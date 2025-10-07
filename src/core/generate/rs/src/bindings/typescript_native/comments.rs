@@ -42,10 +42,6 @@ fn make_comment(docs: &[String]) -> Option<Comment> {
             span: DUMMY_SP,
             kind: CommentKind::Block,
             text: comment_text.into(),
-            // swc_core 0.80+ uses None for comments attached to no specific position
-            // If you want to attach to leading, set as Some(true)
-            // For now, we use None
-            // has_trailing_newline: false, // Only in newer swc
         })
     }
 }
