@@ -4,6 +4,7 @@
   "description": "Generate TypeScript bindings for Candid",
   "author": "DFINITY Stiftung <sdk@dfinity.org>",
   "license": "Apache-2.0",
+  "homepage": "https://js.icp.build/bindgen/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dfinity/icp-js-bindgen.git"
