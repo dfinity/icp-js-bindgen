@@ -8,7 +8,8 @@ head:
       .code-comparison {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 1rem;
+        grid-template-rows: auto 0.5rem auto;
+        column-gap: 1rem;
       }
 
       .code-comparison > div {
@@ -16,9 +17,52 @@ head:
         overflow-x: hidden;
       }
 
+      .code-comparison .title-left {
+        grid-column: 1;
+        grid-row: 1;
+        font-weight: bold;
+      }
+
+      .code-comparison .title-right {
+        grid-column: 2;
+        grid-row: 1;
+        font-weight: bold;
+      }
+
+      .code-comparison .code-left {
+        grid-column: 1;
+        grid-row: 3;
+      }
+
+      .code-comparison .code-right {
+        grid-column: 2;
+        grid-row: 3;
+      }
+
       @media (max-width: 768px) {
         .code-comparison {
           grid-template-columns: 1fr;
+          grid-template-rows: auto auto 0.5rem auto auto;
+        }
+
+        .code-comparison .title-left {
+          grid-column: 1;
+          grid-row: 1;
+        }
+
+        .code-comparison .title-right {
+          grid-column: 1;
+          grid-row: 4;
+        }
+
+        .code-comparison .code-left {
+          grid-column: 1;
+          grid-row: 2;
+        }
+
+        .code-comparison .code-right {
+          grid-column: 1;
+          grid-row: 5;
         }
       }
 ---
@@ -46,13 +90,13 @@ This section contains the TypeScript representation of the Candid types. It cont
 
 #### Options
 
-Candid [options](https://github.com/dfinity/candid/blob/master/spec/Candid.md#options) are represented as a union of the inner option type and undefined:
+Candid [options](https://github.com/dfinity/candid/blob/master/spec/Candid.md#options) are represented as a union of the inner option type and `null`:
 
 <div class="code-comparison">
 
-<div>
+<div class="title-left">Candid</div>
 
-**Candid**
+<div class="code-left">
 
 ```
 type MyType = opt text;
@@ -60,47 +104,21 @@ type MyType = opt text;
 
 </div>
 
-<div>
+<div class="title-right">TypeScript</div>
 
-**TypeScript**
-
-```typescript
-type MyType = string | undefined;
-```
-
-</div>
-
-</div>
-
-#### Nested Options
-
-Nested or recursive options are represented as union of the `Some` and `None` types:
-
-<div class="code-comparison">
-
-<div>
-
-**Candid**
-
-```
-type MyType = opt opt text;
-```
-
-</div>
-
-<div>
-
-**TypeScript**
+<div class="code-right">
 
 ```typescript
-type MyType = Some<string> | None;
+type MyType = string | null;
 ```
 
 </div>
 
 </div>
 
-Where `Some` and `None` are defined as:
+#### Nested/Recursive Options
+
+Nested or recursive options are represented as union of the `Some` and `None` types, where `Some` and `None` are defined as:
 
 ```typescript
 interface Some<T> {
@@ -112,15 +130,71 @@ interface None {
 }
 ```
 
+##### Nested
+
+<div class="code-comparison">
+
+<div class="title-left">Candid</div>
+
+<div class="code-left">
+
+```
+type MyType = opt opt text;
+type MyType2 = opt opt opt text;
+```
+
+</div>
+
+<div class="title-right">TypeScript</div>
+
+<div class="code-right">
+
+```typescript
+type MyType = Some<string | null> | None;
+type MyType2 = Some<Some<string | null> | None> | None;
+```
+
+</div>
+
+</div>
+
+##### Recursive
+
+<div class="code-comparison">
+
+<div class="title-left">Candid</div>
+
+<div class="code-left">
+
+```
+type A = B;
+type B = opt A;
+```
+
+</div>
+
+<div class="title-right">TypeScript</div>
+
+<div class="code-right">
+
+```typescript
+type A = B;
+type B = Some<A> | None
+```
+
+</div>
+
+</div>
+
 #### Record Fields with Options
 
 Record fields that have an option type are optional fields in the TypeScript type:
 
 <div class="code-comparison">
 
-<div>
+<div class="title-left">Candid</div>
 
-**Candid**
+<div class="code-left">
 
 ```
 type MyType = record { 
@@ -130,9 +204,9 @@ type MyType = record {
 
 </div>
 
-<div>
+<div class="title-right">TypeScript</div>
 
-**TypeScript**
+<div class="code-right">
 
 ```typescript
 type MyType = {
@@ -150,9 +224,9 @@ Candid [variants](https://github.com/dfinity/candid/blob/master/spec/Candid.md#v
 
 <div class="code-comparison">
 
-<div>
+<div class="title-left">Candid</div>
 
-**Candid**
+<div class="code-left">
 
 ```
 type MyType = variant { 
@@ -163,9 +237,9 @@ type MyType = variant {
 
 </div>
 
-<div>
+<div class="title-right">TypeScript</div>
 
-**TypeScript**
+<div class="code-right">
 
 ```typescript
 enum MyType {
@@ -184,9 +258,9 @@ Variants that contain types in their fields are represented as TypeScript unions
 
 <div class="code-comparison">
 
-<div>
+<div class="title-left">Candid</div>
 
-**Candid**
+<div class="code-left">
 
 ```
 type MyType = variant { 
@@ -200,9 +274,9 @@ type MyType = variant {
 
 </div>
 
-<div>
+<div class="title-right">TypeScript</div>
 
-**TypeScript**
+<div class="code-right">
 
 ```typescript
 type MyType =
@@ -223,9 +297,9 @@ For example, a Candid service will be represented as:
 
 <div class="code-comparison">
 
-<div>
+<div class="title-left">Candid</div>
 
-**Candid**
+<div class="code-left">
 
 ```txt title="hello_world.did"
 service : () -> {
@@ -235,13 +309,13 @@ service : () -> {
 
 </div>
 
-<div>
+<div class="title-right">TypeScript</div>
 
-**TypeScript**
+<div class="code-right">
 
 ```typescript title="hello_world.ts"
 interface helloWorldInterface = {
-  greet: (name: string) => string;
+  greet: (name: string) => Promise<string>;
 };
 ```
 
@@ -257,9 +331,9 @@ For example, a Candid service will be represented as:
 
 <div class="code-comparison">
 
-<div>
+<div class="title-left">Candid</div>
 
-**Candid**
+<div class="code-left">
 
 ```txt title="hello_world.did"
 service : () -> {
@@ -269,9 +343,9 @@ service : () -> {
 
 </div>
 
-<div>
+<div class="title-right">TypeScript</div>
 
-**TypeScript**
+<div class="code-right">
 
 ```typescript title="hello_world.ts"
 class HelloWorld implements helloWorldInterface {
