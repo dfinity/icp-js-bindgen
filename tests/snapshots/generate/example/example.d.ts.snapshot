@@ -40,22 +40,6 @@ export type my_variant = {
         }>;
     } | null;
 };
-export interface nested {
-    _0_: bigint;
-    _1_: bigint;
-    /**
-     * Doc comment for nested record
-     */
-    _2_: [bigint, bigint];
-    _3_: {
-        _0_: bigint;
-        _42_: bigint;
-        _43_: number;
-    };
-    _40_: bigint;
-    _41_: Variant__42__A_B_C;
-    _42_: bigint;
-}
 export type res = {
     __kind__: "Ok";
     /**
@@ -75,6 +59,22 @@ export type res = {
         error: string;
     };
 };
+export interface nested {
+    _0_: bigint;
+    _1_: bigint;
+    /**
+     * Doc comment for nested record
+     */
+    _2_: [bigint, bigint];
+    _3_: {
+        _0_: bigint;
+        _42_: bigint;
+        _43_: number;
+    };
+    _40_: bigint;
+    _41_: Variant__42__A_B_C;
+    _42_: bigint;
+}
 export interface node {
     head: bigint;
     tail: list;
@@ -102,6 +102,14 @@ export type nested_res = {
     };
 };
 export type B = Some<A> | None;
+export interface nested_records {
+    /**
+     * Doc comment for nested_records field nested
+     */
+    nested?: {
+        nested_field: string;
+    };
+}
 export type tree = {
     __kind__: "branch";
     branch: {
@@ -113,19 +121,11 @@ export type tree = {
     __kind__: "leaf";
     leaf: bigint;
 };
-export interface nested_records {
-    /**
-     * Doc comment for nested_records field nested
-     */
-    nested?: {
-        nested_field: string;
-    };
-}
 export type f = (arg0: List, arg1: [Principal, string]) => Promise<[List | null, res]>;
 export interface brokerInterface {
     find(name: string): Promise<Principal>;
 }
-export type list = node | null;
+export type nested_opt = Some<bigint | null> | None;
 /**
  * Doc comment for prim type
  */
@@ -137,6 +137,7 @@ export type List = {
     head: bigint;
     tail: List;
 } | null;
+export type list = node | null;
 export interface sInterface {
     f: t;
     g(arg0: list): Promise<[B, tree, stream]>;
@@ -176,7 +177,7 @@ export interface exampleInterface {
      * Doc comment for f1 method of service
      */
     f1(arg0: list, test: Uint8Array | number[], arg2: boolean | null): Promise<void>;
-    g1(arg0: my_type, arg1: List, arg2: List | null, arg3: nested): Promise<[bigint, Principal, nested_res]>;
+    g1(arg0: my_type, arg1: nested_opt, arg2: List, arg3: List | null, arg4: nested): Promise<[bigint, Principal, nested_res]>;
     h(arg0: Array<string | null>, arg1: {
         __kind__: "A";
         A: bigint;
