@@ -50,7 +50,6 @@ pub fn compile_wrapper(
     };
 
     if let Some(actor_type) = actor {
-        type_process_error_fn(&mut actor_module);
         let syntax_actor = prog.resolve_actor().ok().flatten();
         let span = syntax_actor
             .as_ref()
@@ -217,121 +216,50 @@ fn create_actor_class(
     serv: &[(String, Type)],
     converter: &mut TypeConverter,
 ) -> ClassDecl {
-    // Create private actor field
-    let actor_field = ClassMember::ClassProp(ClassProp {
-        span: DUMMY_SP,
-        key: PropName::Ident(IdentName {
-            span: DUMMY_SP,
-            sym: "actor".into(),
-        }),
-        value: None,
-        type_ann: Some(Box::new(TsTypeAnn {
-            span: DUMMY_SP,
-            type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
-                span: DUMMY_SP,
-                type_name: TsEntityName::Ident(Ident::new(
-                    "ActorSubclass".into(),
-                    DUMMY_SP,
-                    SyntaxContext::empty(),
-                )),
-                type_params: Some(Box::new(TsTypeParamInstantiation {
-                    span: DUMMY_SP,
-                    params: vec![Box::new(TsType::TsTypeRef(TsTypeRef {
-                        span: DUMMY_SP,
-                        type_name: TsEntityName::Ident(Ident::new(
-                            "_SERVICE".into(),
-                            DUMMY_SP,
-                            SyntaxContext::empty(),
-                        )),
-                        type_params: None,
-                    }))],
-                })),
-            })),
-        })),
-        accessibility: Some(Accessibility::Private),
-        is_static: false,
-        decorators: vec![],
-        is_abstract: false,
-        declare: false,
-        is_optional: false,
-        is_override: false,
-        readonly: false,
-        definite: false,
-    });
-
     // Create constructor
     let constructor = ClassMember::Constructor(Constructor {
         span: DUMMY_SP,
         key: PropName::Ident(
             Ident::new("constructor".into(), DUMMY_SP, SyntaxContext::empty()).into(),
         ),
-        params: vec![
-            ParamOrTsParamProp::TsParamProp(TsParamProp {
-                span: DUMMY_SP,
-                decorators: vec![],
-                accessibility: Some(Accessibility::Private),
-                is_override: false,
-                readonly: false,
-                param: TsParamPropParam::Ident(BindingIdent {
-                    id: Ident {
+        params: vec![ParamOrTsParamProp::TsParamProp(TsParamProp {
+            span: DUMMY_SP,
+            decorators: vec![],
+            accessibility: Some(Accessibility::Private),
+            is_override: false,
+            readonly: false,
+            param: TsParamPropParam::Ident(BindingIdent {
+                id: Ident {
+                    span: DUMMY_SP,
+                    sym: "actor".into(),
+                    optional: false,
+                    ctxt: SyntaxContext::empty(),
+                },
+                type_ann: Some(Box::new(TsTypeAnn {
+                    span: DUMMY_SP,
+                    type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
                         span: DUMMY_SP,
-                        sym: "actor".into(),
-                        optional: false,
-                        ctxt: SyntaxContext::empty(),
-                    },
-                    type_ann: Some(Box::new(TsTypeAnn {
-                        span: DUMMY_SP,
-                        type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
+                        type_name: TsEntityName::Ident(Ident::new(
+                            "ActorSubclass".into(),
+                            DUMMY_SP,
+                            SyntaxContext::empty(),
+                        )),
+                        type_params: Some(Box::new(TsTypeParamInstantiation {
                             span: DUMMY_SP,
-                            type_name: TsEntityName::Ident(Ident::new(
-                                "ActorSubclass".into(),
-                                DUMMY_SP,
-                                SyntaxContext::empty(),
-                            )),
-                            type_params: Some(Box::new(TsTypeParamInstantiation {
+                            params: vec![Box::new(TsType::TsTypeRef(TsTypeRef {
                                 span: DUMMY_SP,
-                                params: vec![Box::new(TsType::TsTypeRef(TsTypeRef {
-                                    span: DUMMY_SP,
-                                    type_name: TsEntityName::Ident(Ident::new(
-                                        "_SERVICE".into(),
-                                        DUMMY_SP,
-                                        SyntaxContext::empty(),
-                                    )),
-                                    type_params: None,
-                                }))],
-                            })),
+                                type_name: TsEntityName::Ident(Ident::new(
+                                    "_SERVICE".into(),
+                                    DUMMY_SP,
+                                    SyntaxContext::empty(),
+                                )),
+                                type_params: None,
+                            }))],
                         })),
                     })),
-                }),
+                })),
             }),
-            ParamOrTsParamProp::TsParamProp(TsParamProp {
-                span: DUMMY_SP,
-                decorators: vec![],
-                accessibility: Some(Accessibility::Private),
-                is_override: false,
-                readonly: false,
-                param: TsParamPropParam::Ident(BindingIdent {
-                    id: Ident {
-                        span: DUMMY_SP,
-                        sym: "processError".into(),
-                        optional: true,
-                        ctxt: SyntaxContext::empty(),
-                    },
-                    type_ann: Some(Box::new(TsTypeAnn {
-                        span: DUMMY_SP,
-                        type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
-                            span: DUMMY_SP,
-                            type_name: TsEntityName::Ident(Ident::new(
-                                "ProcessErrorFn".into(),
-                                DUMMY_SP,
-                                SyntaxContext::empty(),
-                            )),
-                            type_params: None,
-                        })),
-                    })),
-                }),
-            }),
-        ],
+        })],
         body: Some(BlockStmt {
             span: DUMMY_SP,
             stmts: vec![],
@@ -363,15 +291,15 @@ fn create_actor_class(
         .collect();
 
     // Combine all members
-    let mut members = vec![actor_field, constructor];
-    members.extend(methods);
+    let mut class_body_members = vec![constructor];
+    class_body_members.extend(methods);
 
     ClassDecl {
         ident: get_ident_guarded(capitalized_service_name),
         declare: false,
         class: Box::new(Class {
             span: DUMMY_SP,
-            body: members,
+            body: class_body_members,
             super_class: None,
             type_params: None,
             super_type_params: None,
@@ -568,110 +496,6 @@ fn create_actor_method(
         }),
     ];
 
-    // Method body with conditional error handling
-    let body_stmts = vec![
-        // if (this.processError) {
-        Stmt::If(IfStmt {
-            span: DUMMY_SP,
-            test: Box::new(Expr::Member(MemberExpr {
-                span: DUMMY_SP,
-                obj: Box::new(Expr::This(ThisExpr { span: DUMMY_SP })),
-                prop: MemberProp::Ident(
-                    Ident::new("processError".into(), DUMMY_SP, SyntaxContext::empty()).into(),
-                ),
-            })),
-            cons: Box::new(Stmt::Block(BlockStmt {
-                span: DUMMY_SP,
-                stmts: vec![
-                    // try {
-                    Stmt::Try(Box::new(TryStmt {
-                        span: DUMMY_SP,
-                        block: BlockStmt {
-                            span: DUMMY_SP,
-                            stmts: call_and_convert_stmts.clone(),
-                            ctxt: SyntaxContext::empty(),
-                        },
-                        handler: Some(CatchClause {
-                            span: DUMMY_SP,
-                            param: Some(Pat::Ident(BindingIdent {
-                                id: Ident::new("e".into(), DUMMY_SP, SyntaxContext::empty()),
-                                type_ann: None,
-                            })),
-                            body: BlockStmt {
-                                span: DUMMY_SP,
-                                stmts: vec![
-                                    // this.processError(e);
-                                    Stmt::Expr(ExprStmt {
-                                        span: DUMMY_SP,
-                                        expr: Box::new(Expr::Call(CallExpr {
-                                            span: DUMMY_SP,
-                                            callee: Callee::Expr(Box::new(Expr::Member(
-                                                MemberExpr {
-                                                    span: DUMMY_SP,
-                                                    obj: Box::new(Expr::This(ThisExpr {
-                                                        span: DUMMY_SP,
-                                                    })),
-                                                    prop: MemberProp::Ident(
-                                                        Ident::new(
-                                                            "processError".into(),
-                                                            DUMMY_SP,
-                                                            SyntaxContext::empty(),
-                                                        )
-                                                        .into(),
-                                                    ),
-                                                },
-                                            ))),
-                                            args: vec![ExprOrSpread {
-                                                spread: None,
-                                                expr: Box::new(Expr::Ident(Ident::new(
-                                                    "e".into(),
-                                                    DUMMY_SP,
-                                                    SyntaxContext::empty(),
-                                                ))),
-                                            }],
-                                            type_args: None,
-                                            ctxt: SyntaxContext::empty(),
-                                        })),
-                                    }),
-                                    // throw new Error("unreachable");
-                                    Stmt::Throw(ThrowStmt {
-                                        span: DUMMY_SP,
-                                        arg: Box::new(Expr::New(NewExpr {
-                                            span: DUMMY_SP,
-                                            callee: Box::new(Expr::Ident(Ident::new(
-                                                "Error".into(),
-                                                DUMMY_SP,
-                                                SyntaxContext::empty(),
-                                            ))),
-                                            args: Some(vec![ExprOrSpread {
-                                                spread: None,
-                                                expr: Box::new(Expr::Lit(Lit::Str(Str {
-                                                    span: DUMMY_SP,
-                                                    value: "unreachable".into(),
-                                                    raw: None,
-                                                }))),
-                                            }]),
-                                            type_args: None,
-                                            ctxt: SyntaxContext::empty(),
-                                        })),
-                                    }),
-                                ],
-                                ctxt: SyntaxContext::empty(),
-                            },
-                        }),
-                        finalizer: None,
-                    })),
-                ],
-                ctxt: SyntaxContext::empty(),
-            })),
-            alt: Some(Box::new(Stmt::Block(BlockStmt {
-                span: DUMMY_SP,
-                stmts: call_and_convert_stmts,
-                ctxt: SyntaxContext::empty(),
-            }))),
-        }),
-    ];
-
     ClassMember::Method(ClassMethod {
         span: DUMMY_SP,
         key: PropName::Ident(get_ident_guarded(method_id).into()),
@@ -681,7 +505,7 @@ fn create_actor_method(
             span: DUMMY_SP,
             body: Some(BlockStmt {
                 span: DUMMY_SP,
-                stmts: body_stmts,
+                stmts: call_and_convert_stmts,
                 ctxt: SyntaxContext::empty(),
             }),
             is_generator: false,
@@ -700,17 +524,6 @@ fn create_actor_method(
         is_optional: false,
         is_override: false,
     })
-}
-
-fn type_process_error_fn(module: &mut Module) {
-    let type_declaration = super::preamble::actor::process_error_fn_type();
-
-    module
-        .body
-        .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-            span: DUMMY_SP,
-            decl: Decl::TsTypeAlias(Box::new(type_declaration)),
-        })));
 }
 
 fn add_create_actor_exports(module: &mut Module, service_name: &str) {
@@ -788,31 +601,6 @@ fn create_actor_function(service_name: &str) -> FnDecl {
                         right: Box::new(Expr::Object(ObjectLit {
                             span,
                             props: vec![],
-                        })),
-                    }),
-                },
-                // processError?: ProcessErrorFn
-                Param {
-                    span,
-                    decorators: vec![],
-                    pat: Pat::Ident(BindingIdent {
-                        id: Ident {
-                            span,
-                            sym: "processError".into(),
-                            optional: true,
-                            ctxt: SyntaxContext::empty(),
-                        },
-                        type_ann: Some(Box::new(TsTypeAnn {
-                            span,
-                            type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
-                                span,
-                                type_name: TsEntityName::Ident(Ident::new(
-                                    "ProcessErrorFn".into(),
-                                    span,
-                                    SyntaxContext::empty(),
-                                )),
-                                type_params: None,
-                            })),
                         })),
                     }),
                 },
@@ -1074,7 +862,7 @@ fn create_actor_function_body(capitalized_service_name: &str) -> Vec<Stmt> {
             }],
             ctxt: SyntaxContext::empty(),
         }))),
-        // return new Service(actor, processError);
+        // return new Service(actor);
         Stmt::Return(ReturnStmt {
             span,
             arg: Some(Box::new(Expr::New(NewExpr {
@@ -1089,14 +877,6 @@ fn create_actor_function_body(capitalized_service_name: &str) -> Vec<Stmt> {
                         spread: None,
                         expr: Box::new(Expr::Ident(Ident::new(
                             "actor".into(),
-                            span,
-                            SyntaxContext::empty(),
-                        ))),
-                    },
-                    ExprOrSpread {
-                        spread: None,
-                        expr: Box::new(Expr::Ident(Ident::new(
-                            "processError".into(),
                             span,
                             SyntaxContext::empty(),
                         ))),

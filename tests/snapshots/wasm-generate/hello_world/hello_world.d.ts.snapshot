@@ -12,10 +12,9 @@ export type Option<T> = Some<T> | None;
 export interface hello_worldInterface {
     greet(name: string): Promise<string>;
 }
-export type ProcessErrorFn = (error: unknown) => never;
 export interface CreateActorOptions {
     agent?: Agent;
     agentOptions?: HttpAgentOptions;
     actorOptions?: ActorConfig;
 }
-export declare function createActor(canisterId: string, options: CreateActorOptions = {}, processError?: ProcessErrorFn): hello_worldInterface;
+export declare function createActor(canisterId: string, options: CreateActorOptions = {}): hello_worldInterface;

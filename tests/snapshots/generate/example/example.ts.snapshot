@@ -202,7 +202,6 @@ export enum Variant_a_b {
     a = "a",
     b = "b"
 }
-export type ProcessErrorFn = (error: unknown) => never;
 /**
  * Doc comment for service
  */
@@ -246,43 +245,18 @@ export interface exampleInterface {
 }
 import type { A as _A, B as _B, List as _List, a as _a, b as _b, list as _list, my_variant as _my_variant, nested as _nested, nested_records as _nested_records, nested_res as _nested_res, node as _node, res as _res, stream as _stream, tree as _tree } from "./declarations/example.did.d.ts";
 export class Example implements exampleInterface {
-    private actor: ActorSubclass<_SERVICE>;
-    constructor(private actor: ActorSubclass<_SERVICE>, private processError?: ProcessErrorFn){}
+    constructor(private actor: ActorSubclass<_SERVICE>){}
     async f1(arg0: list, arg1: Uint8Array | number[], arg2: boolean | null): Promise<void> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.f1(to_candid_list_n1(arg0), arg1, to_candid_opt_n5(arg2));
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.f1(to_candid_list_n1(arg0), arg1, to_candid_opt_n5(arg2));
-            return result;
-        }
+        const result = await this.actor.f1(to_candid_list_n1(arg0), arg1, to_candid_opt_n5(arg2));
+        return result;
     }
     async g1(arg0: my_type, arg1: List, arg2: List | null, arg3: nested): Promise<[bigint, Principal, nested_res]> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.g1(arg0, to_candid_List_n6(arg1), to_candid_opt_n9(arg2), to_candid_nested_n10(arg3));
-                return [
-                    result[0],
-                    result[1],
-                    from_candid_nested_res_n13(result[2])
-                ];
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.g1(arg0, to_candid_List_n6(arg1), to_candid_opt_n9(arg2), to_candid_nested_n10(arg3));
-            return [
-                result[0],
-                result[1],
-                from_candid_nested_res_n13(result[2])
-            ];
-        }
+        const result = await this.actor.g1(arg0, to_candid_List_n6(arg1), to_candid_opt_n9(arg2), to_candid_nested_n10(arg3));
+        return [
+            result[0],
+            result[1],
+            from_candid_nested_res_n13(result[2])
+        ];
     }
     async h(arg0: Array<string | null>, arg1: {
         __kind__: "A";
@@ -295,38 +269,15 @@ export class Example implements exampleInterface {
         };
         id: bigint;
     }> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.h(to_candid_vec_n17(arg0), to_candid_variant_n19(arg1), to_candid_opt_n9(arg2));
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.h(to_candid_vec_n17(arg0), to_candid_variant_n19(arg1), to_candid_opt_n9(arg2));
-            return result;
-        }
+        const result = await this.actor.h(to_candid_vec_n17(arg0), to_candid_variant_n19(arg1), to_candid_opt_n9(arg2));
+        return result;
     }
     async i(arg0: List, arg1: [Principal, string]): Promise<[List | null, res]> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.i(to_candid_List_n6(arg0), arg1);
-                return [
-                    from_candid_opt_n20(result[0]),
-                    from_candid_res_n24(result[1])
-                ];
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.i(to_candid_List_n6(arg0), arg1);
-            return [
-                from_candid_opt_n20(result[0]),
-                from_candid_res_n24(result[1])
-            ];
-        }
+        const result = await this.actor.i(to_candid_List_n6(arg0), arg1);
+        return [
+            from_candid_opt_n20(result[0]),
+            from_candid_res_n24(result[1])
+        ];
     }
     async x(arg0: a, arg1: b): Promise<[a | null, b | null, {
             __kind__: "Ok";
@@ -337,90 +288,32 @@ export class Example implements exampleInterface {
             __kind__: "Err";
             Err: Variant_a_b;
         }]> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.x(to_candid_a_n26(arg0), arg1);
-                return [
-                    from_candid_opt_n28(result[0]),
-                    from_candid_opt_n31(result[1]),
-                    from_candid_variant_n32(result[2])
-                ];
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.x(to_candid_a_n26(arg0), arg1);
-            return [
-                from_candid_opt_n28(result[0]),
-                from_candid_opt_n31(result[1]),
-                from_candid_variant_n32(result[2])
-            ];
-        }
+        const result = await this.actor.x(to_candid_a_n26(arg0), arg1);
+        return [
+            from_candid_opt_n28(result[0]),
+            from_candid_opt_n31(result[1]),
+            from_candid_variant_n32(result[2])
+        ];
     }
     async y(arg0: nested_records): Promise<[nested_records, my_variant]> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.y(to_candid_nested_records_n34(arg0));
-                return from_candid_tuple_n36(result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.y(to_candid_nested_records_n34(arg0));
-            return from_candid_tuple_n36(result);
-        }
+        const result = await this.actor.y(to_candid_nested_records_n34(arg0));
+        return from_candid_tuple_n36(result);
     }
     async f(arg0: Principal): Promise<void> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.f(arg0);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.f(arg0);
-            return result;
-        }
+        const result = await this.actor.f(arg0);
+        return result;
     }
     async g(arg0: list): Promise<[B, tree, stream]> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.g(to_candid_list_n1(arg0));
-                return [
-                    from_candid_B_n43(result[0]),
-                    from_candid_tree_n46(result[1]),
-                    from_candid_stream_n49(result[2])
-                ];
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.g(to_candid_list_n1(arg0));
-            return [
-                from_candid_B_n43(result[0]),
-                from_candid_tree_n46(result[1]),
-                from_candid_stream_n49(result[2])
-            ];
-        }
+        const result = await this.actor.g(to_candid_list_n1(arg0));
+        return [
+            from_candid_B_n43(result[0]),
+            from_candid_tree_n46(result[1]),
+            from_candid_stream_n49(result[2])
+        ];
     }
     async bbbbb(arg0: b): Promise<void> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.bbbbb(arg0);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.bbbbb(arg0);
-            return result;
-        }
+        const result = await this.actor.bbbbb(arg0);
+        return result;
     }
 }
 function from_candid_A_n45(value: _A): A {
@@ -932,7 +825,7 @@ export interface CreateActorOptions {
     agentOptions?: HttpAgentOptions;
     actorOptions?: ActorConfig;
 }
-export function createActor(canisterId: string, options: CreateActorOptions = {}, processError?: ProcessErrorFn): Example {
+export function createActor(canisterId: string, options: CreateActorOptions = {}): Example {
     const agent = options.agent || HttpAgent.createSync({
         ...options.agentOptions
     });
@@ -944,5 +837,5 @@ export function createActor(canisterId: string, options: CreateActorOptions = {}
         canisterId: canisterId,
         ...options.actorOptions
     });
-    return new Example(actor, processError);
+    return new Example(actor);
 }
