@@ -1,3 +1,14 @@
+## Unreleased
+
+### Feat
+
+- remove `processError` and redundant `private actor` class property (#70)
+- remove additional features (#67)
+
+### Fix
+
+- remove unneeded unions on typed arrays (#74)
+
 ## 0.1.0-beta.7 (2025-10-08)
 
 ### Feat
