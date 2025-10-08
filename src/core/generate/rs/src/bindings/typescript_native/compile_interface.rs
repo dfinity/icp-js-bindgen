@@ -184,14 +184,6 @@ pub fn interface_actor_var(module: &mut Module, type_id: &str, service_name: &st
 }
 
 fn add_create_actor_interface_exports(module: &mut Module, service_name: &str) {
-    let type_process_error_fn = super::preamble::actor::process_error_fn_type();
-    module
-        .body
-        .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-            span: DUMMY_SP,
-            decl: Decl::TsTypeAlias(Box::new(type_process_error_fn)),
-        })));
-
     // CreateActorOptions interface
     let create_actor_options_interface = super::preamble::actor::create_actor_options_interface();
     module
@@ -242,26 +234,6 @@ fn add_create_actor_interface_exports(module: &mut Module, service_name: &str) {
                         right: Box::new(Expr::Object(ObjectLit {
                             span: DUMMY_SP,
                             props: vec![],
-                        })),
-                    }),
-                },
-                Param {
-                    span: DUMMY_SP,
-                    decorators: vec![],
-                    pat: Pat::Ident(BindingIdent {
-                        id: Ident {
-                            span: DUMMY_SP,
-                            sym: "processError".into(),
-                            optional: true,
-                            ctxt: swc_core::common::SyntaxContext::empty(),
-                        },
-                        type_ann: Some(Box::new(TsTypeAnn {
-                            span: DUMMY_SP,
-                            type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
-                                span: DUMMY_SP,
-                                type_name: TsEntityName::Ident(get_ident_guarded("ProcessErrorFn")),
-                                type_params: None,
-                            })),
                         })),
                     }),
                 },

@@ -43,26 +43,14 @@ function candid_none<T>(): [] {
 function record_opt_to_undefined<T>(arg: T | null): T | undefined {
     return arg == null ? undefined : arg;
 }
-export type ProcessErrorFn = (error: unknown) => never;
 export interface hello_worldInterface {
     greet(name: string): Promise<string>;
 }
 export class Hello_world implements hello_worldInterface {
-    private actor: ActorSubclass<_SERVICE>;
-    constructor(private actor: ActorSubclass<_SERVICE>, private processError?: ProcessErrorFn){}
+    constructor(private actor: ActorSubclass<_SERVICE>){}
     async greet(arg0: string): Promise<string> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.greet(arg0);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.greet(arg0);
-            return result;
-        }
+        const result = await this.actor.greet(arg0);
+        return result;
     }
 }
 export interface CreateActorOptions {
@@ -70,7 +58,7 @@ export interface CreateActorOptions {
     agentOptions?: HttpAgentOptions;
     actorOptions?: ActorConfig;
 }
-export function createActor(canisterId: string, options: CreateActorOptions = {}, processError?: ProcessErrorFn): Hello_world {
+export function createActor(canisterId: string, options: CreateActorOptions = {}): Hello_world {
     const agent = options.agent || HttpAgent.createSync({
         ...options.agentOptions
     });
@@ -82,5 +70,5 @@ export function createActor(canisterId: string, options: CreateActorOptions = {}
         canisterId: canisterId,
         ...options.actorOptions
     });
-    return new Hello_world(actor, processError);
+    return new Hello_world(actor);
 }

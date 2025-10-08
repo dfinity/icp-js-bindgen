@@ -1,4 +1,4 @@
-use swc_core::common::{DUMMY_SP, SyntaxContext};
+use swc_core::common::DUMMY_SP;
 use swc_core::ecma::ast::*;
 
 use crate::bindings::typescript_native::utils::get_ident_guarded;
@@ -61,37 +61,5 @@ pub fn create_actor_options_interface() -> TsInterfaceDecl {
                 }),
             ],
         },
-    }
-}
-
-pub fn process_error_fn_type() -> TsTypeAliasDecl {
-    TsTypeAliasDecl {
-        span: DUMMY_SP,
-        declare: false,
-        id: Ident::new("ProcessErrorFn".into(), DUMMY_SP, SyntaxContext::empty()),
-        type_params: None,
-        type_ann: Box::new(TsType::TsFnOrConstructorType(
-            TsFnOrConstructorType::TsFnType(TsFnType {
-                span: DUMMY_SP,
-                params: vec![TsFnParam::Ident(BindingIdent {
-                    id: Ident::new("error".into(), DUMMY_SP, SyntaxContext::empty()),
-                    type_ann: Some(Box::new(TsTypeAnn {
-                        span: DUMMY_SP,
-                        type_ann: Box::new(TsType::TsKeywordType(TsKeywordType {
-                            span: DUMMY_SP,
-                            kind: TsKeywordTypeKind::TsUnknownKeyword,
-                        })),
-                    })),
-                })],
-                type_params: None,
-                type_ann: Box::new(TsTypeAnn {
-                    span: DUMMY_SP,
-                    type_ann: Box::new(TsType::TsKeywordType(TsKeywordType {
-                        span: DUMMY_SP,
-                        kind: TsKeywordTypeKind::TsNeverKeyword,
-                    })),
-                }),
-            }),
-        )),
     }
 }
