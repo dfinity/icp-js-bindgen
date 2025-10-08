@@ -90,6 +90,7 @@ export interface nested {
     { 'C' : null },
   _42_ : bigint,
 }
+export type nested_opt = [] | [[] | [bigint]];
 /**
  * Doc comment for nested_records
  */
@@ -162,7 +163,7 @@ export interface _SERVICE {
    */
   'f1' : ActorMethod<[list, Uint8Array | number[], [] | [boolean]], undefined>,
   'g1' : ActorMethod<
-    [my_type, List, [] | [List], nested],
+    [my_type, nested_opt, List, [] | [List], nested],
     [bigint, Principal, nested_res]
   >,
   'h' : ActorMethod<
