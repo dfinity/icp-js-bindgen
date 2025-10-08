@@ -1,6 +1,7 @@
 use super::super::javascript::is_tuple;
 use super::comments::add_comments;
 use super::conversion_functions_generator::{TopLevelNodes, TypeConverter};
+use super::original_typescript_types::create_typed_array_type;
 use super::utils::{get_ident_guarded, get_ident_guarded_keyword_ok};
 use candid::types::{Field, Function, Label, Type, TypeEnv, TypeInner};
 use candid_parser::syntax::{self, IDLMergedProg, IDLType};
@@ -367,14 +368,14 @@ fn create_vector_type(
     };
 
     match ty.as_ref() {
-        Nat8 => create_union_array_type("Uint8Array", "number"),
-        Nat16 => create_union_array_type("Uint16Array", "number"),
-        Nat32 => create_union_array_type("Uint32Array", "number"),
-        Nat64 => create_union_array_type("BigUint64Array", "bigint"),
-        Int8 => create_union_array_type("Int8Array", "number"),
-        Int16 => create_union_array_type("Int16Array", "number"),
-        Int32 => create_union_array_type("Int32Array", "number"),
-        Int64 => create_union_array_type("BigInt64Array", "bigint"),
+        Nat8 => create_typed_array_type("Uint8Array"),
+        Nat16 => create_typed_array_type("Uint16Array"),
+        Nat32 => create_typed_array_type("Uint32Array"),
+        Nat64 => create_typed_array_type("BigUint64Array"),
+        Int8 => create_typed_array_type("Int8Array"),
+        Int16 => create_typed_array_type("Int16Array"),
+        Int32 => create_typed_array_type("Int32Array"),
+        Int64 => create_typed_array_type("BigInt64Array"),
         _ => {
             // Generic array type
             TsType::TsTypeRef(TsTypeRef {
@@ -438,37 +439,6 @@ fn create_record_type(
                 .collect(),
         })
     }
-}
-
-// Helper to create union array types like "Uint8Array | number[]"
-fn create_union_array_type(typed_array: &str, elem_type: &str) -> TsType {
-    TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
-        span: DUMMY_SP,
-        types: vec![
-            // TypedArray (e.g., Uint8Array)
-            Box::new(TsType::TsTypeRef(TsTypeRef {
-                span: DUMMY_SP,
-                type_name: TsEntityName::Ident(Ident::new(
-                    typed_array.into(),
-                    DUMMY_SP,
-                    SyntaxContext::empty(),
-                )),
-                type_params: None,
-            })),
-            // Regular array (e.g., number[])
-            Box::new(TsType::TsArrayType(TsArrayType {
-                span: DUMMY_SP,
-                elem_type: Box::new(TsType::TsKeywordType(TsKeywordType {
-                    span: DUMMY_SP,
-                    kind: match elem_type {
-                        "number" => TsKeywordTypeKind::TsNumberKeyword,
-                        "bigint" => TsKeywordTypeKind::TsBigIntKeyword,
-                        _ => TsKeywordTypeKind::TsAnyKeyword,
-                    },
-                })),
-            })),
-        ],
-    }))
 }
 
 fn create_variant_type(

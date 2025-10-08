@@ -202,7 +202,7 @@ export interface exampleInterface {
     /**
      * Doc comment for f1 method of service
      */
-    f1(arg0: list, test: Uint8Array | number[], arg2: boolean | null): Promise<void>;
+    f1(arg0: list, test: Uint8Array, arg2: boolean | null): Promise<void>;
     g1(arg0: my_type, arg1: nested_opt, arg2: List, arg3: List | null, arg4: nested): Promise<[bigint, Principal, nested_res]>;
     h(arg0: Array<string | null>, arg1: {
         __kind__: "A";
@@ -239,7 +239,7 @@ export interface exampleInterface {
 import type { A as _A, B as _B, List as _List, a as _a, b as _b, list as _list, my_variant as _my_variant, nested as _nested, nested_opt as _nested_opt, nested_records as _nested_records, nested_res as _nested_res, node as _node, res as _res, stream as _stream, tree as _tree } from "./declarations/example.did.d.ts";
 export class Example implements exampleInterface {
     constructor(private actor: ActorSubclass<_SERVICE>){}
-    async f1(arg0: list, arg1: Uint8Array | number[], arg2: boolean | null): Promise<void> {
+    async f1(arg0: list, arg1: Uint8Array, arg2: boolean | null): Promise<void> {
         const result = await this.actor.f1(to_candid_list_n1(arg0), arg1, to_candid_opt_n5(arg2));
         return result;
     }

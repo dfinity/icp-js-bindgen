@@ -133,14 +133,14 @@ fn pp_vec<'a>(
         _ => inner,
     };
     match ty.as_ref() {
-        Nat8 => str("Uint8Array | number[]"),
-        Nat16 => str("Uint16Array | number[]"),
-        Nat32 => str("Uint32Array | number[]"),
-        Nat64 => str("BigUint64Array | bigint[]"),
-        Int8 => str("Int8Array | number[]"),
-        Int16 => str("Int16Array | number[]"),
-        Int32 => str("Int32Array | number[]"),
-        Int64 => str("BigInt64Array | bigint[]"),
+        Nat8 => str("Uint8Array"),
+        Nat16 => str("Uint16Array"),
+        Nat32 => str("Uint32Array"),
+        Nat64 => str("BigUint64Array"),
+        Int8 => str("Int8Array"),
+        Int16 => str("Int16Array"),
+        Int32 => str("Int32Array"),
+        Int64 => str("BigInt64Array"),
         _ => str("Array").append(enclose("<", pp_ty_rich(env, inner, syntax, is_ref), ">")),
     }
 }

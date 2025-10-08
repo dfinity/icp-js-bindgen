@@ -242,14 +242,14 @@ impl<'a> OriginalTypescriptTypes<'a> {
                 };
 
                 match ty.as_ref() {
-                    TypeInner::Nat8 => self.create_union_array_type("Uint8Array", "number"),
-                    TypeInner::Nat16 => self.create_union_array_type("Uint16Array", "number"),
-                    TypeInner::Nat32 => self.create_union_array_type("Uint32Array", "number"),
-                    TypeInner::Nat64 => self.create_union_array_type("BigUint64Array", "bigint"),
-                    TypeInner::Int8 => self.create_union_array_type("Int8Array", "number"),
-                    TypeInner::Int16 => self.create_union_array_type("Int16Array", "number"),
-                    TypeInner::Int32 => self.create_union_array_type("Int32Array", "number"),
-                    TypeInner::Int64 => self.create_union_array_type("BigInt64Array", "bigint"),
+                    TypeInner::Nat8 => create_typed_array_type("Uint8Array"),
+                    TypeInner::Nat16 => create_typed_array_type("Uint16Array"),
+                    TypeInner::Nat32 => create_typed_array_type("Uint32Array"),
+                    TypeInner::Nat64 => create_typed_array_type("BigUint64Array"),
+                    TypeInner::Int8 => create_typed_array_type("Int8Array"),
+                    TypeInner::Int16 => create_typed_array_type("Int16Array"),
+                    TypeInner::Int32 => create_typed_array_type("Int32Array"),
+                    TypeInner::Int64 => create_typed_array_type("BigInt64Array"),
                     _ => {
                         // Generic array type
                         TsType::TsTypeRef(TsTypeRef {
@@ -346,36 +346,6 @@ impl<'a> OriginalTypescriptTypes<'a> {
             })
             .collect(),
         })
-    }
-
-    fn create_union_array_type(&mut self, typed_array: &str, elem_type: &str) -> TsType {
-        TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
-            span: DUMMY_SP,
-            types: vec![
-                // TypedArray (e.g., Uint8Array)
-                Box::new(TsType::TsTypeRef(TsTypeRef {
-                    span: DUMMY_SP,
-                    type_name: TsEntityName::Ident(Ident::new(
-                        typed_array.into(),
-                        DUMMY_SP,
-                        SyntaxContext::empty(),
-                    )),
-                    type_params: None,
-                })),
-                // Regular array (e.g., number[])
-                Box::new(TsType::TsArrayType(TsArrayType {
-                    span: DUMMY_SP,
-                    elem_type: Box::new(TsType::TsKeywordType(TsKeywordType {
-                        span: DUMMY_SP,
-                        kind: match elem_type {
-                            "number" => TsKeywordTypeKind::TsNumberKeyword,
-                            "bigint" => TsKeywordTypeKind::TsBigIntKeyword,
-                            _ => TsKeywordTypeKind::TsAnyKeyword,
-                        },
-                    })),
-                })),
-            ],
-        }))
     }
 
     fn create_property_signature(&mut self, field: &Field) -> TsTypeElement {
@@ -488,4 +458,17 @@ impl<'a> OriginalTypescriptTypes<'a> {
                 phase: Default::default(),
             })));
     }
+}
+
+/// Create typed array types like "Uint8Array"
+pub fn create_typed_array_type(typed_array: &str) -> TsType {
+    TsType::TsTypeRef(TsTypeRef {
+        span: DUMMY_SP,
+        type_name: TsEntityName::Ident(Ident::new(
+            typed_array.into(),
+            DUMMY_SP,
+            SyntaxContext::empty(),
+        )),
+        type_params: None,
+    })
 }
