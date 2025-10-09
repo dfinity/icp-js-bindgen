@@ -81,8 +81,10 @@ Now, you can migrate to `@icp-sdk/bindgen` in [CLI mode](./cli) by running the f
 
 ```bash
 dfx build --check hello-world-backend # can be skipped if you already built the canister
-icp-bindgen --did-file ./.dfx/local/canisters/hello-world-backend/hello-world-backend.did --out-dir ./src/hello-world-frontend/backend
+icp-bindgen --did-file ./.dfx/<network-name>/canisters/hello-world-backend/hello-world-backend.did --out-dir ./src/hello-world-frontend/backend
 ```
+
+> During the build, `dfx` injects a `$DFX_NETWORK` environment variable that contains the network name, which you can use to construct the path to the `.did` file.
 
 > In case you configured the `canisters.hello-world-backend.declarations` field, you can pass the `canisters.hello-world-backend.declarations.output` value to the `--out-dir` flag. Note that in `@icp-sdk/bindgen`, there's no way to avoid generating the [TypeScript declarations](./structure#declarationsservice-namediddts).
 
