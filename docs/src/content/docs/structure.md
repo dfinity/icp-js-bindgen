@@ -398,6 +398,8 @@ If provided, the `actorOptions` will be passed to the [`Actor.createActor`](http
 
 This folder contains the actual Candid JS bindings. It generates the same bindings that the [`dfx generate`](https://internetcomputer.org/docs/building-apps/developer-tools/dfx/dfx-generate) command was generating.
 
+See the [Migrating](./migrating) page for more information on how to migrate from `dfx generate`.
+
 ### `declarations/<service-name>.did.d.ts`
 
 This file is used in TypeScript projects to type the Candid JS bindings generated in [`declarations/<service-name>.did.js`](#declarationsservice-namedidjs).

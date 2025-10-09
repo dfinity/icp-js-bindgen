@@ -45,10 +45,20 @@
             }
           }
         ]
-      },
+      }
+    ]
+  },
+  {
+    "label": "Guides",
+    "collapsed": false,
+    "items": [
       {
         "label": "Bindings Structure",
         "link": "/structure"
+      },
+      {
+        "label": "Migrating",
+        "link": "/migrating"
       }
     ]
   },
