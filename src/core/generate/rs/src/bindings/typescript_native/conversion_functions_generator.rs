@@ -2,7 +2,7 @@ use super::comments::PosCursor;
 use super::new_typescript_native_types::{convert_type_with_converter, is_recursive_optional};
 use super::original_typescript_types::OriginalTypescriptTypes;
 use super::utils::{EnumDeclarations, contains_unicode_characters, get_ident_guarded};
-use candid::types::{Field, Label, Type, TypeEnv, TypeInner};
+use candid::types::{ArgType, Field, Label, Type, TypeEnv, TypeInner};
 use std::collections::{HashMap, HashSet};
 use swc_core::common::{DUMMY_SP, SyntaxContext, comments::SingleThreadedComments};
 use swc_core::ecma::ast::*;
@@ -1703,14 +1703,14 @@ impl<'a> TypeConverter<'a> {
 pub fn convert_multi_return_from_candid(
     converter: &mut TypeConverter,
     expr: &Expr,
-    types: &[Type],
+    types: &[ArgType],
 ) -> Expr {
     if types.is_empty() {
         // No return value, return void
         Expr::Lit(Lit::Null(Null { span: DUMMY_SP }))
     } else if types.len() == 1 {
         // Single return value
-        converter.convert_from_candid(expr, &types[0])
+        converter.convert_from_candid(expr, &types[0].typ)
     } else {
         // Multiple return values in a tuple
         Expr::Array(ArrayLit {
@@ -1734,12 +1734,12 @@ pub fn convert_multi_return_from_candid(
                     });
 
                     // If type doesn't need conversion, use it directly
-                    let value = if !converter.needs_conversion(ty) {
+                    let value = if !converter.needs_conversion(&ty.typ) {
                         elem_expr
                     } else {
                         // Convert the return value using the appropriate function
-                        let function_name = converter.get_from_candid_function_name(ty);
-                        converter.generate_from_candid_function(ty, &function_name);
+                        let function_name = converter.get_from_candid_function_name(&ty.typ);
+                        converter.generate_from_candid_function(&ty.typ, &function_name);
                         Expr::Call(CallExpr {
                             span: DUMMY_SP,
                             callee: Callee::Expr(Box::new(Expr::Ident(Ident::new(

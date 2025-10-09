@@ -354,7 +354,7 @@ fn create_actor_method(
             span: DUMMY_SP,
             kind: TsKeywordTypeKind::TsVoidKeyword,
         }),
-        1 => convert_type_with_converter(converter, env, &func.rets[0], None, true),
+        1 => convert_type_with_converter(converter, env, &func.rets[0].typ, None, true),
         _ => {
             // Create a tuple type for multiple return values
             TsType::TsTupleType(TsTupleType {
@@ -362,10 +362,12 @@ fn create_actor_method(
                 elem_types: func
                     .rets
                     .iter()
-                    .map(|ty| TsTupleElement {
+                    .map(|ret| TsTupleElement {
                         span: DUMMY_SP,
                         label: None,
-                        ty: Box::new(convert_type_with_converter(converter, env, ty, None, true)),
+                        ty: Box::new(convert_type_with_converter(
+                            converter, env, &ret.typ, None, true,
+                        )),
                     })
                     .collect(),
             })
