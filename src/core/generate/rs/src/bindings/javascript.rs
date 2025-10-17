@@ -251,12 +251,12 @@ fn pp_imports<'a>() -> RcDoc<'a> {
         .append(RcDoc::hardline())
 }
 
-pub fn compile(env: &TypeEnv, actor: &Option<Type>) -> String {
+pub fn compile(env: &TypeEnv, actor: &Option<Type>, root_exports: bool) -> String {
     match actor {
         None => {
             let def_list: Vec<_> = env.to_sorted_iter().map(|pair| pair.0.as_str()).collect();
             let recs = infer_rec(env, &def_list).unwrap();
-            let doc = pp_defs(env, &def_list, &recs, true);
+            let doc = pp_defs(env, &def_list, &recs, root_exports);
 
             pp_imports().append(doc).pretty(LINE_WIDTH).to_string()
         }
@@ -270,18 +270,9 @@ pub fn compile(env: &TypeEnv, actor: &Option<Type>) -> String {
             };
             let init_types = types.as_slice();
 
-            let defs = pp_defs(env, &def_list, &recs, true);
             let actor = pp_actor(actor, &recs);
 
-            let idl_service = str("export const idlService = ")
-                .append(actor.clone())
-                .append(";");
-
-            let idl_init_args = str("export const idlInitArgs = ")
-                .append(pp_types(init_types.iter()))
-                .append(";");
-
-            let idl_factory_return = kwd("return").append(actor).append(";");
+            let idl_factory_return = kwd("return").append(actor.clone()).append(";");
             let idl_factory_body = pp_defs(env, &def_list, &recs, false).append(idl_factory_return);
             let idl_factory_doc = str("export const idlFactory = ({ IDL }) => ")
                 .append(enclose_space("{", idl_factory_body, "};"));
@@ -297,14 +288,28 @@ pub fn compile(env: &TypeEnv, actor: &Option<Type>) -> String {
                 str("export const init = ({ IDL }) => ").append(enclose_space("{", init_doc, "};"));
             let init_doc = init_doc.pretty(LINE_WIDTH).to_string();
 
-            let result = pp_imports()
-                .append(defs)
-                .append(idl_service)
-                .append(RcDoc::hardline())
-                .append(RcDoc::hardline())
-                .append(idl_init_args)
-                .append(RcDoc::hardline())
-                .append(RcDoc::hardline())
+            let mut result = pp_imports();
+
+            if root_exports {
+                let defs = pp_defs(env, &def_list, &recs, true);
+                let idl_service = str("export const idlService = ")
+                    .append(actor)
+                    .append(";");
+                let idl_init_args = str("export const idlInitArgs = ")
+                    .append(pp_types(init_types.iter()))
+                    .append(";");
+
+                result = result
+                    .append(defs)
+                    .append(idl_service)
+                    .append(RcDoc::hardline())
+                    .append(RcDoc::hardline())
+                    .append(idl_init_args)
+                    .append(RcDoc::hardline())
+                    .append(RcDoc::hardline());
+            }
+
+            result = result
                 .append(idl_factory_doc)
                 .append(RcDoc::hardline())
                 .append(RcDoc::hardline())

@@ -27,12 +27,16 @@ pub struct GenerateResult {
 }
 
 #[wasm_bindgen]
-pub fn generate(declarations: String, service_name: String) -> Result<GenerateResult, JsError> {
+pub fn generate(
+    declarations: String,
+    service_name: String,
+    root_exports: bool,
+) -> Result<GenerateResult, JsError> {
     let input_path = PathBuf::from(declarations);
     let (env, actor, prog) = parser::check_file(input_path.as_path()).map_err(JsError::from)?;
 
-    let declarations_js = javascript::compile(&env, &actor);
-    let declarations_ts = typescript::compile(&env, &actor, &prog);
+    let declarations_js = javascript::compile(&env, &actor, root_exports);
+    let declarations_ts = typescript::compile(&env, &actor, &prog, root_exports);
 
     let interface_ts =
         typescript_native::compile::compile(&env, &actor, &service_name, "interface", &prog);

@@ -39,6 +39,18 @@ export type GenerateOutputOptions = {
          */
         interfaceFile?: boolean;
       };
+  /**
+   * Options for controlling the generated declarations files.
+   */
+  declarations?: {
+    /**
+     * If `true`, exports root types in the declarations JS file (`declarations/<service-name>.did.js`).
+     * These exports were introduced in candid PR #665 but are not needed by most users.
+     *
+     * @default false
+     */
+    rootExports?: boolean;
+  };
 };
 
 /**
@@ -89,9 +101,13 @@ export async function generate(options: GenerateOptions) {
         disabled: false,
         interfaceFile: false,
       },
+      declarations: {
+        rootExports: false,
+      },
     },
   } = options;
   const force = Boolean(output.force); // ensure force is a boolean
+  const rootExports = Boolean(output.declarations?.rootExports ?? false); // ensure rootExports is a boolean
 
   const didFilePath = resolve(didFile);
   const outputFileName = basename(didFile, DID_FILE_EXTENSION);
@@ -99,7 +115,7 @@ export async function generate(options: GenerateOptions) {
   await ensureDir(outDir);
   await ensureDir(resolve(outDir, 'declarations'));
 
-  const result = wasmGenerate(didFilePath, outputFileName);
+  const result = wasmGenerate(didFilePath, outputFileName, rootExports);
 
   await writeBindings({
     bindings: result,
