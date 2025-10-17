@@ -13,7 +13,10 @@ describe('wasmGenerate', () => {
   it.each(['hello_world', 'example'])('should generate a bindgen', async (serviceName) => {
     const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 
-    const result = wasmGenerate(didFile, serviceName);
+    const result = wasmGenerate({
+      did_file_path: didFile,
+      service_name: serviceName,
+    });
     await expect(result.declarations_js).toMatchFileSnapshot(
       `${SNAPSHOTS_DIR}/${serviceName}/declarations/${serviceName}.did.js.snapshot`,
     );
