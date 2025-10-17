@@ -115,7 +115,13 @@ export async function generate(options: GenerateOptions) {
   await ensureDir(outDir);
   await ensureDir(resolve(outDir, 'declarations'));
 
-  const result = wasmGenerate(didFilePath, outputFileName, rootExports);
+  const result = wasmGenerate({
+    did_file_path: didFilePath,
+    service_name: outputFileName,
+    declarations: {
+      root_exports: rootExports,
+    },
+  });
 
   await writeBindings({
     bindings: result,

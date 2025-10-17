@@ -4,6 +4,8 @@ mod parser;
 
 use std::path::PathBuf;
 
+use serde::Deserialize;
+use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
 use crate::bindings::{javascript, typescript, typescript_native};
@@ -18,6 +20,20 @@ fn start() {
     log::set_max_level(log::LevelFilter::Trace);
 }
 
+#[derive(Tsify, Deserialize)]
+#[tsify(from_wasm_abi)]
+pub struct GenerateDeclarationsOptions {
+    pub root_exports: bool,
+}
+
+#[derive(Tsify, Deserialize)]
+#[tsify(from_wasm_abi)]
+pub struct GenerateOptions {
+    pub did_file_path: String,
+    pub service_name: String,
+    pub declarations: GenerateDeclarationsOptions,
+}
+
 #[wasm_bindgen(getter_with_clone)]
 pub struct GenerateResult {
     pub declarations_js: String,
@@ -27,22 +43,24 @@ pub struct GenerateResult {
 }
 
 #[wasm_bindgen]
-pub fn generate(
-    declarations: String,
-    service_name: String,
-    root_exports: bool,
-) -> Result<GenerateResult, JsError> {
-    let input_path = PathBuf::from(declarations);
+pub fn generate(options: GenerateOptions) -> Result<GenerateResult, JsError> {
+    let input_path = PathBuf::from(options.did_file_path);
     let (env, actor, prog) = parser::check_file(input_path.as_path()).map_err(JsError::from)?;
 
-    let declarations_js = javascript::compile(&env, &actor, root_exports);
-    let declarations_ts = typescript::compile(&env, &actor, &prog, root_exports);
+    let declarations_js = javascript::compile(&env, &actor, options.declarations.root_exports);
+    let declarations_ts =
+        typescript::compile(&env, &actor, &prog, options.declarations.root_exports);
 
-    let interface_ts =
-        typescript_native::compile::compile(&env, &actor, &service_name, "interface", &prog);
+    let interface_ts = typescript_native::compile::compile(
+        &env,
+        &actor,
+        &options.service_name,
+        "interface",
+        &prog,
+    );
 
     let service_ts =
-        typescript_native::compile::compile(&env, &actor, &service_name, "wrapper", &prog);
+        typescript_native::compile::compile(&env, &actor, &options.service_name, "wrapper", &prog);
 
     Ok(GenerateResult {
         declarations_js,

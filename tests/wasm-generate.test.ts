@@ -15,7 +15,13 @@ describe('wasmGenerate', () => {
       const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
       const snapshotsDir = `${SNAPSHOTS_BASE_DIR}/no-root-export`;
 
-      const result = wasmGenerate(didFile, serviceName, false);
+      const result = wasmGenerate({
+        did_file_path: didFile,
+        service_name: serviceName,
+        declarations: {
+          root_exports: false,
+        },
+      });
       await expect(result.declarations_js).toMatchFileSnapshot(
         `${snapshotsDir}/${serviceName}/declarations/${serviceName}.did.js.snapshot`,
       );
@@ -36,7 +42,13 @@ describe('wasmGenerate', () => {
       const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
       const snapshotsDir = `${SNAPSHOTS_BASE_DIR}/root-export`;
 
-      const result = wasmGenerate(didFile, serviceName, true);
+      const result = wasmGenerate({
+        did_file_path: didFile,
+        service_name: serviceName,
+        declarations: {
+          root_exports: true,
+        },
+      });
       await expect(result.declarations_js).toMatchFileSnapshot(
         `${snapshotsDir}/${serviceName}/declarations/${serviceName}.did.js.snapshot`,
       );
