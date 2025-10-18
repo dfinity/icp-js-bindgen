@@ -45,7 +45,6 @@ export type GenerateOutputOptions = {
   declarations?: {
     /**
      * If `true`, exports root types in the declarations JS file (`declarations/<service-name>.did.js`).
-     * These exports were introduced in candid PR #665 but are not needed by most users.
      *
      * @default false
      */
@@ -107,7 +106,7 @@ export async function generate(options: GenerateOptions) {
     },
   } = options;
   const force = Boolean(output.force); // ensure force is a boolean
-  const rootExports = Boolean(output.declarations?.rootExports ?? false); // ensure rootExports is a boolean
+  const declarationsRootExports = Boolean(output.declarations?.rootExports ?? false); // ensure rootExports is a boolean
 
   const didFilePath = resolve(didFile);
   const outputFileName = basename(didFile, DID_FILE_EXTENSION);
@@ -119,7 +118,7 @@ export async function generate(options: GenerateOptions) {
     did_file_path: didFilePath,
     service_name: outputFileName,
     declarations: {
-      root_exports: rootExports,
+      root_exports: declarationsRootExports,
     },
   });
 
