@@ -1,3 +1,9 @@
+## Unreleased
+
+### Refactor
+
+- accept object as input for wasm generate (#87)
+
 ## 0.1.2 (2025-10-09)
 
 ### Fix
