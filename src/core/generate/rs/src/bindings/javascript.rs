@@ -292,9 +292,7 @@ pub fn compile(env: &TypeEnv, actor: &Option<Type>, root_exports: bool) -> Strin
 
             if root_exports {
                 let defs = pp_defs(env, &def_list, &recs, true);
-                let idl_service = str("export const idlService = ")
-                    .append(actor)
-                    .append(";");
+                let idl_service = str("export const idlService = ").append(actor).append(";");
                 let idl_init_args = str("export const idlInitArgs = ")
                     .append(pp_types(init_types.iter()))
                     .append(";");
