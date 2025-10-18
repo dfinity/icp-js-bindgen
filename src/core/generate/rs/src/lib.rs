@@ -22,9 +22,16 @@ fn start() {
 
 #[derive(Tsify, Deserialize)]
 #[tsify(from_wasm_abi)]
+pub struct GenerateDeclarationsOptions {
+    pub root_exports: bool,
+}
+
+#[derive(Tsify, Deserialize)]
+#[tsify(from_wasm_abi)]
 pub struct GenerateOptions {
     pub did_file_path: String,
     pub service_name: String,
+    pub declarations: GenerateDeclarationsOptions,
 }
 
 #[wasm_bindgen(getter_with_clone)]
@@ -40,8 +47,9 @@ pub fn generate(options: GenerateOptions) -> Result<GenerateResult, JsError> {
     let input_path = PathBuf::from(options.did_file_path);
     let (env, actor, prog) = parser::check_file(input_path.as_path()).map_err(JsError::from)?;
 
-    let declarations_js = javascript::compile(&env, &actor);
-    let declarations_ts = typescript::compile(&env, &actor, &prog);
+    let declarations_js = javascript::compile(&env, &actor, options.declarations.root_exports);
+    let declarations_ts =
+        typescript::compile(&env, &actor, &prog, options.declarations.root_exports);
 
     let interface_ts = typescript_native::compile::compile(
         &env,

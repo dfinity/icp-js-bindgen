@@ -39,6 +39,17 @@ export type GenerateOutputOptions = {
          */
         interfaceFile?: boolean;
       };
+  /**
+   * Options for controlling the generated declarations files.
+   */
+  declarations?: {
+    /**
+     * If `true`, exports root types in the declarations JS file (`declarations/<service-name>.did.js`).
+     *
+     * @default false
+     */
+    rootExports?: boolean;
+  };
 };
 
 /**
@@ -89,9 +100,13 @@ export async function generate(options: GenerateOptions) {
         disabled: false,
         interfaceFile: false,
       },
+      declarations: {
+        rootExports: false,
+      },
     },
   } = options;
   const force = Boolean(output.force); // ensure force is a boolean
+  const declarationsRootExports = Boolean(output.declarations?.rootExports ?? false); // ensure rootExports is a boolean
 
   const didFilePath = resolve(didFile);
   const outputFileName = basename(didFile, DID_FILE_EXTENSION);
@@ -102,6 +117,9 @@ export async function generate(options: GenerateOptions) {
   const result = wasmGenerate({
     did_file_path: didFilePath,
     service_name: outputFileName,
+    declarations: {
+      root_exports: declarationsRootExports,
+    },
   });
 
   await writeBindings({

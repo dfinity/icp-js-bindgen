@@ -2,6 +2,8 @@
 title: Bindings Structure
 prev: false
 next: false
+tableOfContents:
+  maxHeadingLevel: 4
 head:
   - tag: style
     content: |
@@ -302,8 +304,8 @@ For example, a Candid service will be represented as:
 <div class="code-left">
 
 ```txt title="hello_world.did"
-service : () -> {
-  greet : (name : text) -> text;
+service : {
+  greet : (name : text) -> (text);
 };
 ```
 
@@ -336,8 +338,8 @@ For example, a Candid service will be represented as:
 <div class="code-left">
 
 ```txt title="hello_world.did"
-service : () -> {
-  greet : (name : text) -> text;
+service : {
+  greet : (name : text) -> (text);
 };
 ```
 
@@ -402,11 +404,225 @@ See the [Migrating](./migrating) page for more information on how to migrate fro
 
 ### `declarations/<service-name>.did.d.ts`
 
-This file is used in TypeScript projects to type the Candid JS bindings generated in [`declarations/<service-name>.did.js`](#declarationsservice-namedidjs).
+This file is used in TypeScript projects to type the Candid JS bindings generated in [`declarations/<service-name>.did.js`](#declarationsservice-namedidjs). The exported types are:
+
+#### `_SERVICE` type
+
+This type is the TypeScript interface for the service. It contains all the methods that are defined in the [Candid service](https://github.com/dfinity/candid/blob/master/spec/Candid.md#services) in the `.did` file.
+
+For example:
+
+<div class="code-comparison">
+
+<div class="title-left">Candid</div>
+
+<div class="code-left">
+
+```txt title="hello_world.did"
+service : {
+  greet : (text) -> (text);
+};
+```
+
+</div>
+
+<div class="title-right">TypeScript</div>
+
+<div class="code-right">
+
+```typescript title="declarations/hello_world.did.d.ts"
+import type { ActorMethod } from '@icp-sdk/core/agent';
+import type { IDL } from '@icp-sdk/core/candid';
+import type { Principal } from '@icp-sdk/core/principal';
+
+export interface _SERVICE { 'greet' : ActorMethod<[string], string> }
+export declare const idlFactory: IDL.InterfaceFactory;
+export declare const init: (args: { IDL: typeof IDL }) => IDL.Type[];
+```
+
+</div>
+
+</div>
+
+You can use it to type the [`Actor`](https://js.icp.build/core/latest/libs/agent/api/classes/actor/) instance with the methods of the service declared in the `.did` file:
+
+```typescript
+import { type _SERVICE, idlFactory } from "./bindings/hello_world/declarations/hello_world.did";
+
+const actor = Actor.createActor<_SERVICE>( idlFactory, {
+  canisterId: "your-canister-id",
+});
+
+const greeting = await actor.greet("World"); // greet method is now available on the actor instance and typed
+console.log(greeting);
+```
+
+Additionally, all the types used in the service class are exported as well:
+
+<div class="code-comparison">
+
+<div class="title-left">Candid</div>
+
+<div class="code-left">
+
+```txt title="hello_world.did"
+type GreetArgs = record {
+  name : text;
+};
+
+service : {
+  greet : (GreetArgs) -> (text);
+};
+```
+
+</div>
+
+<div class="title-right">TypeScript</div>
+
+<div class="code-right">
+
+```typescript title="declarations/hello_world.did.d.ts"
+import type { ActorMethod } from '@icp-sdk/core/agent';
+import type { IDL } from '@icp-sdk/core/candid';
+import type { Principal } from '@icp-sdk/core/principal';
+
+export interface GreetArgs { 'name' : string } // <- exported type
+export interface _SERVICE { 'greet' : ActorMethod<[GreetArgs], string> }
+export declare const idlFactory: IDL.InterfaceFactory;
+export declare const init: (args: { IDL: typeof IDL }) => IDL.Type[];
+```
+
+</div>
+
+</div>
+
+#### `idlFactory` function
+
+The function signature is:
+
+```typescript
+const idlFactory: IDL.InterfaceFactory;
+```
+
+See [`IDL.InterfaceFactory`](https://js.icp.build/core/latest/libs/candid/api/namespaces/idl/type-aliases/interfacefactory/).
+
+#### `init` function
+
+The function signature is:
+
+```typescript
+const init: (args: { IDL: typeof IDL }) => IDL.Type[];
+```
+
+See [`IDL.Type`](https://js.icp.build/core/latest/libs/candid/api/namespaces/idl/classes/type/).
+
+#### `idlService` type
+
+> Note: This type is only exported if the [`output.declarations.rootExports`](./core/api/type-aliases/GenerateOutputOptions.md#rootExports) option is set to `true`.
+
+The type signature is:
+
+```typescript
+const idlService: IDL.ServiceClass;
+```
+
+See [`IDL.ServiceClass`](https://js.icp.build/core/latest/libs/candid/api/namespaces/idl/classes/serviceclass/).
+
+#### `idlInitArgs` type
+
+> Note: This type is only exported if the [`output.declarations.rootExports`](./core/api/type-aliases/GenerateOutputOptions.md#rootExports) option is set to `true`.
+
+The type signature is:
+
+```typescript
+const idlInitArgs: IDL.Type[];
+```
+
+See [`IDL.Type`](https://js.icp.build/core/latest/libs/candid/api/namespaces/idl/classes/type/).
 
 ### `declarations/<service-name>.did.js`
 
-This file contains the actual Candid JS bindings, that allow encoding and decoding JS objects to and from Candid.
+This file contains the actual Candid JS bindings, that allow encoding and decoding JS objects to and from Candid. This file exports two functions:
+
+#### `idlFactory` function
+
+Typically passed to the [`Actor.createActor`](https://js.icp.build/core/latest/libs/agent/api/classes/actor/#createactor) function:
+
+```typescript
+import { idlFactory } from "./bindings/hello_world/declarations/hello_world.did";
+
+const actor = Actor.createActor(idlFactory, {
+  canisterId: "your-canister-id",
+});
+```
+
+#### `init` function
+
+Used to type the initialization arguments of the service.
+
+You can use the [`output.declarations.rootExports`](./core/api/type-aliases/GenerateOutputOptions.md#rootExports) option to control whether to export the root types in the declarations JS file.
+
+#### `idlService` type
+
+> Note: This type is only exported if the [`output.declarations.rootExports`](./core/api/type-aliases/GenerateOutputOptions.md#rootExports) option is set to `true`.
+
+This type is the same service class that the [`idlFactory` function](#idlfactory-function-1) returns.
+
+Additionally, if the [`output.declarations.rootExports`](./core/api/type-aliases/GenerateOutputOptions.md#rootExports) option is set to `true`, all the types used in the service class are exported as constants from the declarations JS file.
+
+Example:
+
+<div class="code-comparison">
+
+<div class="title-left">Candid</div>
+
+<div class="code-left">
+
+```txt title="hello_world.did"
+type GreetArgs = record {
+  name : text;
+};
+
+service : {
+  greet : (GreetArgs) -> (text);
+};
+```
+
+</div>
+
+<div class="title-right">TypeScript</div>
+
+<div class="code-right">
+
+```typescript title="declarations/hello_world.did.js"
+import { IDL } from '@icp-sdk/core/candid';
+
+export const GreetArgs = IDL.Record({ 'name' : IDL.Text });
+
+export const idlService = IDL.Service({
+  'greet' : IDL.Func([GreetArgs], [IDL.Text], []),
+});
+
+export const idlInitArgs = [];
+
+export const idlFactory = ({ IDL }) => {
+  const GreetArgs = IDL.Record({ 'name' : IDL.Text });
+  
+  return IDL.Service({ 'greet' : IDL.Func([GreetArgs], [IDL.Text], []) });
+};
+
+export const init = ({ IDL }) => { return []; };
+```
+
+</div>
+
+</div>
+
+#### `idlInitArgs` type
+
+> Note: This type is only exported if the [`output.declarations.rootExports`](./core/api/type-aliases/GenerateOutputOptions.md#rootExports) option is set to `true`.
+
+This type is the same types that the [`init` function](#init-function-1) returns.
 
 ## Optional files
 
