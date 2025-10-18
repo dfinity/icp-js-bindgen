@@ -3,15 +3,18 @@ Usage: icp-bindgen [options]
 Generate JavaScript bindings for IC canisters
 
 Options:
-  -V, --version           output the version number
-  --did-file <path>       Path to the .did file to generate bindings from
-  --out-dir <dir>         Directory where the bindings will be written
-  --actor-disabled        If set, skips generating the actor file
-                          (<service-name>.ts). (default: false)
-  --actor-interface-file  If set, generates a `<service-name>.d.ts` file that
-                          contains the same types of the `<service-name>.ts`
-                          file. Has no effect if `--actor-disabled` is set.
-                          (default: false)
-  --force                 If set, overwrite existing files instead of aborting.
-                          (default: false)
-  -h, --help              display help for command
+  -V, --version                output the version number
+  --did-file <path>            Path to the .did file to generate bindings from
+  --out-dir <dir>              Directory where the bindings will be written
+  --actor-disabled             If set, skips generating the actor file
+                               (<service-name>.ts). (default: false)
+  --actor-interface-file       If set, generates a `<service-name>.d.ts` file
+                               that contains the same types of the
+                               `<service-name>.ts` file. Has no effect if
+                               `--actor-disabled` is set. (default: false)
+  --declarations-root-exports  If set, exports root types in the declarations JS
+                               file (`declarations/<service-name>.did.js`).
+                               (default: false)
+  --force                      If set, overwrite existing files instead of
+                               aborting. (default: false)
+  -h, --help                   display help for command
