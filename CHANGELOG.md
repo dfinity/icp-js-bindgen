@@ -1,5 +1,9 @@
 ## Unreleased
 
+### Feat
+
+- JS declarations root exports with flag (disabled by default) (#89)
+
 ### Refactor
 
 - accept object as input for wasm generate (#87)
