@@ -1,6 +1,6 @@
 [tool.commitizen]
 name = "cz_conventional_commits"
 tag_format = "$version"
-version = "0.2.0"
+version = "0.2.0-patch-typed-arrays"
 version_scheme = "semver2"
 version_files = ["package.json:version"]
