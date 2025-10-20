@@ -176,7 +176,7 @@ export interface exampleInterface {
     /**
      * Doc comment for f1 method of service
      */
-    f1(arg0: list, test: Uint8Array, arg2: boolean | null): Promise<void>;
+    f1(arg0: list, test: Uint8Array | number[], arg2: boolean | null): Promise<void>;
     g1(arg0: my_type, arg1: nested_opt, arg2: List, arg3: List | null, arg4: nested): Promise<[bigint, Principal, nested_res]>;
     h(arg0: Array<string | null>, arg1: {
         __kind__: "A";

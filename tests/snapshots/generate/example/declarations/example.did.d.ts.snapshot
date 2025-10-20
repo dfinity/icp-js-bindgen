@@ -161,7 +161,7 @@ export interface _SERVICE {
   /**
    * Doc comment for f1 method of service
    */
-  'f1' : ActorMethod<[list, Uint8Array, [] | [boolean]], undefined>,
+  'f1' : ActorMethod<[list, Uint8Array | number[], [] | [boolean]], undefined>,
   'g1' : ActorMethod<
     [my_type, nested_opt, List, [] | [List], nested],
     [bigint, Principal, nested_res]
