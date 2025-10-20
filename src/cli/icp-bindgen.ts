@@ -56,11 +56,13 @@ type Args = {
   outDir: string;
   actorInterfaceFile?: boolean;
   actorDisabled?: boolean;
+  declarationsRootExports?: boolean;
   force?: boolean;
 };
 
 async function run(args: Args) {
-  const { didFile, outDir, actorInterfaceFile, actorDisabled, force } = args;
+  const { didFile, outDir, actorInterfaceFile, actorDisabled, declarationsRootExports, force } =
+    args;
 
   console.log(cyan(`[${BIN_NAME}] Generating bindings from`), green(didFile));
   await generate({
@@ -71,6 +73,9 @@ async function run(args: Args) {
       actor: {
         disabled: actorDisabled,
         interfaceFile: actorInterfaceFile,
+      },
+      declarations: {
+        rootExports: declarationsRootExports,
       },
     },
   });
@@ -91,6 +96,11 @@ program
   .option(
     '--actor-interface-file',
     'If set, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file. Has no effect if `--actor-disabled` is set.',
+    false,
+  )
+  .option(
+    '--declarations-root-exports',
+    'If set, exports root types in the declarations JS file (`declarations/<service-name>.did.js`).',
     false,
   )
   .option('--force', 'If set, overwrite existing files instead of aborting.', false)

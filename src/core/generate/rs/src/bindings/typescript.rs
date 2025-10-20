@@ -318,7 +318,12 @@ fn pp_actor<'a>(env: &'a TypeEnv, ty: &'a Type, syntax: Option<&'a IDLType>) -> 
     }
 }
 
-pub fn compile(env: &TypeEnv, actor: &Option<Type>, prog: &IDLMergedProg) -> String {
+pub fn compile(
+    env: &TypeEnv,
+    actor: &Option<Type>,
+    prog: &IDLMergedProg,
+    root_exports: bool,
+) -> String {
     let header = r#"import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
@@ -333,11 +338,18 @@ import type { Principal } from '@icp-sdk/core/principal';
                 .as_ref()
                 .map(|s| pp_docs(s.docs.as_ref()))
                 .unwrap_or(RcDoc::nil());
-            docs.append(pp_actor(env, actor, syntax_actor.as_ref().map(|s| &s.typ)))
-                .append(RcDoc::line())
-                .append("export declare const idlService: IDL.ServiceClass;")
-                .append(RcDoc::line())
-                .append("export declare const idlInitArgs: IDL.Type[];")
+            let mut actor_doc =
+                docs.append(pp_actor(env, actor, syntax_actor.as_ref().map(|s| &s.typ)));
+
+            if root_exports {
+                actor_doc = actor_doc
+                    .append(RcDoc::line())
+                    .append("export declare const idlService: IDL.ServiceClass;")
+                    .append(RcDoc::line())
+                    .append("export declare const idlInitArgs: IDL.Type[];");
+            }
+
+            actor_doc
                 .append(RcDoc::line())
                 .append("export declare const idlFactory: IDL.InterfaceFactory;")
                 .append(RcDoc::line())
