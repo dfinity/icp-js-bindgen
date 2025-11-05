@@ -115,7 +115,7 @@ export async function generate(options: GenerateOptions) {
   await ensureDir(resolve(outDir, 'declarations'));
 
   const result = wasmGenerate({
-    did_file_path: didFilePath,
+    did_file: { LocalPath: didFilePath },
     service_name: outputFileName,
     declarations: {
       root_exports: declarationsRootExports,

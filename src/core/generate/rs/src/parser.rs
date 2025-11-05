@@ -273,3 +273,15 @@ pub fn check_file(file: &Path) -> Result<(TypeEnv, Option<Type>, IDLMergedProg)>
     let res = check_actor(&env, &merged_prog.resolve_actor()?)?;
     Ok((te, res, merged_prog))
 }
+
+pub fn check_str(str: &String) -> Result<(TypeEnv, Option<Type>, IDLMergedProg)> {
+    let prog = IDLMergedProg::new(pretty_parse::<IDLProg>(&String::new(), str)?);
+    let mut te = TypeEnv::new();
+    let mut env = Env {
+        te: &mut te,
+        pre: false,
+    };
+    check_decs(&mut env, &prog.decs())?;
+    let res = check_actor(&env, &prog.resolve_actor()?)?;
+    Ok((te, res, prog))
+}
