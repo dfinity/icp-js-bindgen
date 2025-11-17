@@ -43,65 +43,65 @@ describe('generate', () => {
     expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.d.ts`)).toBe(false);
   });
 
-  it.each(['hello_world', 'example'])(
-    'should generate a bindgen with interface declaration',
-    async (serviceName) => {
-      const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+  it.each([
+    'hello_world',
+    'example',
+  ])('should generate a bindgen with interface declaration', async (serviceName) => {
+    const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 
-      await generate({
-        didFile,
-        outDir: OUTPUT_DIR,
-        output: { actor: { interfaceFile: true } },
-      });
+    await generate({
+      didFile,
+      outDir: OUTPUT_DIR,
+      output: { actor: { interfaceFile: true } },
+    });
 
-      await expectGeneratedOutput(SNAPSHOTS_DIR, serviceName);
+    await expectGeneratedOutput(SNAPSHOTS_DIR, serviceName);
 
-      const interfaceTs = await readFileFromOutput(`${serviceName}.d.ts`);
-      await expect(interfaceTs).toMatchFileSnapshot(
-        `${SNAPSHOTS_DIR}/${serviceName}/${serviceName}.d.ts.snapshot`,
-      );
-    },
-  );
+    const interfaceTs = await readFileFromOutput(`${serviceName}.d.ts`);
+    await expect(interfaceTs).toMatchFileSnapshot(
+      `${SNAPSHOTS_DIR}/${serviceName}/${serviceName}.d.ts.snapshot`,
+    );
+  });
 
-  it.each(['hello_world', 'example'])(
-    'should generate a bindgen with declarations only',
-    async (serviceName) => {
-      const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+  it.each([
+    'hello_world',
+    'example',
+  ])('should generate a bindgen with declarations only', async (serviceName) => {
+    const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 
-      await generate({
-        didFile,
-        outDir: OUTPUT_DIR,
-        output: { actor: { disabled: true } },
-      });
+    await generate({
+      didFile,
+      outDir: OUTPUT_DIR,
+      output: { actor: { disabled: true } },
+    });
 
-      await expectGeneratedDeclarations(SNAPSHOTS_DIR, serviceName);
-      expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.d.ts`)).toBe(false);
-      expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.ts`)).toBe(false);
-    },
-  );
+    await expectGeneratedDeclarations(SNAPSHOTS_DIR, serviceName);
+    expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.d.ts`)).toBe(false);
+    expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.ts`)).toBe(false);
+  });
 
-  it.each(['hello_world', 'example'])(
-    'should ignore other options when generating a bindgen with actor disabled',
-    async (serviceName) => {
-      const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+  it.each([
+    'hello_world',
+    'example',
+  ])('should ignore other options when generating a bindgen with actor disabled', async (serviceName) => {
+    const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 
-      await generate({
-        didFile,
-        outDir: OUTPUT_DIR,
-        output: {
-          actor: {
-            disabled: true,
-            // @ts-expect-error - the interface does not allow this, but we want to test that it is ignored at runtime
-            interfaceFile: true,
-          },
+    await generate({
+      didFile,
+      outDir: OUTPUT_DIR,
+      output: {
+        actor: {
+          disabled: true,
+          // @ts-expect-error - the interface does not allow this, but we want to test that it is ignored at runtime
+          interfaceFile: true,
         },
-      });
+      },
+    });
 
-      await expectGeneratedDeclarations(SNAPSHOTS_DIR, serviceName);
-      expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.d.ts`)).toBe(false);
-      expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.ts`)).toBe(false);
-    },
-  );
+    await expectGeneratedDeclarations(SNAPSHOTS_DIR, serviceName);
+    expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.d.ts`)).toBe(false);
+    expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.ts`)).toBe(false);
+  });
 
   it('should preserve the .did file', async () => {
     const { readFile: realReadFile } =
