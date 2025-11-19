@@ -16,7 +16,7 @@ describe('wasmGenerate', () => {
       const snapshotsDir = `${SNAPSHOTS_BASE_DIR}/no-root-export`;
 
       const result = wasmGenerate({
-        did_file_path: didFile,
+        did_file: { LocalPath: didFile },
         service_name: serviceName,
         declarations: {
           root_exports: false,
@@ -43,7 +43,7 @@ describe('wasmGenerate', () => {
       const snapshotsDir = `${SNAPSHOTS_BASE_DIR}/root-export`;
 
       const result = wasmGenerate({
-        did_file_path: didFile,
+        did_file: { LocalPath: didFile },
         service_name: serviceName,
         declarations: {
           root_exports: true,

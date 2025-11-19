@@ -1,6 +1,7 @@
 import { basename, resolve } from 'node:path';
 import { prepareBinding } from './bindings.ts';
 import { ensureDir, writeFileSafe } from './fs.ts';
+import type { DidFile } from './rs/dist/icp-js-bindgen';
 import { type WasmGenerateResult, wasmGenerate, wasmInit } from './rs.ts';
 
 const DID_FILE_EXTENSION = '.did';
@@ -59,7 +60,11 @@ export type GenerateOptions = {
   /**
    * The path to the `.did` file.
    */
-  didFile: string;
+  didFile?: string;
+  /**
+   *
+   */
+  didRemoteUrl?: string;
   /**
    * The path to the directory where the bindings will be generated.
    */
@@ -93,6 +98,7 @@ export async function generate(options: GenerateOptions) {
 
   const {
     didFile,
+    didRemoteUrl,
     outDir,
     output = {
       force: false,
@@ -108,15 +114,56 @@ export async function generate(options: GenerateOptions) {
   const force = Boolean(output.force); // ensure force is a boolean
   const declarationsRootExports = Boolean(output.declarations?.rootExports ?? false); // ensure rootExports is a boolean
 
-  const didFilePath = resolve(didFile);
-  const outputFileName = basename(didFile, DID_FILE_EXTENSION);
+  if (didFile && didRemoteUrl) {
+    throw new Error('Only one of didFile or didRemoteUrl should be provided.');
+  }
+
+  function fromDidFile(didFile: string): {
+    did_file: DidFile;
+    service_name: string;
+  } {
+    return {
+      did_file: { LocalPath: resolve(didFile) },
+      service_name: basename(didFile, DID_FILE_EXTENSION),
+    };
+  }
+
+  async function fromDidRemoteUrl(didRemoteUrl: string): Promise<{
+    did_file: DidFile;
+    service_name: string;
+  }> {
+    const u = new URL(didRemoteUrl);
+    const fileName = u.pathname.split('/').pop();
+    const r = await fetch(didRemoteUrl);
+    if (!r.ok) {
+      throw new Error(
+        `Failed to fetch .did file from URL: ${didRemoteUrl}. Status: ${r.status} ${r.statusText}`,
+      );
+    }
+    const didFile = await r.text();
+    return {
+      did_file: { InlineString: didFile },
+      service_name: fileName || 'service',
+    };
+  }
+
+  let did_file: DidFile;
+  let service_name: string;
+
+  if (didFile) {
+    ({ did_file, service_name } = fromDidFile(didFile));
+  } else if (didRemoteUrl) {
+    ({ did_file, service_name } = await fromDidRemoteUrl(didRemoteUrl));
+  } else {
+    throw new Error('Either didFile or didRemoteUrl must be provided.');
+  }
 
   await ensureDir(outDir);
   await ensureDir(resolve(outDir, 'declarations'));
 
   const result = wasmGenerate({
-    did_file_path: didFilePath,
-    service_name: outputFileName,
+    did_file,
+    service_name,
     declarations: {
       root_exports: declarationsRootExports,
     },
@@ -125,7 +172,7 @@ export async function generate(options: GenerateOptions) {
   await writeBindings({
     bindings: result,
     outDir,
-    outputFileName,
+    outputFileName: service_name,
     output,
     force,
   });

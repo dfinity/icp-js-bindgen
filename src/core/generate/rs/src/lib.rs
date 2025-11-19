@@ -28,8 +28,15 @@ pub struct GenerateDeclarationsOptions {
 
 #[derive(Tsify, Deserialize)]
 #[tsify(from_wasm_abi)]
+pub enum DidFile {
+    LocalPath(String),
+    InlineString(String),
+}
+
+#[derive(Tsify, Deserialize)]
+#[tsify(from_wasm_abi)]
 pub struct GenerateOptions {
-    pub did_file_path: String,
+    pub did_file: DidFile,
     pub service_name: String,
     pub declarations: GenerateDeclarationsOptions,
 }
@@ -44,8 +51,15 @@ pub struct GenerateResult {
 
 #[wasm_bindgen]
 pub fn generate(options: GenerateOptions) -> Result<GenerateResult, JsError> {
-    let input_path = PathBuf::from(options.did_file_path);
-    let (env, actor, prog) = parser::check_file(input_path.as_path()).map_err(JsError::from)?;
+    let (env, actor, prog) = match options.did_file {
+        DidFile::LocalPath(did_file_path) => {
+            let input_path = PathBuf::from(did_file_path);
+            parser::check_file(input_path.as_path()).map_err(JsError::from)?
+        }
+        DidFile::InlineString(did_file_str) => {
+            parser::check_str(&did_file_str).map_err(JsError::from)?
+        }
+    };
 
     let declarations_js = javascript::compile(&env, &actor, options.declarations.root_exports);
     let declarations_ts =

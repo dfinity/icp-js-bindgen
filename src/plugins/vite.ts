@@ -104,6 +104,10 @@ export function icpBindgen(options: Options): Plugin {
 }
 
 function watchDidFileChanges(server: ViteDevServer, options: Options) {
+  if (!options.didFile) {
+    return;
+  }
+
   const didFilePath = resolve(options.didFile);
 
   server.watcher.add(didFilePath);
@@ -115,7 +119,8 @@ function watchDidFileChanges(server: ViteDevServer, options: Options) {
 }
 
 async function run(options: Options) {
-  console.log(cyan(`[${VITE_PLUGIN_NAME}] Generating bindings from`), green(options.didFile));
+  const source = options.didFile || options.didRemoteUrl || 'unknown source';
+  console.log(cyan(`[${VITE_PLUGIN_NAME}] Generating bindings from`), green(source));
 
   await generate({
     didFile: options.didFile,
