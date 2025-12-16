@@ -1,5 +1,9 @@
 ## Unreleased
 
+### Fix
+
+- escape `*/` to prevent premature doc comment termination (#102)
+
 ## 0.2.0 (2025-10-20)
 
 ### Feat
