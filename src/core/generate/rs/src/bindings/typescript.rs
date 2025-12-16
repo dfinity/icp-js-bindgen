@@ -1,5 +1,6 @@
 //! Ported from https://github.com/dfinity/candid/blob/1ddf879f368f765145223c08bbe2c8c8f4782dcc/rust/candid_parser/src/bindings/typescript.rs
 
+use super::comments::escape_doc_comment;
 use super::javascript::{ident, is_tuple_fields};
 use candid::pretty::utils::*;
 use candid::types::{Field, Function, Label, SharedLabel, Type, TypeEnv, TypeInner};
@@ -250,10 +251,9 @@ fn pp_docs<'a>(docs: &'a [String]) -> RcDoc<'a> {
     if docs.is_empty() {
         RcDoc::nil()
     } else {
-        let docs = lines(
-            docs.iter()
-                .map(|line| RcDoc::text(DOC_COMMENT_LINE_PREFIX).append(line)),
-        );
+        let docs = lines(docs.iter().map(|line| {
+            RcDoc::text(DOC_COMMENT_LINE_PREFIX).append(RcDoc::text(escape_doc_comment(line)))
+        }));
         RcDoc::text(DOC_COMMENT_PREFIX)
             .append(RcDoc::hardline())
             .append(docs)

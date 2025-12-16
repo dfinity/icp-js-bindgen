@@ -1,4 +1,5 @@
 use super::conversion_functions_generator::TopLevelNodes;
+use crate::bindings::comments::escape_doc_comment;
 use swc_core::common::{
     BytePos, DUMMY_SP, Span,
     comments::{Comment, CommentKind, Comments},
@@ -26,7 +27,7 @@ fn make_comment(docs: &[String]) -> Option<Comment> {
         // Join all doc lines into a single block comment, with each line prefixed by a space
         let mut comment_text = String::from("*\n");
         for line in docs {
-            comment_text.push_str(&format!(" * {}\n", line));
+            comment_text.push_str(&format!(" * {}\n", escape_doc_comment(line)));
         }
 
         // Add a space at the end to align the block comment final line ("*/") properly
