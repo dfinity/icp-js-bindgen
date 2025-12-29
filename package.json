@@ -65,7 +65,7 @@
   "packageManager": "pnpm@10.13.1",
   "devDependencies": {
     "@biomejs/biome": "2.3.6",
-    "@tanstack/config": "^0.22.0",
+    "@tanstack/vite-config": "^0.4.3",
     "@types/node": "^24.10.1",
     "memfs": "^4.51.0",
     "publint": "^0.3.15",
