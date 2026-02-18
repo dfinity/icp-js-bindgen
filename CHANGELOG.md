@@ -1,5 +1,10 @@
 ## Unreleased
 
+### Fix
+
+- prevent WASM out-of-bounds trap in concurrent generate calls (#111)
+- resolve 9 audit vulnerabilities via pnpm overrides (#112)
+
 ## 0.2.1 (2025-12-16)
 
 ### Fix
