@@ -187,6 +187,93 @@ fn pp_modes(modes: &[candid::types::FuncMode]) -> RcDoc<'_> {
     sep_enclose(ms, ",", "[", "]")
 }
 
+/// Find a Service type in `def_list` that has `func_id` as a method field
+/// and is in a mutual cycle with it (the Func's args/rets reference the Service).
+fn find_service_in_cycle<'a>(
+    env: &'a TypeEnv,
+    func_id: &str,
+    func: &Function,
+    def_list: &[&'a str],
+    recs: &BTreeSet<String>,
+) -> Option<&'a str> {
+    for &s_id in def_list {
+        if recs.contains(s_id) {
+            continue;
+        }
+        let Ok(s_ty) = env.find_type(&s_id.into()) else {
+            continue;
+        };
+        let TypeInner::Service(methods) = s_ty.as_ref() else {
+            continue;
+        };
+
+        let has_func_field = methods
+            .iter()
+            .any(|(_, ty)| matches!(ty.as_ref(), TypeInner::Var(v) if v.as_str() == func_id));
+        if !has_func_field {
+            continue;
+        }
+
+        let references_service = func
+            .args
+            .iter()
+            .any(|arg| matches!(arg.typ.as_ref(), TypeInner::Var(v) if v.as_str() == s_id))
+            || func
+                .rets
+                .iter()
+                .any(|ret| matches!(ret.typ.as_ref(), TypeInner::Var(v) if v.as_str() == s_id));
+
+        if references_service {
+            return Some(s_id);
+        }
+    }
+    None
+}
+
+/// For TypeScript output, swap Rec placement so that recursive Func types
+/// used in Service method fields are emitted as concrete `FuncClass` values
+/// instead of `RecClass`, which would fail `tsc --strict`.
+///
+/// `IDL.Service()` requires `Record<string, FuncClass>` for its fields, but
+/// `IDL.Func()` args accept any `Type[]`. By making the Service the Rec and
+/// the Func a concrete value, both constraints are satisfied.
+fn optimize_recs_for_typescript<'a>(
+    env: &'a TypeEnv,
+    def_list: &mut Vec<&'a str>,
+    initial_recs: BTreeSet<String>,
+) -> BTreeSet<String> {
+    // Collect swaps as owned Strings to avoid borrowing initial_recs.
+    let swaps: Vec<(String, String)> = initial_recs
+        .iter()
+        .filter_map(|func_id| {
+            let ty = env.find_type(&func_id.as_str().into()).ok()?;
+            let TypeInner::Func(func) = ty.as_ref() else {
+                return None;
+            };
+            find_service_in_cycle(env, func_id, func, def_list, &initial_recs)
+                .map(|service_id| (func_id.clone(), service_id.to_string()))
+        })
+        .collect();
+
+    let mut recs = initial_recs;
+    for (func_id, service_id) in &swaps {
+        recs.remove(func_id);
+        recs.insert(service_id.clone());
+
+        // Ensure the func def comes before the service fill in output order.
+        if let (Some(fp), Some(sp)) = (
+            def_list.iter().position(|&s| s == func_id.as_str()),
+            def_list.iter().position(|&s| s == service_id.as_str()),
+        ) {
+            if fp > sp {
+                def_list.swap(fp, sp);
+            }
+        }
+    }
+
+    recs
+}
+
 fn pp_service(serv: &[(String, Type)]) -> RcDoc<'_> {
     let ms = serv
         .iter()
@@ -360,17 +447,28 @@ pub fn compile_typescript(
     };
 
     // Render the JavaScript runtime code with type annotations.
+    // Unlike compile(), we optimize Rec placement so that recursive Func types
+    // in Service method fields are emitted as concrete FuncClass values.
     let js_code = match actor {
         None => {
-            let def_list: Vec<_> = env.to_sorted_iter().map(|pair| pair.0.as_str()).collect();
-            let recs = infer_rec(env, &def_list).unwrap();
+            let mut def_list: Vec<_> =
+                env.to_sorted_iter().map(|pair| pair.0.as_str()).collect();
+            let initial_recs = infer_rec(env, &def_list).unwrap();
+            let initial_recs: BTreeSet<String> =
+                initial_recs.into_iter().map(|s| s.to_string()).collect();
+            let recs_owned = optimize_recs_for_typescript(env, &mut def_list, initial_recs);
+            let recs: BTreeSet<&str> = recs_owned.iter().map(|s| s.as_str()).collect();
             let doc = pp_defs(env, &def_list, &recs, root_exports);
 
             doc.pretty(LINE_WIDTH).to_string()
         }
         Some(actor) => {
-            let def_list = chase_actor(env, actor).unwrap();
-            let recs = infer_rec(env, &def_list).unwrap();
+            let mut def_list = chase_actor(env, actor).unwrap();
+            let initial_recs = infer_rec(env, &def_list).unwrap();
+            let initial_recs: BTreeSet<String> =
+                initial_recs.into_iter().map(|s| s.to_string()).collect();
+            let recs_owned = optimize_recs_for_typescript(env, &mut def_list, initial_recs);
+            let recs: BTreeSet<&str> = recs_owned.iter().map(|s| s.as_str()).collect();
             let types = if let TypeInner::Class(args, _) = actor.as_ref() {
                 args.iter().map(|arg| arg.typ.clone()).collect::<Vec<_>>()
             } else {
