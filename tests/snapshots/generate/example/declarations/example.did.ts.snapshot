@@ -198,8 +198,8 @@ export const idlFactory: IDL.InterfaceFactory = ({ IDL }) => {
   const B = IDL.Rec();
   const List = IDL.Rec();
   const list = IDL.Rec();
+  const s = IDL.Rec();
   const stream = IDL.Rec();
-  const t = IDL.Rec();
   const tree = IDL.Rec();
   const node = IDL.Record({ 'head' : IDL.Nat, 'tail' : list });
   list.fill(IDL.Opt(node));
@@ -278,11 +278,10 @@ export const idlFactory: IDL.InterfaceFactory = ({ IDL }) => {
       })
     )
   );
-  const s = IDL.Service({
-    'f' : t,
-    'g' : IDL.Func([list], [B, tree, stream], []),
-  });
-  t.fill(IDL.Func([s], [], []));
+  const t = IDL.Func([s], [], []);
+  s.fill(
+    IDL.Service({ 'f' : t, 'g' : IDL.Func([list], [B, tree, stream], []) })
+  );
   
   return IDL.Service({
     'f1' : IDL.Func(
