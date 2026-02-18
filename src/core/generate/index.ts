@@ -1,7 +1,7 @@
 import { basename, resolve } from 'node:path';
 import { prepareBinding } from './bindings.ts';
 import { ensureDir, writeFileSafe } from './fs.ts';
-import { type WasmGenerateResult, wasmGenerate, wasmInit } from './rs.ts';
+import { wasmGenerate, wasmInit } from './rs.ts';
 
 const DID_FILE_EXTENSION = '.did';
 
@@ -122,8 +122,22 @@ export async function generate(options: GenerateOptions) {
     },
   });
 
+  // Extract all strings from the WASM object synchronously before any async
+  // work and free it explicitly.  The GenerateResult is backed by WASM linear
+  // memory and registered with a FinalizationRegistry whose cleanup timing
+  // is engine-dependent.  Holding the object across await boundaries has been
+  // observed to cause "Out of bounds memory access" traps when multiple
+  // generate() calls run concurrently (e.g. several Vite plugin instances).
+  const bindings = {
+    declarations_js: result.declarations_js,
+    declarations_ts: result.declarations_ts,
+    interface_ts: result.interface_ts,
+    service_ts: result.service_ts,
+  };
+  result.free();
+
   await writeBindings({
-    bindings: result,
+    bindings,
     outDir,
     outputFileName,
     output,
@@ -131,8 +145,15 @@ export async function generate(options: GenerateOptions) {
   });
 }
 
+type Bindings = {
+  declarations_js: string;
+  declarations_ts: string;
+  interface_ts: string;
+  service_ts: string;
+};
+
 type WriteBindingsOptions = {
-  bindings: WasmGenerateResult;
+  bindings: Bindings;
   outDir: string;
   outputFileName: string;
   output: GenerateOutputOptions;
