@@ -200,9 +200,7 @@ fn references_var(ty: &Type, name: &str) -> bool {
             func.args.iter().any(|a| references_var(&a.typ, name))
                 || func.rets.iter().any(|r| references_var(&r.typ, name))
         }
-        TypeInner::Service(methods) => {
-            methods.iter().any(|(_, m)| references_var(m, name))
-        }
+        TypeInner::Service(methods) => methods.iter().any(|(_, m)| references_var(m, name)),
         TypeInner::Class(args, ty) => {
             args.iter().any(|a| references_var(&a.typ, name)) || references_var(ty, name)
         }
@@ -230,21 +228,13 @@ fn find_service_in_cycle<'a>(
             continue;
         };
 
-        let has_func_field = methods
-            .iter()
-            .any(|(_, ty)| references_var(ty, func_id));
+        let has_func_field = methods.iter().any(|(_, ty)| references_var(ty, func_id));
         if !has_func_field {
             continue;
         }
 
-        let references_service = func
-            .args
-            .iter()
-            .any(|arg| references_var(&arg.typ, s_id))
-            || func
-                .rets
-                .iter()
-                .any(|ret| references_var(&ret.typ, s_id));
+        let references_service = func.args.iter().any(|arg| references_var(&arg.typ, s_id))
+            || func.rets.iter().any(|ret| references_var(&ret.typ, s_id));
 
         if references_service {
             return Some(s_id);
@@ -254,10 +244,7 @@ fn find_service_in_cycle<'a>(
 }
 
 /// Run `infer_rec` then `optimize_recs`, returning owned rec names.
-fn infer_and_optimize_recs<'a>(
-    env: &'a TypeEnv,
-    def_list: &mut Vec<&'a str>,
-) -> BTreeSet<String> {
+fn infer_and_optimize_recs<'a>(env: &'a TypeEnv, def_list: &mut Vec<&'a str>) -> BTreeSet<String> {
     let initial_recs = infer_rec(env, def_list).unwrap();
     let initial_recs: BTreeSet<String> = initial_recs.into_iter().map(|s| s.to_string()).collect();
     optimize_recs(env, def_list, initial_recs)
@@ -284,8 +271,7 @@ fn optimize_recs<'a>(
             let TypeInner::Func(func) = ty.as_ref() else {
                 return None;
             };
-            let service_id =
-                find_service_in_cycle(env, func_id, func, def_list, &initial_recs)?;
+            let service_id = find_service_in_cycle(env, func_id, func, def_list, &initial_recs)?;
             if !claimed.insert(service_id) {
                 return None;
             }
@@ -302,10 +288,9 @@ fn optimize_recs<'a>(
         if let (Some(fp), Some(sp)) = (
             def_list.iter().position(|&s| s == func_id.as_str()),
             def_list.iter().position(|&s| s == service_id.as_str()),
-        ) {
-            if fp > sp {
-                def_list.swap(fp, sp);
-            }
+        ) && fp > sp
+        {
+            def_list.swap(fp, sp);
         }
     }
 
@@ -380,8 +365,7 @@ fn pp_imports<'a>() -> RcDoc<'a> {
 pub fn compile(env: &TypeEnv, actor: &Option<Type>, root_exports: bool) -> String {
     match actor {
         None => {
-            let mut def_list: Vec<_> =
-                env.to_sorted_iter().map(|pair| pair.0.as_str()).collect();
+            let mut def_list: Vec<_> = env.to_sorted_iter().map(|pair| pair.0.as_str()).collect();
             let initial_recs = infer_rec(env, &def_list).unwrap();
             let initial_recs: BTreeSet<String> =
                 initial_recs.into_iter().map(|s| s.to_string()).collect();
@@ -496,8 +480,7 @@ pub fn compile_typescript(
     // Render the JavaScript runtime code with type annotations.
     let js_code = match actor {
         None => {
-            let mut def_list: Vec<_> =
-                env.to_sorted_iter().map(|pair| pair.0.as_str()).collect();
+            let mut def_list: Vec<_> = env.to_sorted_iter().map(|pair| pair.0.as_str()).collect();
             let recs_owned = infer_and_optimize_recs(env, &mut def_list);
             let recs: BTreeSet<&str> = recs_owned.iter().map(|s| s.as_str()).collect();
             let doc = pp_defs(env, &def_list, &recs, root_exports);
