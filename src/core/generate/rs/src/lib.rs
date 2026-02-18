@@ -24,6 +24,8 @@ fn start() {
 #[tsify(from_wasm_abi)]
 pub struct GenerateDeclarationsOptions {
     pub root_exports: bool,
+    #[serde(default)]
+    pub typescript: bool,
 }
 
 #[derive(Tsify, Deserialize)]
@@ -38,6 +40,7 @@ pub struct GenerateOptions {
 pub struct GenerateResult {
     pub declarations_js: String,
     pub declarations_ts: String,
+    pub declarations_typescript: String,
     pub interface_ts: String,
     pub service_ts: String,
 }
@@ -50,6 +53,17 @@ pub fn generate(options: GenerateOptions) -> Result<GenerateResult, JsError> {
     let declarations_js = javascript::compile(&env, &actor, options.declarations.root_exports);
     let declarations_ts =
         typescript::compile(&env, &actor, &prog, options.declarations.root_exports);
+
+    let declarations_typescript = if options.declarations.typescript {
+        javascript::compile_typescript(
+            &env,
+            &actor,
+            &prog,
+            options.declarations.root_exports,
+        )
+    } else {
+        String::new()
+    };
 
     let interface_ts = typescript_native::compile::compile(
         &env,
@@ -65,6 +79,7 @@ pub fn generate(options: GenerateOptions) -> Result<GenerateResult, JsError> {
     Ok(GenerateResult {
         declarations_js,
         declarations_ts,
+        declarations_typescript,
         interface_ts,
         service_ts,
     })

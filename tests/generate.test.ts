@@ -41,6 +41,10 @@ describe('generate', () => {
 
     await expectGeneratedOutput(SNAPSHOTS_DIR, serviceName);
     expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.d.ts`)).toBe(false);
+
+    // Verify the service .ts file imports from .did (extensionless)
+    const serviceTs = await readFileFromOutput(`${serviceName}.ts`);
+    expect(serviceTs).toContain(`from "./declarations/${serviceName}.did"`);
   });
 
   it.each([
@@ -101,6 +105,51 @@ describe('generate', () => {
     await expectGeneratedDeclarations(SNAPSHOTS_DIR, serviceName);
     expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.d.ts`)).toBe(false);
     expect(fileExists(`${OUTPUT_DIR}/${serviceName}/${serviceName}.ts`)).toBe(false);
+  });
+
+  it.each([
+    'hello_world',
+    'example',
+  ])('should generate typescript declarations for %s', async (serviceName) => {
+    const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+
+    await generate({
+      didFile,
+      outDir: OUTPUT_DIR,
+      output: { declarations: { typescript: true } },
+    });
+
+    // Should produce .did.ts instead of .did.js + .did.d.ts
+    expect(fileExists(`${OUTPUT_DIR}/declarations/${serviceName}.did.ts`)).toBe(true);
+    expect(fileExists(`${OUTPUT_DIR}/declarations/${serviceName}.did.js`)).toBe(false);
+    expect(fileExists(`${OUTPUT_DIR}/declarations/${serviceName}.did.d.ts`)).toBe(false);
+
+    const declarationsTypescript = await readFileFromOutput(`declarations/${serviceName}.did.ts`);
+    await expect(declarationsTypescript).toMatchFileSnapshot(
+      `${SNAPSHOTS_DIR}/${serviceName}/declarations/${serviceName}.did.ts.snapshot`,
+    );
+
+    // Verify the service .ts file imports from .did (not .did.d.ts)
+    const serviceTs = await readFileFromOutput(`${serviceName}.ts`);
+    expect(serviceTs).toContain(`from "./declarations/${serviceName}.did"`);
+    expect(serviceTs).not.toContain(`from "./declarations/${serviceName}.did.d.ts"`);
+  });
+
+  it.each([
+    'hello_world',
+    'example',
+  ])('should generate typescript declarations with rootExports for %s', async (serviceName) => {
+    const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+
+    await generate({
+      didFile,
+      outDir: OUTPUT_DIR,
+      output: { declarations: { typescript: true, rootExports: true } },
+    });
+
+    expect(fileExists(`${OUTPUT_DIR}/declarations/${serviceName}.did.ts`)).toBe(true);
+    expect(fileExists(`${OUTPUT_DIR}/declarations/${serviceName}.did.js`)).toBe(false);
+    expect(fileExists(`${OUTPUT_DIR}/declarations/${serviceName}.did.d.ts`)).toBe(false);
   });
 
   it('should preserve the .did file', async () => {

@@ -4,6 +4,7 @@ use candid::pretty::candid::pp_mode;
 use candid::pretty::utils::*;
 use candid::types::{ArgType, Field, Function, Label, SharedLabel, Type, TypeEnv, TypeInner};
 use candid_parser::bindings::analysis::{chase_actor, chase_types, infer_rec};
+use candid_parser::syntax::IDLMergedProg;
 use pretty::RcDoc;
 use std::collections::BTreeSet;
 
@@ -316,4 +317,117 @@ pub fn compile(env: &TypeEnv, actor: &Option<Type>, root_exports: bool) -> Strin
             result.pretty(LINE_WIDTH).to_string()
         }
     }
+}
+
+/// Compiles a merged TypeScript declarations file (`.did.ts`) that combines
+/// the TypeScript type definitions with the JavaScript IDL runtime code.
+pub fn compile_typescript(
+    env: &TypeEnv,
+    actor: &Option<Type>,
+    prog: &IDLMergedProg,
+    root_exports: bool,
+) -> String {
+    use super::typescript;
+
+    // Render the TypeScript prefix (type imports + type definitions + actor interface)
+    // in its own scope to avoid lifetime issues with RcDoc borrowing.
+    let ts_prefix = {
+        let syntax_actor = prog.resolve_actor().ok().flatten();
+        let ts_def_list: Vec<_> = env.to_sorted_iter().map(|pair| pair.0.as_str()).collect();
+        let ts_defs = typescript::pp_defs(env, &ts_def_list, prog);
+
+        let ts_actor = match actor {
+            None => RcDoc::nil(),
+            Some(actor) => {
+                let docs = syntax_actor
+                    .as_ref()
+                    .map(|s| typescript::pp_docs(s.docs.as_ref()))
+                    .unwrap_or(RcDoc::nil());
+                docs.append(typescript::pp_actor(
+                    env,
+                    actor,
+                    syntax_actor.as_ref().map(|s| &s.typ),
+                ))
+            }
+        };
+
+        typescript::pp_type_imports()
+            .append(pp_imports())
+            .append(ts_defs)
+            .append(ts_actor)
+            .pretty(LINE_WIDTH)
+            .to_string()
+    };
+
+    // Render the JavaScript runtime code with type annotations.
+    let js_code = match actor {
+        None => {
+            let def_list: Vec<_> = env.to_sorted_iter().map(|pair| pair.0.as_str()).collect();
+            let recs = infer_rec(env, &def_list).unwrap();
+            let doc = pp_defs(env, &def_list, &recs, root_exports);
+
+            doc.pretty(LINE_WIDTH).to_string()
+        }
+        Some(actor) => {
+            let def_list = chase_actor(env, actor).unwrap();
+            let recs = infer_rec(env, &def_list).unwrap();
+            let types = if let TypeInner::Class(args, _) = actor.as_ref() {
+                args.iter().map(|arg| arg.typ.clone()).collect::<Vec<_>>()
+            } else {
+                Vec::new()
+            };
+            let init_types = types.as_slice();
+
+            let actor_expr = pp_actor(actor, &recs);
+
+            let idl_factory_return = kwd("return").append(actor_expr.clone()).append(";");
+            let idl_factory_body = pp_defs(env, &def_list, &recs, false).append(idl_factory_return);
+            let idl_factory_doc =
+                str("export const idlFactory: IDL.InterfaceFactory = ({ IDL }) => ")
+                    .append(enclose_space("{", idl_factory_body, "};"));
+
+            let init_defs = chase_types(env, init_types).unwrap();
+            let init_recs = infer_rec(env, &init_defs).unwrap();
+            let init_defs_doc = pp_defs(env, &init_defs, &init_recs, false);
+            let init_doc = kwd("return")
+                .append(pp_types(init_types.iter()))
+                .append(";");
+            let init_doc = init_defs_doc.append(init_doc);
+            let init_doc =
+                str("export const init: (args: { IDL: typeof IDL }) => IDL.Type[] = ({ IDL }) => ")
+                    .append(enclose_space("{", init_doc, "};"));
+            let init_doc = init_doc.pretty(LINE_WIDTH).to_string();
+
+            let mut result = RcDoc::<()>::nil();
+
+            if root_exports {
+                let defs = pp_defs(env, &def_list, &recs, true);
+                let idl_service = str("export const idlService: IDL.ServiceClass = ")
+                    .append(actor_expr)
+                    .append(";");
+                let idl_init_args = str("export const idlInitArgs: IDL.Type[] = ")
+                    .append(pp_types(init_types.iter()))
+                    .append(";");
+
+                result = result
+                    .append(defs)
+                    .append(idl_service)
+                    .append(RcDoc::hardline())
+                    .append(RcDoc::hardline())
+                    .append(idl_init_args)
+                    .append(RcDoc::hardline())
+                    .append(RcDoc::hardline());
+            }
+
+            result = result
+                .append(idl_factory_doc)
+                .append(RcDoc::hardline())
+                .append(RcDoc::hardline())
+                .append(init_doc);
+
+            result.pretty(LINE_WIDTH).to_string()
+        }
+    };
+
+    format!("{}\n{}\n", ts_prefix, js_code)
 }
