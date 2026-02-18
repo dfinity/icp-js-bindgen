@@ -244,7 +244,7 @@ export interface exampleInterface {
      */
     bbbbb(arg0: b): Promise<void>;
 }
-import type { A as _A, B as _B, List as _List, a as _a, b as _b, list as _list, my_variant as _my_variant, nested as _nested, nested_opt as _nested_opt, nested_records as _nested_records, nested_res as _nested_res, node as _node, res as _res, stream as _stream, tree as _tree } from "./declarations/example.did.d.ts";
+import type { A as _A, B as _B, List as _List, a as _a, b as _b, list as _list, my_variant as _my_variant, nested as _nested, nested_opt as _nested_opt, nested_records as _nested_records, nested_res as _nested_res, node as _node, res as _res, stream as _stream, tree as _tree } from "./declarations/example.did";
 export class Example implements exampleInterface {
     constructor(private actor: ActorSubclass<_SERVICE>){}
     async f1(arg0: list, arg1: Uint8Array, arg2: boolean | null): Promise<void> {
