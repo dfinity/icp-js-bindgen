@@ -55,12 +55,7 @@ pub fn generate(options: GenerateOptions) -> Result<GenerateResult, JsError> {
         typescript::compile(&env, &actor, &prog, options.declarations.root_exports);
 
     let declarations_typescript = if options.declarations.typescript {
-        javascript::compile_typescript(
-            &env,
-            &actor,
-            &prog,
-            options.declarations.root_exports,
-        )
+        javascript::compile_typescript(&env, &actor, &prog, options.declarations.root_exports)
     } else {
         String::new()
     };
