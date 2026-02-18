@@ -187,6 +187,29 @@ fn pp_modes(modes: &[candid::types::FuncMode]) -> RcDoc<'_> {
     sep_enclose(ms, ",", "[", "]")
 }
 
+/// Check whether `ty` (or any type nested within it) contains a `Var`
+/// reference to `name`.
+fn references_var(ty: &Type, name: &str) -> bool {
+    match ty.as_ref() {
+        TypeInner::Var(v) => v.as_str() == name,
+        TypeInner::Opt(inner) | TypeInner::Vec(inner) => references_var(inner, name),
+        TypeInner::Record(fields) | TypeInner::Variant(fields) => {
+            fields.iter().any(|f| references_var(&f.ty, name))
+        }
+        TypeInner::Func(func) => {
+            func.args.iter().any(|a| references_var(&a.typ, name))
+                || func.rets.iter().any(|r| references_var(&r.typ, name))
+        }
+        TypeInner::Service(methods) => {
+            methods.iter().any(|(_, m)| references_var(m, name))
+        }
+        TypeInner::Class(args, ty) => {
+            args.iter().any(|a| references_var(&a.typ, name)) || references_var(ty, name)
+        }
+        _ => false,
+    }
+}
+
 /// Find a Service type in `def_list` that has `func_id` as a method field
 /// and is in a mutual cycle with it (the Func's args/rets reference the Service).
 fn find_service_in_cycle<'a>(
@@ -209,7 +232,7 @@ fn find_service_in_cycle<'a>(
 
         let has_func_field = methods
             .iter()
-            .any(|(_, ty)| matches!(ty.as_ref(), TypeInner::Var(v) if v.as_str() == func_id));
+            .any(|(_, ty)| references_var(ty, func_id));
         if !has_func_field {
             continue;
         }
@@ -217,11 +240,11 @@ fn find_service_in_cycle<'a>(
         let references_service = func
             .args
             .iter()
-            .any(|arg| matches!(arg.typ.as_ref(), TypeInner::Var(v) if v.as_str() == s_id))
+            .any(|arg| references_var(&arg.typ, s_id))
             || func
                 .rets
                 .iter()
-                .any(|ret| matches!(ret.typ.as_ref(), TypeInner::Var(v) if v.as_str() == s_id));
+                .any(|ret| references_var(&ret.typ, s_id));
 
         if references_service {
             return Some(s_id);
