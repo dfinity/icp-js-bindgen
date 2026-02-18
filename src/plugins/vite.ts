@@ -33,7 +33,7 @@
  */
 
 import { resolve } from 'node:path';
-import type { Plugin, ViteDevServer } from 'vite';
+import type { Plugin } from 'vite';
 import {
   type GenerateOptions,
   type GenerateOutputOptions,
@@ -89,6 +89,8 @@ export interface Options extends Omit<GenerateOptions, 'output'> {
  * @ignore
  */
 export function icpBindgen(options: Options): Plugin {
+  let cleanupWatcher: (() => void) | undefined;
+
   return {
     name: VITE_PLUGIN_NAME,
     async buildStart() {
@@ -96,22 +98,24 @@ export function icpBindgen(options: Options): Plugin {
     },
     configureServer(server) {
       if (!options.disableWatch) {
-        watchDidFileChanges(server, options);
+        // Remove previous listener to prevent accumulation on server restart.
+        cleanupWatcher?.();
+
+        const didFilePath = resolve(options.didFile);
+        server.watcher.add(didFilePath);
+
+        const onChange = async (changedPath: string) => {
+          if (resolve(changedPath) === resolve(didFilePath)) {
+            await run(options);
+          }
+        };
+
+        server.watcher.on('change', onChange);
+        cleanupWatcher = () => server.watcher.off('change', onChange);
       }
     },
     sharedDuringBuild: true,
   };
-}
-
-function watchDidFileChanges(server: ViteDevServer, options: Options) {
-  const didFilePath = resolve(options.didFile);
-
-  server.watcher.add(didFilePath);
-  server.watcher.on('change', async (changedPath) => {
-    if (resolve(changedPath) === resolve(didFilePath)) {
-      await run(options);
-    }
-  });
 }
 
 async function run(options: Options) {

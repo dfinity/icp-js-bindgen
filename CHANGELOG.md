@@ -1,3 +1,11 @@
+## 0.2.2 (2026-02-18)
+
+### Fix
+
+- prevent `change` listener leak in Vite plugin (#110)
+- prevent WASM out-of-bounds trap in concurrent generate calls (#111)
+- resolve 9 audit vulnerabilities via pnpm overrides (#112)
+
 ## 0.2.1 (2025-12-16)
 
 ### Fix
