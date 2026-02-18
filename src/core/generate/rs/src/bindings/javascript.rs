@@ -230,19 +230,30 @@ fn find_service_in_cycle<'a>(
     None
 }
 
-/// For TypeScript output, swap Rec placement so that recursive Func types
-/// used in Service method fields are emitted as concrete `FuncClass` values
-/// instead of `RecClass`, which would fail `tsc --strict`.
+/// Run `infer_rec` then `optimize_recs`, returning owned rec names.
+fn infer_and_optimize_recs<'a>(
+    env: &'a TypeEnv,
+    def_list: &mut Vec<&'a str>,
+) -> BTreeSet<String> {
+    let initial_recs = infer_rec(env, def_list).unwrap();
+    let initial_recs: BTreeSet<String> = initial_recs.into_iter().map(|s| s.to_string()).collect();
+    optimize_recs(env, def_list, initial_recs)
+}
+
+/// Swap Rec placement so that recursive Func types used in Service method
+/// fields are emitted as concrete `FuncClass` values instead of `RecClass`.
 ///
 /// `IDL.Service()` requires `Record<string, FuncClass>` for its fields, but
 /// `IDL.Func()` args accept any `Type[]`. By making the Service the Rec and
 /// the Func a concrete value, both constraints are satisfied.
-fn optimize_recs_for_typescript<'a>(
+fn optimize_recs<'a>(
     env: &'a TypeEnv,
     def_list: &mut Vec<&'a str>,
     initial_recs: BTreeSet<String>,
 ) -> BTreeSet<String> {
     // Collect swaps as owned Strings to avoid borrowing initial_recs.
+    // Track claimed services so two Funcs don't both swap with the same one.
+    let mut claimed = BTreeSet::new();
     let swaps: Vec<(String, String)> = initial_recs
         .iter()
         .filter_map(|func_id| {
@@ -250,8 +261,12 @@ fn optimize_recs_for_typescript<'a>(
             let TypeInner::Func(func) = ty.as_ref() else {
                 return None;
             };
-            find_service_in_cycle(env, func_id, func, def_list, &initial_recs)
-                .map(|service_id| (func_id.clone(), service_id.to_string()))
+            let service_id =
+                find_service_in_cycle(env, func_id, func, def_list, &initial_recs)?;
+            if !claimed.insert(service_id) {
+                return None;
+            }
+            Some((func_id.clone(), service_id.to_string()))
         })
         .collect();
 
@@ -342,15 +357,24 @@ fn pp_imports<'a>() -> RcDoc<'a> {
 pub fn compile(env: &TypeEnv, actor: &Option<Type>, root_exports: bool) -> String {
     match actor {
         None => {
-            let def_list: Vec<_> = env.to_sorted_iter().map(|pair| pair.0.as_str()).collect();
-            let recs = infer_rec(env, &def_list).unwrap();
+            let mut def_list: Vec<_> =
+                env.to_sorted_iter().map(|pair| pair.0.as_str()).collect();
+            let initial_recs = infer_rec(env, &def_list).unwrap();
+            let initial_recs: BTreeSet<String> =
+                initial_recs.into_iter().map(|s| s.to_string()).collect();
+            let recs_owned = optimize_recs(env, &mut def_list, initial_recs);
+            let recs: BTreeSet<&str> = recs_owned.iter().map(|s| s.as_str()).collect();
             let doc = pp_defs(env, &def_list, &recs, root_exports);
 
             pp_imports().append(doc).pretty(LINE_WIDTH).to_string()
         }
         Some(actor) => {
-            let def_list = chase_actor(env, actor).unwrap();
-            let recs = infer_rec(env, &def_list).unwrap();
+            let mut def_list = chase_actor(env, actor).unwrap();
+            let initial_recs = infer_rec(env, &def_list).unwrap();
+            let initial_recs: BTreeSet<String> =
+                initial_recs.into_iter().map(|s| s.to_string()).collect();
+            let recs_owned = optimize_recs(env, &mut def_list, initial_recs);
+            let recs: BTreeSet<&str> = recs_owned.iter().map(|s| s.as_str()).collect();
             let types = if let TypeInner::Class(args, _) = actor.as_ref() {
                 args.iter().map(|arg| arg.typ.clone()).collect::<Vec<_>>()
             } else {
@@ -447,16 +471,11 @@ pub fn compile_typescript(
     };
 
     // Render the JavaScript runtime code with type annotations.
-    // Unlike compile(), we optimize Rec placement so that recursive Func types
-    // in Service method fields are emitted as concrete FuncClass values.
     let js_code = match actor {
         None => {
             let mut def_list: Vec<_> =
                 env.to_sorted_iter().map(|pair| pair.0.as_str()).collect();
-            let initial_recs = infer_rec(env, &def_list).unwrap();
-            let initial_recs: BTreeSet<String> =
-                initial_recs.into_iter().map(|s| s.to_string()).collect();
-            let recs_owned = optimize_recs_for_typescript(env, &mut def_list, initial_recs);
+            let recs_owned = infer_and_optimize_recs(env, &mut def_list);
             let recs: BTreeSet<&str> = recs_owned.iter().map(|s| s.as_str()).collect();
             let doc = pp_defs(env, &def_list, &recs, root_exports);
 
@@ -464,10 +483,7 @@ pub fn compile_typescript(
         }
         Some(actor) => {
             let mut def_list = chase_actor(env, actor).unwrap();
-            let initial_recs = infer_rec(env, &def_list).unwrap();
-            let initial_recs: BTreeSet<String> =
-                initial_recs.into_iter().map(|s| s.to_string()).collect();
-            let recs_owned = optimize_recs_for_typescript(env, &mut def_list, initial_recs);
+            let recs_owned = infer_and_optimize_recs(env, &mut def_list);
             let recs: BTreeSet<&str> = recs_owned.iter().map(|s| s.as_str()).collect();
             let types = if let TypeInner::Class(args, _) = actor.as_ref() {
                 args.iter().map(|arg| arg.typ.clone()).collect::<Vec<_>>()
@@ -484,8 +500,9 @@ pub fn compile_typescript(
                 str("export const idlFactory: IDL.InterfaceFactory = ({ IDL }) => ")
                     .append(enclose_space("{", idl_factory_body, "};"));
 
-            let init_defs = chase_types(env, init_types).unwrap();
-            let init_recs = infer_rec(env, &init_defs).unwrap();
+            let mut init_defs = chase_types(env, init_types).unwrap();
+            let init_recs_owned = infer_and_optimize_recs(env, &mut init_defs);
+            let init_recs: BTreeSet<&str> = init_recs_owned.iter().map(|s| s.as_str()).collect();
             let init_defs_doc = pp_defs(env, &init_defs, &init_recs, false);
             let init_doc = kwd("return")
                 .append(pp_types(init_types.iter()))
