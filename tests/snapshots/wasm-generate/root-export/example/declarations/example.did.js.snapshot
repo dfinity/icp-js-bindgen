@@ -3,8 +3,8 @@ import { IDL } from '@icp-sdk/core/candid';
 export const B = IDL.Rec();
 export const List = IDL.Rec();
 export const list = IDL.Rec();
+export const s = IDL.Rec();
 export const stream = IDL.Rec();
-export const t = IDL.Rec();
 export const tree = IDL.Rec();
 export const node = IDL.Record({ 'head' : IDL.Nat, 'tail' : list });
 list.fill(IDL.Opt(node));
@@ -77,11 +77,8 @@ stream.fill(
     IDL.Record({ 'head' : IDL.Nat, 'next' : IDL.Func([], [stream], ['query']) })
   )
 );
-export const s = IDL.Service({
-  'f' : t,
-  'g' : IDL.Func([list], [B, tree, stream], []),
-});
-t.fill(IDL.Func([s], [], []));
+export const t = IDL.Func([s], [], []);
+s.fill(IDL.Service({ 'f' : t, 'g' : IDL.Func([list], [B, tree, stream], []) }));
 
 export const idlService = IDL.Service({
   'f1' : IDL.Func([list, IDL.Vec(IDL.Nat8), IDL.Opt(IDL.Bool)], [], ['oneway']),
@@ -128,8 +125,8 @@ export const idlFactory = ({ IDL }) => {
   const B = IDL.Rec();
   const List = IDL.Rec();
   const list = IDL.Rec();
+  const s = IDL.Rec();
   const stream = IDL.Rec();
-  const t = IDL.Rec();
   const tree = IDL.Rec();
   const node = IDL.Record({ 'head' : IDL.Nat, 'tail' : list });
   list.fill(IDL.Opt(node));
@@ -208,11 +205,10 @@ export const idlFactory = ({ IDL }) => {
       })
     )
   );
-  const s = IDL.Service({
-    'f' : t,
-    'g' : IDL.Func([list], [B, tree, stream], []),
-  });
-  t.fill(IDL.Func([s], [], []));
+  const t = IDL.Func([s], [], []);
+  s.fill(
+    IDL.Service({ 'f' : t, 'g' : IDL.Func([list], [B, tree, stream], []) })
+  );
   
   return IDL.Service({
     'f1' : IDL.Func(
