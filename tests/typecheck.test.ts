@@ -1,10 +1,9 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { readFileSync, mkdirSync, writeFileSync, rmSync, readdirSync, statSync } from 'node:fs';
-import { join, basename } from 'node:path';
-import { mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import ts from 'typescript';
+import { basename, join } from 'node:path';
 import { globSync } from 'tinyglobby';
+import ts from 'typescript';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 // Minimal type stubs for @icp-sdk/core so tsc can validate the generated .did.ts files.
 const AGENT_STUB = `
