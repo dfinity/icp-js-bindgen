@@ -13,3 +13,4 @@ overrides:
   lodash: '>=4.17.23'
   markdown-it: '>=14.1.1'
   ajv: '>=8.18.0'
+  minimatch: '>=10.2.1'
