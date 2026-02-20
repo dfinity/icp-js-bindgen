@@ -69,6 +69,8 @@
     "@types/node": "^24.12.0",
     "memfs": "^4.56.11",
     "publint": "^0.3.18",
+    "tinyglobby": "^0.2.15",
+    "typescript": "^5.9.3",
     "vite": "^8.0.0",
     "vitest": "4.1.0",
     "wasm-pack": "^0.14.0"
