@@ -63,4 +63,54 @@ describe('wasmGenerate', () => {
       );
     });
   });
+
+  describe('with typescript declarations', () => {
+    it.each([
+      'hello_world',
+      'example',
+    ])('should generate a merged .did.ts for %s', async (serviceName) => {
+      const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+      const snapshotsDir = `${SNAPSHOTS_BASE_DIR}/typescript`;
+
+      const result = wasmGenerate({
+        did_file_path: didFile,
+        service_name: serviceName,
+        declarations: {
+          root_exports: false,
+          typescript: true,
+        },
+      });
+      await expect(result.declarations_typescript).toMatchFileSnapshot(
+        `${snapshotsDir}/${serviceName}/declarations/${serviceName}.did.ts.snapshot`,
+      );
+      await expect(result.service_ts).toMatchFileSnapshot(
+        `${snapshotsDir}/${serviceName}/${serviceName}.ts.snapshot`,
+      );
+    });
+  });
+
+  describe('with typescript declarations and rootExports', () => {
+    it.each([
+      'hello_world',
+      'example',
+    ])('should generate a merged .did.ts with root exports for %s', async (serviceName) => {
+      const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+      const snapshotsDir = `${SNAPSHOTS_BASE_DIR}/typescript-root-export`;
+
+      const result = wasmGenerate({
+        did_file_path: didFile,
+        service_name: serviceName,
+        declarations: {
+          root_exports: true,
+          typescript: true,
+        },
+      });
+      await expect(result.declarations_typescript).toMatchFileSnapshot(
+        `${snapshotsDir}/${serviceName}/declarations/${serviceName}.did.ts.snapshot`,
+      );
+      await expect(result.service_ts).toMatchFileSnapshot(
+        `${snapshotsDir}/${serviceName}/${serviceName}.ts.snapshot`,
+      );
+    });
+  });
 });

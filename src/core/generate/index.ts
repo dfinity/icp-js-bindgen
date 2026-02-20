@@ -1,5 +1,5 @@
 import { basename, resolve } from 'node:path';
-import { prepareBinding } from './bindings.ts';
+import { prepareBinding, prepareTypescriptBinding } from './bindings.ts';
 import { ensureDir, writeFileSafe } from './fs.ts';
 import { wasmGenerate, wasmInit } from './rs.ts';
 
@@ -44,11 +44,20 @@ export type GenerateOutputOptions = {
    */
   declarations?: {
     /**
-     * If `true`, exports root types in the declarations JS file (`declarations/<service-name>.did.js`).
+     * If `true`, exports root types in the declarations file.
      *
      * @default false
      */
     rootExports?: boolean;
+    /**
+     * If `true`, generates a single `declarations/<service-name>.did.ts` TypeScript file
+     * instead of separate `declarations/<service-name>.did.js` and `declarations/<service-name>.did.d.ts` files.
+     *
+     * This eliminates the need for `allowJs: true` in the consumer's TypeScript configuration.
+     *
+     * @default false
+     */
+    typescript?: boolean;
   };
 };
 
@@ -107,6 +116,7 @@ export async function generate(options: GenerateOptions) {
   } = options;
   const force = Boolean(output.force); // ensure force is a boolean
   const declarationsRootExports = Boolean(output.declarations?.rootExports ?? false); // ensure rootExports is a boolean
+  const declarationsTypescript = Boolean(output.declarations?.typescript ?? false); // ensure typescript is a boolean
 
   const didFilePath = resolve(didFile);
   const outputFileName = basename(didFile, DID_FILE_EXTENSION);
@@ -119,6 +129,7 @@ export async function generate(options: GenerateOptions) {
     service_name: outputFileName,
     declarations: {
       root_exports: declarationsRootExports,
+      typescript: declarationsTypescript,
     },
   });
 
@@ -131,6 +142,7 @@ export async function generate(options: GenerateOptions) {
   const bindings = {
     declarations_js: result.declarations_js,
     declarations_ts: result.declarations_ts,
+    declarations_typescript: result.declarations_typescript,
     interface_ts: result.interface_ts,
     service_ts: result.service_ts,
   };
@@ -148,6 +160,7 @@ export async function generate(options: GenerateOptions) {
 type Bindings = {
   declarations_js: string;
   declarations_ts: string;
+  declarations_typescript?: string;
   interface_ts: string;
   service_ts: string;
 };
@@ -167,14 +180,22 @@ async function writeBindings({
   output,
   force,
 }: WriteBindingsOptions) {
-  const declarationsTsFile = resolve(outDir, 'declarations', `${outputFileName}.did.d.ts`);
-  const declarationsJsFile = resolve(outDir, 'declarations', `${outputFileName}.did.js`);
+  if (output.declarations?.typescript) {
+    const declarationsTypescriptFile = resolve(outDir, 'declarations', `${outputFileName}.did.ts`);
+    const declarationsTypescript = prepareTypescriptBinding(
+      bindings.declarations_typescript as string,
+    );
+    await writeFileSafe(declarationsTypescriptFile, declarationsTypescript, force);
+  } else {
+    const declarationsTsFile = resolve(outDir, 'declarations', `${outputFileName}.did.d.ts`);
+    const declarationsJsFile = resolve(outDir, 'declarations', `${outputFileName}.did.js`);
 
-  const declarationsTs = prepareBinding(bindings.declarations_ts);
-  const declarationsJs = prepareBinding(bindings.declarations_js);
+    const declarationsTs = prepareBinding(bindings.declarations_ts);
+    const declarationsJs = prepareBinding(bindings.declarations_js);
 
-  await writeFileSafe(declarationsTsFile, declarationsTs, force);
-  await writeFileSafe(declarationsJsFile, declarationsJs, force);
+    await writeFileSafe(declarationsTsFile, declarationsTs, force);
+    await writeFileSafe(declarationsJsFile, declarationsJs, force);
+  }
 
   if (output.actor?.disabled) {
     return;

@@ -4,6 +4,7 @@ use candid::pretty::candid::pp_mode;
 use candid::pretty::utils::*;
 use candid::types::{ArgType, Field, Function, Label, SharedLabel, Type, TypeEnv, TypeInner};
 use candid_parser::bindings::analysis::{chase_actor, chase_types, infer_rec};
+use candid_parser::syntax::IDLMergedProg;
 use pretty::RcDoc;
 use std::collections::BTreeSet;
 
@@ -186,6 +187,116 @@ fn pp_modes(modes: &[candid::types::FuncMode]) -> RcDoc<'_> {
     sep_enclose(ms, ",", "[", "]")
 }
 
+/// Check whether `ty` (or any type nested within it) contains a `Var`
+/// reference to `name`.
+fn references_var(ty: &Type, name: &str) -> bool {
+    match ty.as_ref() {
+        TypeInner::Var(v) => v.as_str() == name,
+        TypeInner::Opt(inner) | TypeInner::Vec(inner) => references_var(inner, name),
+        TypeInner::Record(fields) | TypeInner::Variant(fields) => {
+            fields.iter().any(|f| references_var(&f.ty, name))
+        }
+        TypeInner::Func(func) => {
+            func.args.iter().any(|a| references_var(&a.typ, name))
+                || func.rets.iter().any(|r| references_var(&r.typ, name))
+        }
+        TypeInner::Service(methods) => methods.iter().any(|(_, m)| references_var(m, name)),
+        TypeInner::Class(args, ty) => {
+            args.iter().any(|a| references_var(&a.typ, name)) || references_var(ty, name)
+        }
+        _ => false,
+    }
+}
+
+/// Find a Service type in `def_list` that has `func_id` as a method field
+/// and is in a mutual cycle with it (the Func's args/rets reference the Service).
+fn find_service_in_cycle<'a>(
+    env: &'a TypeEnv,
+    func_id: &str,
+    func: &Function,
+    def_list: &[&'a str],
+    recs: &BTreeSet<String>,
+) -> Option<&'a str> {
+    for &s_id in def_list {
+        if recs.contains(s_id) {
+            continue;
+        }
+        let Ok(s_ty) = env.find_type(&s_id.into()) else {
+            continue;
+        };
+        let TypeInner::Service(methods) = s_ty.as_ref() else {
+            continue;
+        };
+
+        let has_func_field = methods.iter().any(|(_, ty)| references_var(ty, func_id));
+        if !has_func_field {
+            continue;
+        }
+
+        let references_service = func.args.iter().any(|arg| references_var(&arg.typ, s_id))
+            || func.rets.iter().any(|ret| references_var(&ret.typ, s_id));
+
+        if references_service {
+            return Some(s_id);
+        }
+    }
+    None
+}
+
+/// Run `infer_rec` then `optimize_recs`, returning owned rec names.
+fn infer_and_optimize_recs<'a>(env: &'a TypeEnv, def_list: &mut Vec<&'a str>) -> BTreeSet<String> {
+    let initial_recs = infer_rec(env, def_list).unwrap();
+    let initial_recs: BTreeSet<String> = initial_recs.into_iter().map(|s| s.to_string()).collect();
+    optimize_recs(env, def_list, initial_recs)
+}
+
+/// Swap Rec placement so that recursive Func types used in Service method
+/// fields are emitted as concrete `FuncClass` values instead of `RecClass`.
+///
+/// `IDL.Service()` requires `Record<string, FuncClass>` for its fields, but
+/// `IDL.Func()` args accept any `Type[]`. By making the Service the Rec and
+/// the Func a concrete value, both constraints are satisfied.
+fn optimize_recs<'a>(
+    env: &'a TypeEnv,
+    def_list: &mut Vec<&'a str>,
+    initial_recs: BTreeSet<String>,
+) -> BTreeSet<String> {
+    // Collect swaps as owned Strings to avoid borrowing initial_recs.
+    // Track claimed services so two Funcs don't both swap with the same one.
+    let mut claimed = BTreeSet::new();
+    let swaps: Vec<(String, String)> = initial_recs
+        .iter()
+        .filter_map(|func_id| {
+            let ty = env.find_type(&func_id.as_str().into()).ok()?;
+            let TypeInner::Func(func) = ty.as_ref() else {
+                return None;
+            };
+            let service_id = find_service_in_cycle(env, func_id, func, def_list, &initial_recs)?;
+            if !claimed.insert(service_id) {
+                return None;
+            }
+            Some((func_id.clone(), service_id.to_string()))
+        })
+        .collect();
+
+    let mut recs = initial_recs;
+    for (func_id, service_id) in &swaps {
+        recs.remove(func_id);
+        recs.insert(service_id.clone());
+
+        // Ensure the func def comes before the service fill in output order.
+        if let (Some(fp), Some(sp)) = (
+            def_list.iter().position(|&s| s == func_id.as_str()),
+            def_list.iter().position(|&s| s == service_id.as_str()),
+        ) && fp > sp
+        {
+            def_list.swap(fp, sp);
+        }
+    }
+
+    recs
+}
+
 fn pp_service(serv: &[(String, Type)]) -> RcDoc<'_> {
     let ms = serv
         .iter()
@@ -254,15 +365,23 @@ fn pp_imports<'a>() -> RcDoc<'a> {
 pub fn compile(env: &TypeEnv, actor: &Option<Type>, root_exports: bool) -> String {
     match actor {
         None => {
-            let def_list: Vec<_> = env.to_sorted_iter().map(|pair| pair.0.as_str()).collect();
-            let recs = infer_rec(env, &def_list).unwrap();
+            let mut def_list: Vec<_> = env.to_sorted_iter().map(|pair| pair.0.as_str()).collect();
+            let initial_recs = infer_rec(env, &def_list).unwrap();
+            let initial_recs: BTreeSet<String> =
+                initial_recs.into_iter().map(|s| s.to_string()).collect();
+            let recs_owned = optimize_recs(env, &mut def_list, initial_recs);
+            let recs: BTreeSet<&str> = recs_owned.iter().map(|s| s.as_str()).collect();
             let doc = pp_defs(env, &def_list, &recs, root_exports);
 
             pp_imports().append(doc).pretty(LINE_WIDTH).to_string()
         }
         Some(actor) => {
-            let def_list = chase_actor(env, actor).unwrap();
-            let recs = infer_rec(env, &def_list).unwrap();
+            let mut def_list = chase_actor(env, actor).unwrap();
+            let initial_recs = infer_rec(env, &def_list).unwrap();
+            let initial_recs: BTreeSet<String> =
+                initial_recs.into_iter().map(|s| s.to_string()).collect();
+            let recs_owned = optimize_recs(env, &mut def_list, initial_recs);
+            let recs: BTreeSet<&str> = recs_owned.iter().map(|s| s.as_str()).collect();
             let types = if let TypeInner::Class(args, _) = actor.as_ref() {
                 args.iter().map(|arg| arg.typ.clone()).collect::<Vec<_>>()
             } else {
@@ -316,4 +435,120 @@ pub fn compile(env: &TypeEnv, actor: &Option<Type>, root_exports: bool) -> Strin
             result.pretty(LINE_WIDTH).to_string()
         }
     }
+}
+
+/// Compiles a merged TypeScript declarations file (`.did.ts`) that combines
+/// the TypeScript type definitions with the JavaScript IDL runtime code.
+pub fn compile_typescript(
+    env: &TypeEnv,
+    actor: &Option<Type>,
+    prog: &IDLMergedProg,
+    root_exports: bool,
+) -> String {
+    use super::typescript;
+
+    // Render the TypeScript prefix (type imports + type definitions + actor interface)
+    // in its own scope to avoid lifetime issues with RcDoc borrowing.
+    let ts_prefix = {
+        let syntax_actor = prog.resolve_actor().ok().flatten();
+        let ts_def_list: Vec<_> = env.to_sorted_iter().map(|pair| pair.0.as_str()).collect();
+        let ts_defs = typescript::pp_defs(env, &ts_def_list, prog);
+
+        let ts_actor = match actor {
+            None => RcDoc::nil(),
+            Some(actor) => {
+                let docs = syntax_actor
+                    .as_ref()
+                    .map(|s| typescript::pp_docs(s.docs.as_ref()))
+                    .unwrap_or(RcDoc::nil());
+                docs.append(typescript::pp_actor(
+                    env,
+                    actor,
+                    syntax_actor.as_ref().map(|s| &s.typ),
+                ))
+            }
+        };
+
+        typescript::pp_type_imports()
+            .append(pp_imports())
+            .append(ts_defs)
+            .append(ts_actor)
+            .pretty(LINE_WIDTH)
+            .to_string()
+    };
+
+    // Render the JavaScript runtime code with type annotations.
+    let js_code = match actor {
+        None => {
+            let mut def_list: Vec<_> = env.to_sorted_iter().map(|pair| pair.0.as_str()).collect();
+            let recs_owned = infer_and_optimize_recs(env, &mut def_list);
+            let recs: BTreeSet<&str> = recs_owned.iter().map(|s| s.as_str()).collect();
+            let doc = pp_defs(env, &def_list, &recs, root_exports);
+
+            doc.pretty(LINE_WIDTH).to_string()
+        }
+        Some(actor) => {
+            let mut def_list = chase_actor(env, actor).unwrap();
+            let recs_owned = infer_and_optimize_recs(env, &mut def_list);
+            let recs: BTreeSet<&str> = recs_owned.iter().map(|s| s.as_str()).collect();
+            let types = if let TypeInner::Class(args, _) = actor.as_ref() {
+                args.iter().map(|arg| arg.typ.clone()).collect::<Vec<_>>()
+            } else {
+                Vec::new()
+            };
+            let init_types = types.as_slice();
+
+            let actor_expr = pp_actor(actor, &recs);
+
+            let idl_factory_return = kwd("return").append(actor_expr.clone()).append(";");
+            let idl_factory_body = pp_defs(env, &def_list, &recs, false).append(idl_factory_return);
+            let idl_factory_doc =
+                str("export const idlFactory: IDL.InterfaceFactory = ({ IDL }) => ")
+                    .append(enclose_space("{", idl_factory_body, "};"));
+
+            let mut init_defs = chase_types(env, init_types).unwrap();
+            let init_recs_owned = infer_and_optimize_recs(env, &mut init_defs);
+            let init_recs: BTreeSet<&str> = init_recs_owned.iter().map(|s| s.as_str()).collect();
+            let init_defs_doc = pp_defs(env, &init_defs, &init_recs, false);
+            let init_doc = kwd("return")
+                .append(pp_types(init_types.iter()))
+                .append(";");
+            let init_doc = init_defs_doc.append(init_doc);
+            let init_doc =
+                str("export const init: (args: { IDL: typeof IDL }) => IDL.Type[] = ({ IDL }) => ")
+                    .append(enclose_space("{", init_doc, "};"));
+            let init_doc = init_doc.pretty(LINE_WIDTH).to_string();
+
+            let mut result = RcDoc::<()>::nil();
+
+            if root_exports {
+                let defs = pp_defs(env, &def_list, &recs, true);
+                let idl_service = str("export const idlService: IDL.ServiceClass = ")
+                    .append(actor_expr)
+                    .append(";");
+                let idl_init_args = str("export const idlInitArgs: IDL.Type[] = ")
+                    .append(pp_types(init_types.iter()))
+                    .append(";");
+
+                result = result
+                    .append(defs)
+                    .append(idl_service)
+                    .append(RcDoc::hardline())
+                    .append(RcDoc::hardline())
+                    .append(idl_init_args)
+                    .append(RcDoc::hardline())
+                    .append(RcDoc::hardline());
+            }
+
+            result = result
+                .append(idl_factory_doc)
+                .append(RcDoc::hardline())
+                .append(RcDoc::hardline())
+                .append(init_doc);
+
+            result.pretty(LINE_WIDTH).to_string()
+        }
+    };
+
+    format!("{}\n{}\n", ts_prefix, js_code)
 }

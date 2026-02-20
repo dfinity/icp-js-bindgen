@@ -450,7 +450,7 @@ impl<'a> OriginalTypescriptTypes<'a> {
                 specifiers: sorted_specifiers,
                 src: Box::new(Str {
                     span: DUMMY_SP,
-                    value: format!("./declarations/{}.did.d.ts", dashed_name).into(),
+                    value: format!("./declarations/{}.did", dashed_name).into(),
                     raw: None,
                 }),
                 type_only: true,

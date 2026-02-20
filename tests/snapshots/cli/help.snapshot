@@ -12,9 +12,11 @@ Options:
                                that contains the same types of the
                                `<service-name>.ts` file. Has no effect if
                                `--actor-disabled` is set. (default: false)
-  --declarations-root-exports  If set, exports root types in the declarations JS
-                               file (`declarations/<service-name>.did.js`).
-                               (default: false)
+  --declarations-root-exports  If set, exports root types in the declarations
+                               file. (default: false)
+  --declarations-typescript    If set, generates a single `.did.ts` TypeScript
+                               file instead of separate `.did.js` and
+                               `.did.d.ts` files. (default: false)
   --force                      If set, overwrite existing files instead of
                                aborting. (default: false)
   -h, --help                   display help for command
