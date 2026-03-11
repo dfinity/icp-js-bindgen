@@ -9,7 +9,13 @@ let initPromise: Promise<void> | undefined;
 
 export async function wasmInit(...args: Parameters<typeof init>) {
   if (!initPromise) {
-    initPromise = init(...args).then(() => {});
+    initPromise = init(...args).then(
+      () => {},
+      (error: unknown) => {
+        initPromise = undefined;
+        throw error;
+      },
+    );
   }
   return initPromise;
 }
