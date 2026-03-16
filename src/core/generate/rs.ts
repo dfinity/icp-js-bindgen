@@ -5,15 +5,19 @@ import type {
 } from './rs/dist/icp-js-bindgen.d.ts';
 import init, { generate, start } from './rs/dist/icp-js-bindgen.js';
 
-let initialized = false;
+let initPromise: Promise<void> | undefined;
 
 export async function wasmInit(...args: Parameters<typeof init>) {
-  if (initialized) {
-    return;
+  if (!initPromise) {
+    initPromise = init(...args).then(
+      () => {},
+      (error: unknown) => {
+        initPromise = undefined;
+        throw error;
+      },
+    );
   }
-
-  await init(...args);
-  initialized = true;
+  return initPromise;
 }
 
 export const wasmStart = start;
