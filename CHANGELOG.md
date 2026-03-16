@@ -2,6 +2,7 @@
 
 ### Fix
 
+- prevent WASM double-initialization with concurrent plugin instances (#125)
 - resolve 3 audit vulnerabilities via pnpm overrides (#122)
 
 ## 0.2.2 (2026-02-18)
