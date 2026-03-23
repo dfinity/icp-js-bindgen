@@ -1,3 +1,9 @@
+## Unreleased
+
+### Feat
+
+- add --declarations-typescript flag for single .did.ts output (#121)
+
 ## 0.2.3 (2026-03-16)
 
 ### Fix
