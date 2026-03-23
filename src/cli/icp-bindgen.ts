@@ -41,6 +41,7 @@
  * - `--out-dir <dir>`: Directory where the bindings will be written
  * - `--actor-interface-file`: If set, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file. Has no effect if `--actor-disabled` is set. (default: `false`)
  * - `--actor-disabled`: If set, skips generating the actor file (`<service-name>.ts`). (default: `false`)
+ * - `--declarations-flat`: If set, generates declaration files directly in the output directory instead of in a `declarations/` subfolder. (default: `false`)
  * - `--force`: If set, overwrite existing files instead of aborting. (default: `false`)
  *
  * @module cli
@@ -58,6 +59,7 @@ type Args = {
   actorDisabled?: boolean;
   declarationsRootExports?: boolean;
   declarationsTypescript?: boolean;
+  declarationsFlat?: boolean;
   force?: boolean;
 };
 
@@ -69,6 +71,7 @@ async function run(args: Args) {
     actorDisabled,
     declarationsRootExports,
     declarationsTypescript,
+    declarationsFlat,
     force,
   } = args;
 
@@ -85,6 +88,7 @@ async function run(args: Args) {
       declarations: {
         rootExports: declarationsRootExports,
         typescript: declarationsTypescript,
+        flat: declarationsFlat,
       },
     },
   });
@@ -115,6 +119,11 @@ program
   .option(
     '--declarations-typescript',
     'If set, generates a single `.did.ts` TypeScript file instead of separate `.did.js` and `.did.d.ts` files.',
+    false,
+  )
+  .option(
+    '--declarations-flat',
+    'If set, generates declaration files directly in the output directory instead of in a `declarations/` subfolder.',
     false,
   )
   .option('--force', 'If set, overwrite existing files instead of aborting.', false)

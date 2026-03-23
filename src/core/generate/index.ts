@@ -58,6 +58,15 @@ export type GenerateOutputOptions = {
      * @default false
      */
     typescript?: boolean;
+    /**
+     * If `true`, generates declaration files directly in `outDir` instead of in a `declarations/` subfolder.
+     *
+     * This is useful for projects that need full control over the output file layout without
+     * post-processing scripts to move or rename the generated files.
+     *
+     * @default false
+     */
+    flat?: boolean;
   };
 };
 
@@ -117,12 +126,15 @@ export async function generate(options: GenerateOptions) {
   const force = Boolean(output.force); // ensure force is a boolean
   const declarationsRootExports = Boolean(output.declarations?.rootExports ?? false); // ensure rootExports is a boolean
   const declarationsTypescript = Boolean(output.declarations?.typescript ?? false); // ensure typescript is a boolean
+  const declarationsFlat = Boolean(output.declarations?.flat ?? false); // ensure flat is a boolean
 
   const didFilePath = resolve(didFile);
   const outputFileName = basename(didFile, DID_FILE_EXTENSION);
 
   await ensureDir(outDir);
-  await ensureDir(resolve(outDir, 'declarations'));
+  if (!declarationsFlat) {
+    await ensureDir(resolve(outDir, 'declarations'));
+  }
 
   const result = wasmGenerate({
     did_file_path: didFilePath,
@@ -154,6 +166,7 @@ export async function generate(options: GenerateOptions) {
     outputFileName,
     output,
     force,
+    flat: declarationsFlat,
   });
 }
 
@@ -171,6 +184,7 @@ type WriteBindingsOptions = {
   outputFileName: string;
   output: GenerateOutputOptions;
   force: boolean;
+  flat: boolean;
 };
 
 async function writeBindings({
@@ -179,14 +193,17 @@ async function writeBindings({
   outputFileName,
   output,
   force,
+  flat,
 }: WriteBindingsOptions) {
+  const declarationsDir = flat ? outDir : resolve(outDir, 'declarations');
+
   if (output.declarations?.typescript) {
-    const declarationsTsModuleFile = resolve(outDir, 'declarations', `${outputFileName}.did.ts`);
+    const declarationsTsModuleFile = resolve(declarationsDir, `${outputFileName}.did.ts`);
     const declarationsTypescript = prepareTypescriptBinding(bindings.declarations_typescript);
     await writeFileSafe(declarationsTsModuleFile, declarationsTypescript, force);
   } else {
-    const declarationsTsFile = resolve(outDir, 'declarations', `${outputFileName}.did.d.ts`);
-    const declarationsJsFile = resolve(outDir, 'declarations', `${outputFileName}.did.js`);
+    const declarationsTsFile = resolve(declarationsDir, `${outputFileName}.did.d.ts`);
+    const declarationsJsFile = resolve(declarationsDir, `${outputFileName}.did.js`);
 
     const declarationsTs = prepareBinding(bindings.declarations_ts);
     const declarationsJs = prepareBinding(bindings.declarations_js);
@@ -200,12 +217,24 @@ async function writeBindings({
   }
 
   const serviceTsFile = resolve(outDir, `${outputFileName}.ts`);
-  const serviceTs = prepareBinding(bindings.service_ts);
+  const serviceTs = prepareBinding(
+    flat ? flattenImportPath(bindings.service_ts) : bindings.service_ts,
+  );
   await writeFileSafe(serviceTsFile, serviceTs, force);
 
   if (output.actor?.interfaceFile) {
     const interfaceTsFile = resolve(outDir, `${outputFileName}.d.ts`);
-    const interfaceTs = prepareBinding(bindings.interface_ts);
+    const interfaceTs = prepareBinding(
+      flat ? flattenImportPath(bindings.interface_ts) : bindings.interface_ts,
+    );
     await writeFileSafe(interfaceTsFile, interfaceTs, force);
   }
+}
+
+// The WASM generator always emits imports as './declarations/<name>.did'.
+// This rewrite must stay in sync with the Rust codegen in
+// src/core/generate/rs/src/bindings/typescript_native/preamble/imports.rs
+// and original_typescript_types.rs.
+function flattenImportPath(source: string): string {
+  return source.replaceAll('./declarations/', './');
 }
