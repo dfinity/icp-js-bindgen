@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **generate**: add declarations.flat option to write files directly in outDir (#130)
 - add --declarations-typescript flag for single .did.ts output (#121)
 
 ## 0.2.3 (2026-03-16)
