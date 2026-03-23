@@ -64,14 +64,14 @@
   },
   "packageManager": "pnpm@10.13.1",
   "devDependencies": {
-    "@biomejs/biome": "2.4.7",
-    "@tanstack/vite-config": "^0.5.1",
+    "@biomejs/biome": "2.4.8",
+    "@tanstack/vite-config": "^0.5.2",
     "@types/node": "^24.12.0",
-    "memfs": "^4.56.11",
+    "memfs": "^4.57.1",
     "publint": "^0.3.18",
     "tinyglobby": "^0.2.15",
     "typescript": "^5.9.3",
-    "vite": "^8.0.0",
+    "vite": "^8.0.2",
     "vitest": "4.1.0",
     "wasm-pack": "^0.14.0"
   },
