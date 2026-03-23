@@ -247,7 +247,7 @@ fn pp_service<'a>(
     sep_enclose_space(methods, ",", "{", "}")
 }
 
-fn pp_docs<'a>(docs: &'a [String]) -> RcDoc<'a> {
+pub(crate) fn pp_docs<'a>(docs: &'a [String]) -> RcDoc<'a> {
     if docs.is_empty() {
         RcDoc::nil()
     } else {
@@ -262,7 +262,11 @@ fn pp_docs<'a>(docs: &'a [String]) -> RcDoc<'a> {
     }
 }
 
-fn pp_defs<'a>(env: &'a TypeEnv, def_list: &'a [&'a str], prog: &'a IDLMergedProg) -> RcDoc<'a> {
+pub(crate) fn pp_defs<'a>(
+    env: &'a TypeEnv,
+    def_list: &'a [&'a str],
+    prog: &'a IDLMergedProg,
+) -> RcDoc<'a> {
     lines(def_list.iter().map(|&id| {
         let ty = env.find_type(&id.into()).unwrap();
         let syntax = prog.lookup(id);
@@ -299,7 +303,11 @@ fn pp_defs<'a>(env: &'a TypeEnv, def_list: &'a [&'a str], prog: &'a IDLMergedPro
     }))
 }
 
-fn pp_actor<'a>(env: &'a TypeEnv, ty: &'a Type, syntax: Option<&'a IDLType>) -> RcDoc<'a> {
+pub(crate) fn pp_actor<'a>(
+    env: &'a TypeEnv,
+    ty: &'a Type,
+    syntax: Option<&'a IDLType>,
+) -> RcDoc<'a> {
     let service_doc = kwd("export interface _SERVICE");
     match ty.as_ref() {
         TypeInner::Service(_) => service_doc.append(pp_ty_rich(env, ty, syntax, false)),
@@ -316,6 +324,15 @@ fn pp_actor<'a>(env: &'a TypeEnv, ty: &'a Type, syntax: Option<&'a IDLType>) -> 
         }
         _ => unreachable!(),
     }
+}
+
+pub(crate) fn pp_type_imports<'a>() -> RcDoc<'a> {
+    str("import type { ActorMethod } from '@icp-sdk/core/agent';")
+        .append(RcDoc::hardline())
+        .append(str(
+            "import type { Principal } from '@icp-sdk/core/principal';",
+        ))
+        .append(RcDoc::hardline())
 }
 
 pub fn compile(

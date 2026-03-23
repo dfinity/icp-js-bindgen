@@ -9,3 +9,11 @@ ${DISCLAIMER_COMMENT}
 
 ${binding}`;
 }
+
+export function prepareTypescriptBinding(binding: string): string {
+  return `${ESLINT_DISABLE_COMMENT}
+
+${DISCLAIMER_COMMENT}
+
+${binding}`;
+}
