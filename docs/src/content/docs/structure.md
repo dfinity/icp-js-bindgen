@@ -400,6 +400,8 @@ If provided, the `actorOptions` will be passed to the [`Actor.createActor`](http
 
 This folder contains the actual Candid JS bindings. It generates the same bindings that the [`dfx generate`](https://internetcomputer.org/docs/building-apps/developer-tools/dfx/dfx-generate) command was generating.
 
+> **Tip**: Set the [`output.declarations.flat`](./core/api/type-aliases/GenerateOutputOptions.md#flat) option to `true` (or pass `--declarations-flat` via the CLI) to write these files directly into `outDir` instead of a `declarations/` subfolder. This is useful for projects that need full control over the output file layout without post-processing scripts to move or rename files.
+
 See the [Migrating](./migrating) page for more information on how to migrate from `dfx generate`.
 
 ### `declarations/<service-name>.did.d.ts`

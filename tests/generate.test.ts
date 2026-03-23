@@ -152,6 +152,112 @@ describe('generate', () => {
     expect(fileExists(`${OUTPUT_DIR}/declarations/${serviceName}.did.d.ts`)).toBe(false);
   });
 
+  it.each([
+    'hello_world',
+    'example',
+  ])('should generate flat declarations for %s', async (serviceName) => {
+    const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+
+    await generate({
+      didFile,
+      outDir: OUTPUT_DIR,
+      output: { declarations: { flat: true } },
+    });
+
+    // Declaration files should be in outDir directly, not in a declarations/ subfolder
+    expect(fileExists(`${OUTPUT_DIR}/${serviceName}.did.d.ts`)).toBe(true);
+    expect(fileExists(`${OUTPUT_DIR}/${serviceName}.did.js`)).toBe(true);
+    expect(fileExists(`${OUTPUT_DIR}/declarations`)).toBe(false);
+
+    // The service .ts file should import from ./<service>.did (not ./declarations/<service>.did)
+    const serviceTs = await readFileFromOutput(`${serviceName}.ts`);
+    expect(serviceTs).toContain(`from "./${serviceName}.did"`);
+    expect(serviceTs).not.toContain(`from "./declarations/${serviceName}.did"`);
+  });
+
+  it.each([
+    'hello_world',
+    'example',
+  ])('should generate flat typescript declarations for %s', async (serviceName) => {
+    const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+
+    await generate({
+      didFile,
+      outDir: OUTPUT_DIR,
+      output: { declarations: { typescript: true, flat: true } },
+    });
+
+    // Should produce .did.ts directly in outDir
+    expect(fileExists(`${OUTPUT_DIR}/${serviceName}.did.ts`)).toBe(true);
+    expect(fileExists(`${OUTPUT_DIR}/declarations`)).toBe(false);
+
+    // The service .ts file should import from ./<service>.did
+    const serviceTs = await readFileFromOutput(`${serviceName}.ts`);
+    expect(serviceTs).toContain(`from "./${serviceName}.did"`);
+    expect(serviceTs).not.toContain(`from "./declarations/${serviceName}.did"`);
+  });
+
+  it.each([
+    'hello_world',
+    'example',
+  ])('should generate flat declarations with interface file for %s', async (serviceName) => {
+    const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+
+    await generate({
+      didFile,
+      outDir: OUTPUT_DIR,
+      output: { declarations: { flat: true }, actor: { interfaceFile: true } },
+    });
+
+    // Declaration files should be flat
+    expect(fileExists(`${OUTPUT_DIR}/${serviceName}.did.d.ts`)).toBe(true);
+    expect(fileExists(`${OUTPUT_DIR}/${serviceName}.did.js`)).toBe(true);
+    expect(fileExists(`${OUTPUT_DIR}/declarations`)).toBe(false);
+
+    // Interface file should also use flat import path
+    const interfaceTs = await readFileFromOutput(`${serviceName}.d.ts`);
+    expect(interfaceTs).toContain(`"./${serviceName}.did"`);
+    expect(interfaceTs).not.toContain(`"./declarations/${serviceName}.did"`);
+  });
+
+  it.each([
+    'hello_world',
+    'example',
+  ])('should generate flat declarations with actor disabled for %s', async (serviceName) => {
+    const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+
+    await generate({
+      didFile,
+      outDir: OUTPUT_DIR,
+      output: { declarations: { flat: true }, actor: { disabled: true } },
+    });
+
+    expect(fileExists(`${OUTPUT_DIR}/${serviceName}.did.d.ts`)).toBe(true);
+    expect(fileExists(`${OUTPUT_DIR}/${serviceName}.did.js`)).toBe(true);
+    expect(fileExists(`${OUTPUT_DIR}/declarations`)).toBe(false);
+    expect(fileExists(`${OUTPUT_DIR}/${serviceName}.ts`)).toBe(false);
+  });
+
+  it.each([
+    'hello_world',
+    'example',
+  ])('should generate flat typescript declarations with rootExports for %s', async (serviceName) => {
+    const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+
+    await generate({
+      didFile,
+      outDir: OUTPUT_DIR,
+      output: { declarations: { flat: true, typescript: true, rootExports: true } },
+    });
+
+    expect(fileExists(`${OUTPUT_DIR}/${serviceName}.did.ts`)).toBe(true);
+    expect(fileExists(`${OUTPUT_DIR}/declarations`)).toBe(false);
+
+    const serviceTs = await readFileFromOutput(`${serviceName}.ts`);
+    expect(serviceTs).toContain(`from "./${serviceName}.did"`);
+    expect(serviceTs).not.toContain(`from "./declarations/${serviceName}.did"`);
+  });
+
   it('should preserve the .did file', async () => {
     const { readFile: realReadFile } =
       await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');

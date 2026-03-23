@@ -24,4 +24,14 @@ generate({
 });
 ```
 
+To write declaration files directly into `outDir` instead of the default `declarations/` subfolder, use the `output.declarations.flat` option:
+
+```ts
+generate({
+  didFile: './canisters/hello_world.did',
+  outDir: './src/bindings',
+  output: { declarations: { flat: true } },
+});
+```
+
 For an explanation of the generated files, see the [Bindings Structure](../structure.md) page.

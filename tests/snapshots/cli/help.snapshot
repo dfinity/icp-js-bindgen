@@ -17,6 +17,9 @@ Options:
   --declarations-typescript    If set, generates a single `.did.ts` TypeScript
                                file instead of separate `.did.js` and
                                `.did.d.ts` files. (default: false)
+  --declarations-flat          If set, generates declaration files directly in
+                               the output directory instead of in a
+                               `declarations/` subfolder. (default: false)
   --force                      If set, overwrite existing files instead of
                                aborting. (default: false)
   -h, --help                   display help for command
