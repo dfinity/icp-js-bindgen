@@ -182,9 +182,7 @@ async function writeBindings({
 }: WriteBindingsOptions) {
   if (output.declarations?.typescript) {
     const declarationsTsModuleFile = resolve(outDir, 'declarations', `${outputFileName}.did.ts`);
-    const declarationsTypescript = prepareTypescriptBinding(
-      bindings.declarations_typescript,
-    );
+    const declarationsTypescript = prepareTypescriptBinding(bindings.declarations_typescript);
     await writeFileSafe(declarationsTsModuleFile, declarationsTypescript, force);
   } else {
     const declarationsTsFile = resolve(outDir, 'declarations', `${outputFileName}.did.d.ts`);
