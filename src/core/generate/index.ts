@@ -160,7 +160,7 @@ export async function generate(options: GenerateOptions) {
 type Bindings = {
   declarations_js: string;
   declarations_ts: string;
-  declarations_typescript?: string;
+  declarations_typescript: string;
   interface_ts: string;
   service_ts: string;
 };
@@ -181,11 +181,11 @@ async function writeBindings({
   force,
 }: WriteBindingsOptions) {
   if (output.declarations?.typescript) {
-    const declarationsTypescriptFile = resolve(outDir, 'declarations', `${outputFileName}.did.ts`);
+    const declarationsTsModuleFile = resolve(outDir, 'declarations', `${outputFileName}.did.ts`);
     const declarationsTypescript = prepareTypescriptBinding(
-      bindings.declarations_typescript as string,
+      bindings.declarations_typescript,
     );
-    await writeFileSafe(declarationsTypescriptFile, declarationsTypescript, force);
+    await writeFileSafe(declarationsTsModuleFile, declarationsTypescript, force);
   } else {
     const declarationsTsFile = resolve(outDir, 'declarations', `${outputFileName}.did.d.ts`);
     const declarationsJsFile = resolve(outDir, 'declarations', `${outputFileName}.did.js`);

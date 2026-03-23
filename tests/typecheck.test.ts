@@ -84,6 +84,46 @@ afterAll(() => {
   if (tmpDir) rmSync(tmpDir, { recursive: true, force: true });
 });
 
+describe('typecheck .did.ts with allowJs false', () => {
+  const snapshotFiles = globSync('tests/snapshots/**/*.did.ts.snapshot');
+
+  it.each(snapshotFiles)('%s', (snapshotPath) => {
+    const content = readFileSync(snapshotPath, 'utf-8');
+    const tsFileName = basename(snapshotPath).replace('.snapshot', '');
+    const tsFilePath = join(tmpDir, tsFileName);
+
+    writeFileSync(tsFilePath, content);
+
+    // A consumer file that imports the generated .did.ts module.
+    const consumerPath = join(tmpDir, `consumer_${tsFileName}`);
+    const importBase = tsFileName.replace(/\.ts$/, '');
+    writeFileSync(
+      consumerPath,
+      `import { idlFactory } from './${importBase}';\nconsole.log(idlFactory);\n`,
+    );
+
+    const configPath = join(tmpDir, 'tsconfig.json');
+    const rawConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
+    rawConfig.compilerOptions.allowJs = false;
+    const { config } = ts.readConfigFile(configPath, () => JSON.stringify(rawConfig));
+    const parsed = ts.parseJsonConfigFileContent(config, ts.sys, tmpDir);
+
+    const program = ts.createProgram([consumerPath], parsed.options);
+    const diagnostics = ts
+      .getPreEmitDiagnostics(program)
+      .filter((d) => d.file?.fileName === consumerPath || d.file?.fileName === tsFilePath);
+
+    if (diagnostics.length > 0) {
+      const formatted = ts.formatDiagnosticsWithColorAndContext(diagnostics, {
+        getCanonicalFileName: (f) => f,
+        getCurrentDirectory: () => tmpDir,
+        getNewLine: () => '\n',
+      });
+      expect.fail(`TypeScript errors in ${snapshotPath}:\n${formatted}`);
+    }
+  });
+});
+
 describe('typecheck .did.ts snapshots', () => {
   const snapshotFiles = globSync('tests/snapshots/**/*.did.ts.snapshot');
 
