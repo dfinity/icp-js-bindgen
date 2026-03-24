@@ -449,7 +449,7 @@ export declare const init: (args: { IDL: typeof IDL }) => IDL.Type[];
 You can use it to type the [`Actor`](https://js.icp.build/core/latest/libs/agent/api/classes/actor/) instance with the methods of the service declared in the `.did` file:
 
 ```typescript
-import { type _SERVICE, idlFactory } from "./bindings/hello_world/declarations/hello_world.did";
+import { type _SERVICE, idlFactory } from "./bindings/declarations/hello_world.did";
 
 const actor = Actor.createActor<_SERVICE>( idlFactory, {
   canisterId: "your-canister-id",
@@ -551,7 +551,7 @@ This file contains the actual Candid JS bindings, that allow encoding and decodi
 Typically passed to the [`Actor.createActor`](https://js.icp.build/core/latest/libs/agent/api/classes/actor/#createactor) function:
 
 ```typescript
-import { idlFactory } from "./bindings/hello_world/declarations/hello_world.did";
+import { idlFactory } from "./bindings/declarations/hello_world.did";
 
 const actor = Actor.createActor(idlFactory, {
   canisterId: "your-canister-id",
