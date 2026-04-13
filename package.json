@@ -79,7 +79,9 @@
     "commander": "^14.0.3"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["wasm-pack"],
+    "onlyBuiltDependencies": [
+      "wasm-pack"
+    ],
     "overrides": {
       "axios": ">=1.15.0",
       "lodash": ">=4.18.0",
