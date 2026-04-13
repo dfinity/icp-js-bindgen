@@ -12,3 +12,5 @@ overrides:
   axios: '>=1.13.5'
   ajv: '>=8.18.0'
   minimatch: '>=10.2.1'
+
+minimumReleaseAge: 10080 # ignore dependency updates released less than 7 days ago
