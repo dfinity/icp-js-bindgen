@@ -1,10 +1,12 @@
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import type {
   GenerateDeclarationsOptions,
   GenerateOptions,
   GenerateResult,
 } from './rs/dist/icp-js-bindgen.d.ts';
 import init, { generate, start } from './rs/dist/icp-js-bindgen.js';
+import wasmUrl from './rs/dist/icp-js-bindgen_bg.wasm?url';
 
 let initPromise: Promise<void> | undefined;
 
@@ -17,17 +19,16 @@ export async function wasmInit(...args: Parameters<typeof init>) {
 
     if (initArgs.length === 0) {
       try {
-        const wasmUrl = new URL('./rs/dist/icp-js-bindgen_bg.wasm', import.meta.url);
-        const wasmPath = wasmUrl.pathname;
+        const wasmPath = fileURLToPath(new URL(wasmUrl, 'file://'));
         const bytes = await readFile(wasmPath);
         initArgs = [{ module_or_path: bytes }];
       } catch {
-        // If it failes, ignore and fall back to default init behavior
+        // If it fails, ignore and fall back to default init behavior
         initArgs = args;
       }
     }
 
-    initPromise = init(...(initArgs)).then(
+    initPromise = init(...initArgs).then(
       () => {},
       (error: unknown) => {
         initPromise = undefined;
