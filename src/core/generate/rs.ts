@@ -17,12 +17,7 @@ export function wasmInit(...args: Parameters<typeof init>): Promise<void> {
       let initArgs = args;
 
       if (initArgs.length === 0) {
-        try {
-          initArgs = [{ module_or_path: wasmUrl }];
-        } catch {
-          // If it fails, ignore and fall back to default init behavior
-          initArgs = args;
-        }
+        initArgs = [{ module_or_path: wasmUrl }];
       }
 
       try {
