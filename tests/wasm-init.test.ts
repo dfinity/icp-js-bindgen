@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { wasmInit } from '../src/core/generate/rs.ts';
 import { getWasm } from './utils/wasm.ts';
 
 describe('wasmInit', () => {
   it('should handle concurrent calls without hanging', async () => {
+    vi.resetModules();
     const { wasm } = await getWasm();
 
     // Simulate multiple concurrent wasmInit calls, as would happen when
@@ -23,6 +24,7 @@ describe('wasmInit', () => {
   });
 
   it('should handle concurrent calls without explicit args without hanging', async () => {
+    vi.resetModules();
     const results = await Promise.all([wasmInit(), wasmInit(), wasmInit(), wasmInit(), wasmInit()]);
 
     // All calls should resolve (not hang) and return undefined.

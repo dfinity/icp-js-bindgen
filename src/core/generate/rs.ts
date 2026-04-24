@@ -1,5 +1,3 @@
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import type {
   GenerateDeclarationsOptions,
   GenerateOptions,
@@ -20,9 +18,7 @@ export function wasmInit(...args: Parameters<typeof init>): Promise<void> {
 
       if (initArgs.length === 0) {
         try {
-          const wasmPath = fileURLToPath(new URL(wasmUrl, 'file://'));
-          const bytes = await readFile(wasmPath);
-          initArgs = [{ module_or_path: bytes }];
+          initArgs = [{ module_or_path: wasmUrl }];
         } catch {
           // If it fails, ignore and fall back to default init behavior
           initArgs = args;
