@@ -21,4 +21,13 @@ describe('wasmInit', () => {
       expect(result).toBeUndefined();
     }
   });
+
+  it('should handle concurrent calls without explicit args without hanging', async () => {
+    const results = await Promise.all([wasmInit(), wasmInit(), wasmInit(), wasmInit(), wasmInit()]);
+
+    // All calls should resolve (not hang) and return undefined.
+    for (const result of results) {
+      expect(result).toBeUndefined();
+    }
+  });
 });

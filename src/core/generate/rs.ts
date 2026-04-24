@@ -10,31 +10,32 @@ import wasmUrl from './rs/dist/icp-js-bindgen_bg.wasm?url';
 
 let initPromise: Promise<void> | undefined;
 
-export async function wasmInit(...args: Parameters<typeof init>) {
+export function wasmInit(...args: Parameters<typeof init>): Promise<void> {
   if (!initPromise) {
-    // If caller didn't pass explicit args, try to load the .wasm file bytes
-    // directly when it's a file: URL. This prevents hanging when runtimes
-    // don't support fetch(file:) semantics.
-    let initArgs = args;
+    initPromise = (async () => {
+      // If caller didn't pass explicit args, try to load the .wasm file bytes
+      // directly when it's a file: URL. This prevents hanging when runtimes
+      // don't support fetch(file:) semantics.
+      let initArgs = args;
 
-    if (initArgs.length === 0) {
-      try {
-        const wasmPath = fileURLToPath(new URL(wasmUrl, 'file://'));
-        const bytes = await readFile(wasmPath);
-        initArgs = [{ module_or_path: bytes }];
-      } catch {
-        // If it fails, ignore and fall back to default init behavior
-        initArgs = args;
+      if (initArgs.length === 0) {
+        try {
+          const wasmPath = fileURLToPath(new URL(wasmUrl, 'file://'));
+          const bytes = await readFile(wasmPath);
+          initArgs = [{ module_or_path: bytes }];
+        } catch {
+          // If it fails, ignore and fall back to default init behavior
+          initArgs = args;
+        }
       }
-    }
 
-    initPromise = init(...initArgs).then(
-      () => {},
-      (error: unknown) => {
+      try {
+        await init(...initArgs);
+      } catch (error) {
         initPromise = undefined;
         throw error;
-      },
-    );
+      }
+    })();
   }
   return initPromise;
 }
