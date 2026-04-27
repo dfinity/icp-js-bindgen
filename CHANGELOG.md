@@ -1,5 +1,9 @@
 ## Unreleased
 
+### Fix
+
+- wasm modules not loading on bun runtime (#140)
+
 ## 0.3.0 (2026-03-23)
 
 ### Feat
