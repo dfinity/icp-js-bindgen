@@ -335,11 +335,7 @@ fn create_actor_method(
                     type_ann: Some(Box::new(TsTypeAnn {
                         span: DUMMY_SP,
                         type_ann: Box::new(convert_type_with_converter(
-                            converter,
-                            env,
-                            arg_ty,
-                            None,
-                            true,
+                            converter, env, arg_ty, None, true,
                         )),
                     })),
                 }),
@@ -364,9 +360,7 @@ fn create_actor_method(
                     .map(|ret| TsTupleElement {
                         span: DUMMY_SP,
                         label: None,
-                        ty: Box::new(convert_type_with_converter(
-                            converter, env, ret, None, true,
-                        )),
+                        ty: Box::new(convert_type_with_converter(converter, env, ret, None, true)),
                     })
                     .collect(),
             })
