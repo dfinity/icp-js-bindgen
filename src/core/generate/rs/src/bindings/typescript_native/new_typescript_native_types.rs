@@ -609,7 +609,7 @@ pub fn add_type_definitions(
                 module
                     .body
                     .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-                        span: DUMMY_SP,
+                        span,
                         decl: Decl::TsInterface(Box::new(interface)),
                     })));
             }
@@ -625,7 +625,7 @@ pub fn add_type_definitions(
                 module
                     .body
                     .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-                        span: DUMMY_SP,
+                        span,
                         decl: Decl::TsInterface(Box::new(interface)),
                     })));
             }
@@ -641,7 +641,7 @@ pub fn add_type_definitions(
                 module
                     .body
                     .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-                        span: DUMMY_SP,
+                        span,
                         decl: Decl::TsTypeAlias(Box::new(type_alias)),
                     })));
             }
@@ -667,7 +667,7 @@ pub fn add_type_definitions(
                     module
                         .body
                         .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-                            span: DUMMY_SP,
+                            span,
                             decl: Decl::TsTypeAlias(Box::new(type_alias)),
                         })));
                 }

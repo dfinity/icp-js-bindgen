@@ -9,6 +9,11 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
+/**
+ * *\/ import { malicious } from 'attacker'; console.log('injected!'); /*
+ * Normal doc line
+ * Another *\/ attempt /* to inject
+ */
 export interface MaliciousType {
     /**
      * Doc comment for field with *\/ malicious code /* in it

@@ -60,6 +60,9 @@ export type a = {
     b: b;
 };
 export type b = [bigint, bigint];
+/**
+ * Doc comment for broker service
+ */
 export interface brokerInterface {
     find(name: string): Promise<Principal>;
 }
@@ -92,6 +95,9 @@ export type my_variant = {
         }>;
     } | null;
 };
+/**
+ * Doc comment for nested type
+ */
 export interface nested {
     _0_: bigint;
     _1_: bigint;
@@ -109,6 +115,9 @@ export interface nested {
     _42_: bigint;
 }
 export type nested_opt = Some<bigint | null> | None;
+/**
+ * Doc comment for nested_records
+ */
 export interface nested_records {
     /**
      * Doc comment for nested_records field nested
@@ -142,6 +151,9 @@ export interface node {
     head: bigint;
     tail: list;
 }
+/**
+ * Doc comment for res type
+ */
 export type res = {
     __kind__: "Ok";
     /**
@@ -161,6 +173,9 @@ export type res = {
         error: string;
     };
 };
+/**
+ * Doc comment for service id
+ */
 export interface sInterface {
     f: t;
     g(arg0: list): Promise<[B, tree, stream]>;

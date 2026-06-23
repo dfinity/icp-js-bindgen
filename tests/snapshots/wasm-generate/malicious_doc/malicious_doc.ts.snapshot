@@ -43,6 +43,11 @@ function candid_none<T>(): [] {
 function record_opt_to_undefined<T>(arg: T | null): T | undefined {
     return arg == null ? undefined : arg;
 }
+/**
+ * *\/ import { malicious } from 'attacker'; console.log('injected!'); /*
+ * Normal doc line
+ * Another *\/ attempt /* to inject
+ */
 export interface MaliciousType {
     /**
      * Doc comment for field with *\/ malicious code /* in it
