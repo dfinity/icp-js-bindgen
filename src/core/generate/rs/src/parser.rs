@@ -2,7 +2,7 @@
 //! that uses Node.js's fs from [crate::fs] to read the imported files.
 
 use crate::fs::read_file_utf8;
-use candid::types::{ArgType, Field, Function, Type, TypeEnv, TypeInner};
+use candid::types::{Field, Function, Type, TypeEnv, TypeInner};
 use candid_parser::{
     Error, Result, pretty_parse,
     syntax::{
@@ -47,7 +47,7 @@ pub fn check_type(env: &Env, t: &IDLType) -> Result<Type> {
     match t {
         IDLType::PrimT(prim) => Ok(check_prim(prim)),
         IDLType::VarT(id) => {
-            let key = id.as_str().into();
+            let key = id.clone();
             env.te.find_type(&key)?;
             Ok(TypeInner::Var(key).into())
         }
@@ -101,11 +101,11 @@ pub fn check_type(env: &Env, t: &IDLType) -> Result<Type> {
     }
 }
 
-fn check_arg(env: &Env, arg: &IDLArgType) -> Result<ArgType> {
-    Ok(ArgType {
-        name: arg.name.clone(),
-        typ: check_type(env, &arg.typ)?,
-    })
+// Candid's `Function`/`Class` types (candid 0.10) do not carry argument names,
+// so we drop the name here and only keep the checked type. Argument names are
+// recovered from the syntax AST (`IDLArgType.name`) by the binding generators.
+fn check_arg(env: &Env, arg: &IDLArgType) -> Result<Type> {
+    check_type(env, &arg.typ)
 }
 
 fn check_fields(env: &Env, fs: &[TypeField]) -> Result<Vec<Field>> {

@@ -1,4 +1,3 @@
-use candid::types::internal::TypeKey;
 use candid::types::{Field, Label, Type, TypeEnv, TypeInner};
 use std::collections::HashSet;
 use swc_core::common::{DUMMY_SP, SyntaxContext};
@@ -41,7 +40,7 @@ impl<'a> OriginalTypescriptTypes<'a> {
         self.required_candid_imports.insert(type_id.to_string());
     }
 
-    fn create_var_type(&mut self, id: &TypeKey) -> TsType {
+    fn create_var_type(&mut self, id: &str) -> TsType {
         let ty = self.env.rec_find_type(id).unwrap();
         if matches!(ty.as_ref(), TypeInner::Func(_)) {
             return self.create_inline_actor_method();
@@ -50,11 +49,11 @@ impl<'a> OriginalTypescriptTypes<'a> {
             return self.create_inline_service();
         }
         // For named types, use the imported Candid type
-        self.add_required_import(id.as_str());
+        self.add_required_import(id);
         TsType::TsTypeRef(TsTypeRef {
             span: DUMMY_SP,
             type_name: TsEntityName::Ident(Ident::new(
-                format!("_{}", id.as_str()).into(),
+                format!("_{}", id).into(),
                 DUMMY_SP,
                 SyntaxContext::empty(),
             )),

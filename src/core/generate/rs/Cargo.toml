@@ -16,8 +16,13 @@ crate-type = ["cdylib"]
 wasm-opt = ["-Oz", "--enable-mutable-globals"]
 
 [dependencies]
-candid = { git = "https://github.com/dfinity/candid", branch = "next" }
-candid_parser = { git = "https://github.com/dfinity/candid", branch = "next" }
+# Temporarily track the candid PR branch (named-args parser support) so CI can
+# verify both projects work together. Both deps come from the same candid repo
+# checkout, so candid_parser's internal `candid` path dep unifies with this
+# `candid`. Switch to the published `candid` 0.10 / `candid_parser` 0.4 releases
+# once the candid PR (dfinity/candid#742) is merged and released.
+candid = { git = "https://github.com/dfinity/candid", branch = "js-bindgen-named-args-parser" }
+candid_parser = { git = "https://github.com/dfinity/candid", branch = "js-bindgen-named-args-parser" }
 
 wasm-bindgen = "0.2"
 console_error_panic_hook = "0.1"

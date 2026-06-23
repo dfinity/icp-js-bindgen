@@ -59,15 +59,21 @@ pub fn create_interface_from_service(
     let members = serv
         .iter()
         .map(|(method_id, method_ty)| {
-            let span = syntax_serv
-                .and_then(|bindings| bindings.iter().find(|b| &b.id == method_id))
+            let binding =
+                syntax_serv.and_then(|bindings| bindings.iter().find(|b| &b.id == method_id));
+            let span = binding
                 .map(|b| add_comments(top_level_nodes, b.docs.as_ref()))
                 .unwrap_or(DUMMY_SP);
 
             match method_ty.as_ref() {
-                TypeInner::Func(func) => {
-                    create_method_signature(top_level_nodes, env, method_id, func, span)
-                }
+                TypeInner::Func(func) => create_method_signature(
+                    top_level_nodes,
+                    env,
+                    method_id,
+                    func,
+                    binding.map(|b| &b.typ),
+                    span,
+                ),
                 TypeInner::Var(var_id) => TsTypeElement::TsPropertySignature(TsPropertySignature {
                     span,
                     key: Box::new(Expr::Ident(get_ident_guarded(method_id))),
@@ -628,8 +634,13 @@ pub fn add_type_definitions(
                 }
                 TypeInner::Func(func) => {
                     // Generate type alias for function types
-                    let type_alias =
-                        create_type_alias_from_function(top_level_nodes, env, id.as_str(), func);
+                    let type_alias = create_type_alias_from_function(
+                        top_level_nodes,
+                        env,
+                        id.as_str(),
+                        func,
+                        syntax_ty,
+                    );
                     module
                         .body
                         .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
@@ -770,13 +781,14 @@ fn create_type_alias_from_function(
     env: &TypeEnv,
     id: &str,
     func: &Function,
+    syntax: Option<&IDLType>,
 ) -> TsTypeAliasDecl {
     TsTypeAliasDecl {
         span: DUMMY_SP,
         declare: false,
         id: get_ident_guarded(id),
         type_params: None,
-        type_ann: Box::new(create_function_type(top_level_nodes, env, func)),
+        type_ann: Box::new(create_function_type(top_level_nodes, env, func, syntax)),
     }
 }
 
@@ -897,26 +909,41 @@ fn create_property_signature_for_variant(
     })
 }
 
+/// Recover per-argument names from a function's syntax node. Candid's checked
+/// `Function` type (candid 0.10) does not carry argument names, so we read them
+/// from the syntax AST (`IDLArgType.name`); missing names fall back to `arg{i}`.
+fn func_arg_names(syntax: Option<&IDLType>) -> Vec<Option<String>> {
+    match syntax {
+        Some(IDLType::FuncT(f)) => f.args.iter().map(|a| a.name.clone()).collect(),
+        _ => Vec::new(),
+    }
+}
+
 // Create TS method signature from Candid function
 fn create_method_signature(
     top_level_nodes: &mut TopLevelNodes,
     env: &TypeEnv,
     method_id: &str,
     func: &Function,
+    syntax: Option<&IDLType>,
     span: Span,
 ) -> TsTypeElement {
+    let arg_names = func_arg_names(syntax);
     // Create parameters
     let params = func
         .args
         .iter()
         .enumerate()
         .map(|(i, arg_ty)| {
-            let var_name = arg_ty.name.clone().unwrap_or_else(|| format!("arg{}", i));
+            let var_name = arg_names
+                .get(i)
+                .and_then(|n| n.clone())
+                .unwrap_or_else(|| format!("arg{}", i));
             TsFnParam::Ident(BindingIdent {
                 id: Ident::new(var_name.into(), DUMMY_SP, SyntaxContext::empty()),
                 type_ann: Some(Box::new(TsTypeAnn {
                     span: DUMMY_SP,
-                    type_ann: Box::new(convert_type(top_level_nodes, env, &arg_ty.typ, None, true)),
+                    type_ann: Box::new(convert_type(top_level_nodes, env, arg_ty, None, true)),
                 })),
             })
         })
@@ -928,7 +955,7 @@ fn create_method_signature(
             span: DUMMY_SP,
             kind: TsKeywordTypeKind::TsVoidKeyword,
         }),
-        1 => convert_type(top_level_nodes, env, &func.rets[0].typ, None, true),
+        1 => convert_type(top_level_nodes, env, &func.rets[0], None, true),
         _ => {
             // Create a tuple type for multiple return values
             TsType::TsTupleType(TsTupleType {
@@ -939,7 +966,7 @@ fn create_method_signature(
                     .map(|ret| TsTupleElement {
                         span: DUMMY_SP,
                         label: None,
-                        ty: Box::new(convert_type(top_level_nodes, env, &ret.typ, None, true)),
+                        ty: Box::new(convert_type(top_level_nodes, env, ret, None, true)),
                     })
                     .collect(),
             })
@@ -979,19 +1006,24 @@ fn create_function_type(
     top_level_nodes: &mut TopLevelNodes,
     env: &TypeEnv,
     func: &Function,
+    syntax: Option<&IDLType>,
 ) -> TsType {
+    let arg_names = func_arg_names(syntax);
     // Create parameters
     let params = func
         .args
         .iter()
         .enumerate()
         .map(|(i, arg_ty)| {
-            let var_name = arg_ty.name.clone().unwrap_or_else(|| format!("arg{}", i));
+            let var_name = arg_names
+                .get(i)
+                .and_then(|n| n.clone())
+                .unwrap_or_else(|| format!("arg{}", i));
             TsFnParam::Ident(BindingIdent {
                 id: Ident::new(var_name.into(), DUMMY_SP, SyntaxContext::empty()),
                 type_ann: Some(Box::new(TsTypeAnn {
                     span: DUMMY_SP,
-                    type_ann: Box::new(convert_type(top_level_nodes, env, &arg_ty.typ, None, true)),
+                    type_ann: Box::new(convert_type(top_level_nodes, env, arg_ty, None, true)),
                 })),
             })
         })
@@ -1003,7 +1035,7 @@ fn create_function_type(
             span: DUMMY_SP,
             kind: TsKeywordTypeKind::TsVoidKeyword,
         }),
-        1 => convert_type(top_level_nodes, env, &func.rets[0].typ, None, true),
+        1 => convert_type(top_level_nodes, env, &func.rets[0], None, true),
         _ => {
             // Create a tuple type for multiple return values
             TsType::TsTupleType(TsTupleType {
@@ -1014,7 +1046,7 @@ fn create_function_type(
                     .map(|ret| TsTupleElement {
                         span: DUMMY_SP,
                         label: None,
-                        ty: Box::new(convert_type(top_level_nodes, env, &ret.typ, None, true)),
+                        ty: Box::new(convert_type(top_level_nodes, env, ret, None, true)),
                     })
                     .collect(),
             })
