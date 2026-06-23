@@ -592,128 +592,119 @@ pub fn add_type_definitions(
     module: &mut Module,
     prog: &IDLMergedProg,
 ) {
-    for id in env.0.keys() {
-        if let Ok(ty) = env.find_type(id) {
-            let syntax = prog.lookup(id.as_str());
-            let syntax_ty = syntax.map(|s| &s.typ);
-            let span = syntax
-                .map(|s| add_comments(top_level_nodes, s.docs.as_ref()))
-                .unwrap_or(DUMMY_SP);
-            match ty.as_ref() {
-                TypeInner::Record(_) if !is_tuple(ty) => {
-                    // Generate interface for record types
-                    let interface = create_interface_from_record(
-                        top_level_nodes,
-                        env,
-                        id.as_str(),
-                        ty,
-                        syntax_ty,
-                    );
-                    module
-                        .body
-                        .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-                            span: DUMMY_SP,
-                            decl: Decl::TsInterface(Box::new(interface)),
-                        })));
-                }
-                TypeInner::Service(serv) => {
-                    // Generate interface for service types
-                    let interface = create_interface_from_service(
-                        top_level_nodes,
-                        env,
-                        id.as_str(),
-                        syntax_ty,
-                        serv,
-                    );
-                    module
-                        .body
-                        .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-                            span: DUMMY_SP,
-                            decl: Decl::TsInterface(Box::new(interface)),
-                        })));
-                }
-                TypeInner::Func(func) => {
-                    // Generate type alias for function types
-                    let type_alias = create_type_alias_from_function(
-                        top_level_nodes,
-                        env,
-                        id.as_str(),
-                        func,
-                        syntax_ty,
-                    );
-                    module
-                        .body
-                        .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-                            span: DUMMY_SP,
-                            decl: Decl::TsTypeAlias(Box::new(type_alias)),
-                        })));
-                }
-                TypeInner::Variant(fs) => {
-                    // Check if all variants have null type
-                    let all_null = fs.iter().all(|f| matches!(f.ty.as_ref(), TypeInner::Null));
+    // Emit type definitions in sorted (alphabetical) order for deterministic
+    // output, matching the other binding generators (see `to_sorted_iter` in
+    // typescript.rs / javascript.rs).
+    for (id, ty) in env.to_sorted_iter() {
+        let syntax = prog.lookup(id.as_str());
+        let syntax_ty = syntax.map(|s| &s.typ);
+        let span = syntax
+            .map(|s| add_comments(top_level_nodes, s.docs.as_ref()))
+            .unwrap_or(DUMMY_SP);
+        match ty.as_ref() {
+            TypeInner::Record(_) if !is_tuple(ty) => {
+                // Generate interface for record types
+                let interface =
+                    create_interface_from_record(top_level_nodes, env, id.as_str(), ty, syntax_ty);
+                module
+                    .body
+                    .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+                        span: DUMMY_SP,
+                        decl: Decl::TsInterface(Box::new(interface)),
+                    })));
+            }
+            TypeInner::Service(serv) => {
+                // Generate interface for service types
+                let interface = create_interface_from_service(
+                    top_level_nodes,
+                    env,
+                    id.as_str(),
+                    syntax_ty,
+                    serv,
+                );
+                module
+                    .body
+                    .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+                        span: DUMMY_SP,
+                        decl: Decl::TsInterface(Box::new(interface)),
+                    })));
+            }
+            TypeInner::Func(func) => {
+                // Generate type alias for function types
+                let type_alias = create_type_alias_from_function(
+                    top_level_nodes,
+                    env,
+                    id.as_str(),
+                    func,
+                    syntax_ty,
+                );
+                module
+                    .body
+                    .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+                        span: DUMMY_SP,
+                        decl: Decl::TsTypeAlias(Box::new(type_alias)),
+                    })));
+            }
+            TypeInner::Variant(fs) => {
+                // Check if all variants have null type
+                let all_null = fs.iter().all(|f| matches!(f.ty.as_ref(), TypeInner::Null));
 
-                    if all_null {
-                        // For variants with all null types, directly create the enum
-                        // Don't create a type alias
+                if all_null {
+                    // For variants with all null types, directly create the enum
+                    // Don't create a type alias
+                    create_variant_type(top_level_nodes, env, syntax_ty, fs, Some(id.as_str()));
+                } else {
+                    // For other variants, create a type alias to the union type
+                    let variant_type =
                         create_variant_type(top_level_nodes, env, syntax_ty, fs, Some(id.as_str()));
-                    } else {
-                        // For other variants, create a type alias to the union type
-                        let variant_type = create_variant_type(
-                            top_level_nodes,
-                            env,
-                            syntax_ty,
-                            fs,
-                            Some(id.as_str()),
-                        );
-                        let type_alias = TsTypeAliasDecl {
-                            span: DUMMY_SP,
-                            declare: false,
-                            id: get_ident_guarded(id.as_str()),
-                            type_params: None,
-                            type_ann: Box::new(variant_type),
-                        };
-                        module
-                            .body
-                            .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-                                span: DUMMY_SP,
-                                decl: Decl::TsTypeAlias(Box::new(type_alias)),
-                            })));
-                    }
-                }
-                TypeInner::Var(inner_id) => {
-                    let inner_type = env.rec_find_type(inner_id).unwrap();
-                    let inner_name = match inner_type.as_ref() {
-                        TypeInner::Service(_) => service_interface_ident(inner_id.as_str()),
-                        _ => get_ident_guarded(inner_id.as_str()),
-                    };
                     let type_alias = TsTypeAliasDecl {
                         span: DUMMY_SP,
                         declare: false,
                         id: get_ident_guarded(id.as_str()),
                         type_params: None,
-                        type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
-                            span: DUMMY_SP,
-                            type_name: TsEntityName::Ident(inner_name),
-                            type_params: None,
-                        })),
+                        type_ann: Box::new(variant_type),
                     };
                     module
                         .body
                         .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-                            span,
+                            span: DUMMY_SP,
                             decl: Decl::TsTypeAlias(Box::new(type_alias)),
                         })));
                 }
-                _ => {
-                    // Generate type alias for other types
-                    let type_alias = create_type_alias(top_level_nodes, env, id.as_str(), ty);
-                    module
-                        .body
-                        .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-                            span,
-                            decl: Decl::TsTypeAlias(Box::new(type_alias)),
-                        })));
-                }
+            }
+            TypeInner::Var(inner_id) => {
+                let inner_type = env.rec_find_type(inner_id).unwrap();
+                let inner_name = match inner_type.as_ref() {
+                    TypeInner::Service(_) => service_interface_ident(inner_id.as_str()),
+                    _ => get_ident_guarded(inner_id.as_str()),
+                };
+                let type_alias = TsTypeAliasDecl {
+                    span: DUMMY_SP,
+                    declare: false,
+                    id: get_ident_guarded(id.as_str()),
+                    type_params: None,
+                    type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
+                        span: DUMMY_SP,
+                        type_name: TsEntityName::Ident(inner_name),
+                        type_params: None,
+                    })),
+                };
+                module
+                    .body
+                    .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+                        span,
+                        decl: Decl::TsTypeAlias(Box::new(type_alias)),
+                    })));
+            }
+            _ => {
+                // Generate type alias for other types
+                let type_alias = create_type_alias(top_level_nodes, env, id.as_str(), ty);
+                module
+                    .body
+                    .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+                        span,
+                        decl: Decl::TsTypeAlias(Box::new(type_alias)),
+                    })));
             }
         }
     }
