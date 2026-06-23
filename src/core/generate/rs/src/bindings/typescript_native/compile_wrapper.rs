@@ -1,6 +1,5 @@
 use super::conversion_functions_generator::TypeConverter;
 use super::utils::{contains_unicode_characters, get_ident_guarded, get_ident_guarded_keyword_ok};
-use candid::types::internal::TypeKey;
 use candid::types::{Function, Type, TypeEnv, TypeInner};
 use candid_parser::syntax::IDLMergedProg;
 use swc_core::common::{DUMMY_SP, SyntaxContext};
@@ -169,12 +168,12 @@ fn wrapper_actor_service(
 fn wrapper_actor_var(
     env: &TypeEnv,
     module: &mut Module,
-    type_id: &TypeKey,
+    type_id: &str,
     service_name: &str,
     converter: &mut TypeConverter,
     span: Span,
 ) {
-    interface_actor_var(module, type_id.as_str(), service_name, span);
+    interface_actor_var(module, type_id, service_name, span);
     let type_ref = env.find_type(type_id).unwrap();
     let serv = match type_ref.as_ref() {
         TypeInner::Service(serv) => serv,
@@ -336,11 +335,7 @@ fn create_actor_method(
                     type_ann: Some(Box::new(TsTypeAnn {
                         span: DUMMY_SP,
                         type_ann: Box::new(convert_type_with_converter(
-                            converter,
-                            env,
-                            &arg_ty.typ,
-                            None,
-                            true,
+                            converter, env, arg_ty, None, true,
                         )),
                     })),
                 }),
@@ -354,7 +349,7 @@ fn create_actor_method(
             span: DUMMY_SP,
             kind: TsKeywordTypeKind::TsVoidKeyword,
         }),
-        1 => convert_type_with_converter(converter, env, &func.rets[0].typ, None, true),
+        1 => convert_type_with_converter(converter, env, &func.rets[0], None, true),
         _ => {
             // Create a tuple type for multiple return values
             TsType::TsTupleType(TsTupleType {
@@ -365,9 +360,7 @@ fn create_actor_method(
                     .map(|ret| TsTupleElement {
                         span: DUMMY_SP,
                         label: None,
-                        ty: Box::new(convert_type_with_converter(
-                            converter, env, &ret.typ, None, true,
-                        )),
+                        ty: Box::new(convert_type_with_converter(converter, env, ret, None, true)),
                     })
                     .collect(),
             })
@@ -400,7 +393,7 @@ fn create_actor_method(
             let arg_expr = Expr::Ident(arg_ident);
 
             // Apply type conversion
-            let converted_expr = converter.convert_to_candid(&arg_expr, &arg_ty.typ);
+            let converted_expr = converter.convert_to_candid(&arg_expr, arg_ty);
 
             ExprOrSpread {
                 spread: None,

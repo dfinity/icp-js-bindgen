@@ -16,8 +16,8 @@ crate-type = ["cdylib"]
 wasm-opt = ["-Oz", "--enable-mutable-globals"]
 
 [dependencies]
-candid = { git = "https://github.com/dfinity/candid", branch = "next" }
-candid_parser = { git = "https://github.com/dfinity/candid", branch = "next" }
+candid = "0.10.30"
+candid_parser = "0.4.0"
 
 wasm-bindgen = "0.2"
 console_error_panic_hook = "0.1"

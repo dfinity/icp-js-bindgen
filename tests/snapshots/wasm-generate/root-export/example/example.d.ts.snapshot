@@ -9,6 +9,35 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
+export type A = B;
+export type B = Some<A> | None;
+/**
+ * Doc comment for List
+ */
+export type List = {
+    head: bigint;
+    tail: List;
+} | null;
+export type a = {
+    __kind__: "a";
+    a: null;
+} | {
+    __kind__: "b";
+    b: b;
+};
+export type b = [bigint, bigint];
+/**
+ * Doc comment for broker service
+ */
+export interface brokerInterface {
+    find(name: string): Promise<Principal>;
+}
+export type f = (arg0: List, arg1: [Principal, string]) => Promise<[List | null, res]>;
+export type list = node | null;
+/**
+ * Doc comment for prim type
+ */
+export type my_type = Principal;
 export type my_variant = {
     __kind__: "a";
     /**
@@ -32,25 +61,9 @@ export type my_variant = {
         }>;
     } | null;
 };
-export type res = {
-    __kind__: "Ok";
-    /**
-     * Doc comment for Ok variant
-     */
-    Ok: [bigint, bigint];
-} | {
-    __kind__: "Err";
-    /**
-     * Doc comment for Err variant
-     */
-    Err: {
-        /**
-         * Doc comment for error field in Err variant,
-         * on multiple lines
-         */
-        error: string;
-    };
-};
+/**
+ * Doc comment for nested type
+ */
 export interface nested {
     _0_: bigint;
     _1_: bigint;
@@ -67,11 +80,18 @@ export interface nested {
     _41_: Variant__42__A_B_C;
     _42_: bigint;
 }
-export interface node {
-    head: bigint;
-    tail: list;
+export type nested_opt = Some<bigint | null> | None;
+/**
+ * Doc comment for nested_records
+ */
+export interface nested_records {
+    /**
+     * Doc comment for nested_records field nested
+     */
+    nested?: {
+        nested_field: string;
+    };
 }
-export type A = B;
 export type nested_res = {
     __kind__: "Ok";
     Ok: Variant_Ok_Err;
@@ -93,15 +113,44 @@ export type nested_res = {
         Err: [bigint];
     };
 };
-export type B = Some<A> | None;
-export interface nested_records {
-    /**
-     * Doc comment for nested_records field nested
-     */
-    nested?: {
-        nested_field: string;
-    };
+export interface node {
+    head: bigint;
+    tail: list;
 }
+/**
+ * Doc comment for res type
+ */
+export type res = {
+    __kind__: "Ok";
+    /**
+     * Doc comment for Ok variant
+     */
+    Ok: [bigint, bigint];
+} | {
+    __kind__: "Err";
+    /**
+     * Doc comment for Err variant
+     */
+    Err: {
+        /**
+         * Doc comment for error field in Err variant,
+         * on multiple lines
+         */
+        error: string;
+    };
+};
+/**
+ * Doc comment for service id
+ */
+export interface sInterface {
+    f: t;
+    g(arg0: list): Promise<[B, tree, stream]>;
+}
+export type stream = {
+    head: bigint;
+    next: [Principal, string];
+} | null;
+export type t = (server: Principal) => Promise<void>;
 export type tree = {
     __kind__: "branch";
     branch: {
@@ -113,40 +162,6 @@ export type tree = {
     __kind__: "leaf";
     leaf: bigint;
 };
-export type f = (arg0: List, arg1: [Principal, string]) => Promise<[List | null, res]>;
-export interface brokerInterface {
-    find(name: string): Promise<Principal>;
-}
-export type nested_opt = Some<bigint | null> | None;
-/**
- * Doc comment for prim type
- */
-export type my_type = Principal;
-/**
- * Doc comment for List
- */
-export type List = {
-    head: bigint;
-    tail: List;
-} | null;
-export type list = node | null;
-export interface sInterface {
-    f: t;
-    g(arg0: list): Promise<[B, tree, stream]>;
-}
-export type stream = {
-    head: bigint;
-    next: [Principal, string];
-} | null;
-export type b = [bigint, bigint];
-export type a = {
-    __kind__: "a";
-    a: null;
-} | {
-    __kind__: "b";
-    b: b;
-};
-export type t = (server: Principal) => Promise<void>;
 export enum Variant_Ok_Err {
     Ok = "Ok",
     Err = "Err"

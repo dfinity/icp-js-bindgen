@@ -2,7 +2,7 @@
 
 use candid::pretty::candid::pp_mode;
 use candid::pretty::utils::*;
-use candid::types::{ArgType, Field, Function, Label, SharedLabel, Type, TypeEnv, TypeInner};
+use candid::types::{Field, Function, Label, SharedLabel, Type, TypeEnv, TypeInner};
 use candid_parser::bindings::analysis::{chase_actor, chase_types, infer_rec};
 use candid_parser::syntax::IDLMergedProg;
 use pretty::RcDoc;
@@ -169,8 +169,8 @@ fn pp_function(func: &Function) -> RcDoc<'_> {
     sep_enclose([args, rets, modes], ",", "(", ")").nest(INDENT_SPACE)
 }
 
-fn pp_args(args: &[ArgType]) -> RcDoc<'_> {
-    pp_types(args.iter().map(|arg| &arg.typ))
+fn pp_args(args: &[Type]) -> RcDoc<'_> {
+    pp_types(args.iter())
 }
 
 fn pp_types<'a, T>(types: T) -> RcDoc<'a>
@@ -197,12 +197,12 @@ fn references_var(ty: &Type, name: &str) -> bool {
             fields.iter().any(|f| references_var(&f.ty, name))
         }
         TypeInner::Func(func) => {
-            func.args.iter().any(|a| references_var(&a.typ, name))
-                || func.rets.iter().any(|r| references_var(&r.typ, name))
+            func.args.iter().any(|a| references_var(a, name))
+                || func.rets.iter().any(|r| references_var(r, name))
         }
         TypeInner::Service(methods) => methods.iter().any(|(_, m)| references_var(m, name)),
         TypeInner::Class(args, ty) => {
-            args.iter().any(|a| references_var(&a.typ, name)) || references_var(ty, name)
+            args.iter().any(|a| references_var(a, name)) || references_var(ty, name)
         }
         _ => false,
     }
@@ -221,7 +221,7 @@ fn find_service_in_cycle<'a>(
         if recs.contains(s_id) {
             continue;
         }
-        let Ok(s_ty) = env.find_type(&s_id.into()) else {
+        let Ok(s_ty) = env.find_type(s_id) else {
             continue;
         };
         let TypeInner::Service(methods) = s_ty.as_ref() else {
@@ -233,8 +233,8 @@ fn find_service_in_cycle<'a>(
             continue;
         }
 
-        let references_service = func.args.iter().any(|arg| references_var(&arg.typ, s_id))
-            || func.rets.iter().any(|ret| references_var(&ret.typ, s_id));
+        let references_service = func.args.iter().any(|arg| references_var(arg, s_id))
+            || func.rets.iter().any(|ret| references_var(ret, s_id));
 
         if references_service {
             return Some(s_id);
@@ -267,7 +267,7 @@ fn optimize_recs<'a>(
     let swaps: Vec<(String, String)> = initial_recs
         .iter()
         .filter_map(|func_id| {
-            let ty = env.find_type(&func_id.as_str().into()).ok()?;
+            let ty = env.find_type(func_id.as_str()).ok()?;
             let TypeInner::Func(func) = ty.as_ref() else {
                 return None;
             };
@@ -320,7 +320,7 @@ fn pp_defs<'a>(
             .append(" = IDL.Rec();")
     }));
     let mut defs = lines(def_list.iter().map(|&id| {
-        let ty = env.find_type(&id.into()).unwrap();
+        let ty = env.find_type(id).unwrap();
         if recs.contains(id) {
             ident(id)
                 .append(".fill")
@@ -383,7 +383,7 @@ pub fn compile(env: &TypeEnv, actor: &Option<Type>, root_exports: bool) -> Strin
             let recs_owned = optimize_recs(env, &mut def_list, initial_recs);
             let recs: BTreeSet<&str> = recs_owned.iter().map(|s| s.as_str()).collect();
             let types = if let TypeInner::Class(args, _) = actor.as_ref() {
-                args.iter().map(|arg| arg.typ.clone()).collect::<Vec<_>>()
+                args.clone()
             } else {
                 Vec::new()
             };
@@ -492,7 +492,7 @@ pub fn compile_typescript(
             let recs_owned = infer_and_optimize_recs(env, &mut def_list);
             let recs: BTreeSet<&str> = recs_owned.iter().map(|s| s.as_str()).collect();
             let types = if let TypeInner::Class(args, _) = actor.as_ref() {
-                args.iter().map(|arg| arg.typ.clone()).collect::<Vec<_>>()
+                args.clone()
             } else {
                 Vec::new()
             };

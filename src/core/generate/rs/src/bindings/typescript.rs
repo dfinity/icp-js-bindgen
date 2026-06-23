@@ -206,13 +206,13 @@ fn pp_opt<'a>(
 }
 
 fn pp_function<'a>(env: &'a TypeEnv, func: &'a Function) -> RcDoc<'a> {
-    let args = func.args.iter().map(|arg| pp_ty(env, &arg.typ, true));
+    let args = func.args.iter().map(|arg| pp_ty(env, arg, true));
     let args = sep_enclose(args, ",", "[", "]");
     let rets = match func.rets.len() {
         0 => str("undefined"),
-        1 => pp_ty(env, &func.rets[0].typ, true),
+        1 => pp_ty(env, &func.rets[0], true),
         _ => sep_enclose(
-            func.rets.iter().map(|ret| pp_ty(env, &ret.typ, true)),
+            func.rets.iter().map(|ret| pp_ty(env, ret, true)),
             ",",
             "[",
             "]",
@@ -268,7 +268,7 @@ pub(crate) fn pp_defs<'a>(
     prog: &'a IDLMergedProg,
 ) -> RcDoc<'a> {
     lines(def_list.iter().map(|&id| {
-        let ty = env.find_type(&id.into()).unwrap();
+        let ty = env.find_type(id).unwrap();
         let syntax = prog.lookup(id);
         let syntax_ty = syntax.map(|s| &s.typ);
         let docs = syntax
