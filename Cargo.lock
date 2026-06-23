@@ -218,7 +218,8 @@ dependencies = [
 [[package]]
 name = "candid"
 version = "0.10.30"
-source = "git+https://github.com/dfinity/candid?branch=js-bindgen-named-args-parser#39ad3476ce07121ff2b515304e7f4e8943538ae3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1cc4495aa7a596cad1570886668cd3cdb1f077ec2ad28e7e3938a76756c89d80"
 dependencies = [
  "anyhow",
  "binread",
@@ -240,7 +241,8 @@ dependencies = [
 [[package]]
 name = "candid_derive"
 version = "0.10.30"
-source = "git+https://github.com/dfinity/candid?branch=js-bindgen-named-args-parser#39ad3476ce07121ff2b515304e7f4e8943538ae3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c93f446781aa35d3b2ec5c36e3d67fce948308fe166833ccbb1b3ef8bbb899e0"
 dependencies = [
  "lazy_static",
  "proc-macro2",
@@ -251,7 +253,8 @@ dependencies = [
 [[package]]
 name = "candid_parser"
 version = "0.4.0"
-source = "git+https://github.com/dfinity/candid?branch=js-bindgen-named-args-parser#39ad3476ce07121ff2b515304e7f4e8943538ae3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e35c12ed409a6c02c6e204db49926c75ceeb622a4a994b828cdd3dea7dfec59"
 dependencies = [
  "anyhow",
  "candid",
@@ -681,7 +684,8 @@ dependencies = [
 [[package]]
 name = "ic_principal"
 version = "0.1.3"
-source = "git+https://github.com/dfinity/candid?branch=js-bindgen-named-args-parser#39ad3476ce07121ff2b515304e7f4e8943538ae3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1aea751965eaf92990be8c79c64b4f3174ff22dd3604e6696a06a494afbaba2a"
 dependencies = [
  "arbitrary",
  "crc32fast",
