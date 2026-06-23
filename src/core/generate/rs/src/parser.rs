@@ -143,7 +143,7 @@ fn check_defs(env: &mut Env, decs: &[Dec]) -> Result<()> {
         match dec {
             Dec::TypD(Binding { id, typ, docs: _ }) => {
                 let t = check_type(env, typ)?;
-                env.te.0.insert(id.clone().into(), t);
+                env.te.0.insert(id.clone(), t);
             }
             Dec::ImportType(_) | Dec::ImportServ(_) => (),
         }
