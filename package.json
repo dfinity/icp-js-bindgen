@@ -66,14 +66,14 @@
   "devDependencies": {
     "@biomejs/biome": "2.4.8",
     "@tanstack/vite-config": "^0.5.2",
-    "@types/node": "^24.12.0",
-    "memfs": "^4.57.1",
-    "publint": "^0.3.18",
-    "tinyglobby": "^0.2.16",
+    "@types/node": "^24.13.2",
+    "memfs": "^4.57.8",
+    "publint": "^0.3.21",
+    "tinyglobby": "^0.2.17",
     "typescript": "^5.9.3",
-    "vite": "^8.0.2",
+    "vite": "^8.1.0",
     "vitest": "4.1.0",
-    "wasm-pack": "^0.14.0"
+    "wasm-pack": "^0.15.0"
   },
   "dependencies": {
     "commander": "^14.0.3"
@@ -86,7 +86,9 @@
       "tar": ">=7.5.11",
       "minimatch": ">=10.2.5",
       "ajv": ">=8.18.0",
-      "postcss@<8.5.10": ">=8.5.10"
+      "postcss@<8.5.10": ">=8.5.10",
+      "brace-expansion@>=5.0.0 <5.0.6": ">=5.0.6",
+      "markdown-it@<=14.1.1": ">=14.2.0"
     }
   }
 }
