@@ -1,3 +1,9 @@
+## Unreleased
+
+### Fix
+
+- resolve 16 audit vulnerabilities via pnpm overrides (#153)
+
 ## 0.4.0 (2026-04-29)
 
 ### Fix
