@@ -94,12 +94,22 @@ static KEYWORDS: [&str; 64] = [
     "with",
     "yield",
 ];
-pub(crate) fn ident(id: &str) -> RcDoc<'_> {
+/// The naming rule for identifiers exported by the generated declarations files.
+///
+/// Anything importing from those files must escape names with this same rule, or the
+/// import will name a member that does not exist. Note this list is deliberately narrower
+/// than `typescript_native::utils::KEYWORDS`, which also covers TypeScript built-in type
+/// names — escaping an import with that wider list would over-escape.
+pub(crate) fn escaped_ident_name(id: &str) -> String {
     if KEYWORDS.contains(&id) {
-        str(id).append("_")
+        format!("{}_", id)
     } else {
-        str(id)
+        id.to_string()
     }
+}
+
+pub(crate) fn ident(id: &str) -> RcDoc<'_> {
+    RcDoc::text(escaped_ident_name(id))
 }
 
 fn pp_ty(ty: &Type) -> RcDoc<'_> {

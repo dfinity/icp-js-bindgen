@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::*;
 
+use super::super::javascript::escaped_ident_name;
 use super::utils::get_ident_guarded_keyword_ok;
 
 pub struct OriginalTypescriptTypes<'a> {
@@ -410,11 +411,14 @@ impl<'a> OriginalTypescriptTypes<'a> {
         let specifiers = required_imports
             .iter()
             .map(|id| {
+                // The imported name must match what the declarations file actually exports,
+                // which escapes reserved words (`new` is exported as `new_`). The local alias
+                // is always prefixed with `_`, so it never needs escaping.
                 ImportSpecifier::Named(ImportNamedSpecifier {
                     span: DUMMY_SP,
                     local: Ident::new(format!("_{}", id).into(), DUMMY_SP, SyntaxContext::empty()),
                     imported: Some(ModuleExportName::Ident(Ident::new(
-                        id.clone().into(),
+                        escaped_ident_name(id).into(),
                         DUMMY_SP,
                         SyntaxContext::empty(),
                     ))),

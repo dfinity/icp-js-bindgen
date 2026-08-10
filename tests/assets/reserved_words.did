@@ -1,0 +1,32 @@
+// Regression fixture for reserved-word handling in generated bindings.
+//
+// All-null variants are lowered to a TypeScript `enum`, which made them the one place
+// where a candid tag became a TypeScript identifier. Reserved words are legal both as
+// enum member names and in member-access position, so tags must survive verbatim.
+
+// A named all-null variant whose tags are JS/TS reserved words.
+type Status = variant { new; default; in; class; function; done };
+
+// A candid *type* whose own name is a reserved word. The generated enum type name must be
+// escaped (an identifier cannot be `new`), and every reference to it must use that same
+// escaped name.
+type new = variant { a; b };
+
+// Tags that collide once escaped: naive escaping turns `new` into `new_` and produces a
+// duplicate member alongside the real `new_` tag.
+type Collide = variant { new; new_ };
+
+// Reserved words as record field names and as tags of a non-null variant, which take a
+// different code path (discriminated union) than the enum lowering above.
+type Payload = record { new : nat; default : text; class : bool };
+type Mixed = variant { new : nat; done };
+
+service : {
+  // Inline (anonymous) all-null variant: exercises the generated `Variant_*` enum name.
+  get_inline : () -> (variant { new; done }) query;
+  get_status : () -> (Status) query;
+  put_status : (Status) -> ();
+  get_reserved_type : () -> (new) query;
+  put_collide : (Collide) -> ();
+  round_trip : (Payload, Mixed) -> (Payload, Mixed);
+}

@@ -2,7 +2,7 @@ use super::super::javascript::is_tuple;
 use super::comments::add_comments;
 use super::conversion_functions_generator::{TopLevelNodes, TypeConverter};
 use super::original_typescript_types::create_typed_array_type;
-use super::utils::{get_ident_guarded, get_ident_guarded_keyword_ok};
+use super::utils::{get_ident, get_ident_guarded, get_ident_guarded_keyword_ok};
 use candid::types::{Field, Function, Label, Type, TypeEnv, TypeInner};
 use candid_parser::syntax::{self, IDLMergedProg, IDLType};
 use swc_core::common::Span;
@@ -492,12 +492,16 @@ fn create_variant_type(
                         field_info.iter().map(|(name, _)| name.clone()).collect();
                     format!("Variant_{}", field_names.join("_"))
                 };
-                // Create enum members
+                // Create enum members.
+                // Reserved words are valid enum member names and valid in member-access
+                // position (`Status.new`), so they must NOT be escaped here: the
+                // `from_candid_*`/`to_candid_*` functions reference members by their candid
+                // tag, and escaping the declaration alone made those references dangle.
                 let members = field_info
                     .into_iter()
                     .map(|(member_name, span)| TsEnumMember {
                         span,
-                        id: TsEnumMemberId::Ident(get_ident_guarded(&member_name)),
+                        id: TsEnumMemberId::Ident(get_ident_guarded_keyword_ok(&member_name)),
                         init: Some(Box::new(Expr::Lit(Lit::Str(Str {
                             span: DUMMY_SP,
                             value: member_name.into(),
@@ -505,25 +509,32 @@ fn create_variant_type(
                         })))),
                     })
                     .collect();
-                // Create the enum declaration
+                // Create the enum declaration.
+                // Unlike its members, the enum *type* name must be escaped: an identifier
+                // cannot be a reserved word. The escaped identifier is stored alongside the
+                // declaration so every reference to it (type refs, conversion functions) uses
+                // exactly the name that was declared, instead of re-deriving the escaping and
+                // risking divergence.
+                let enum_ident = get_ident_guarded(&enum_name);
                 let enum_decl = TsEnumDecl {
                     span: DUMMY_SP,
                     declare: false,
                     is_const: false,
-                    id: get_ident_guarded(&enum_name),
+                    id: enum_ident.clone(),
                     members,
                 };
 
-                // Store the enum declaration with its name as key
-                (enum_decl, enum_name.clone())
+                // Store the enum declaration with its declared name
+                (enum_decl, enum_ident.sym.to_string())
             });
 
             let enum_name = enum_declarations.get(&fs.to_vec()).unwrap().1.clone();
 
-            // Return a reference to the enum type
+            // Return a reference to the enum type. `enum_name` is already the declared
+            // (escaped) identifier, so it must not be escaped again.
             TsType::TsTypeRef(TsTypeRef {
                 span: DUMMY_SP,
-                type_name: TsEntityName::Ident(get_ident_guarded(&enum_name)),
+                type_name: TsEntityName::Ident(get_ident(&enum_name)),
                 type_params: None,
             })
         } else {
