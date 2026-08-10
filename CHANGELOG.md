@@ -1,3 +1,10 @@
+## Unreleased
+
+### Fix
+
+- **generate**: reserved-word candid tags broke enum references (#152)
+- resolve 16 audit vulnerabilities via pnpm overrides (#153)
+
 ## 0.4.0 (2026-04-29)
 
 ### Fix
