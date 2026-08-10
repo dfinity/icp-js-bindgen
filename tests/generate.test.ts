@@ -34,7 +34,11 @@ beforeEach(() => {
 });
 
 describe('generate', () => {
-  it.each(['hello_world', 'example'])('should generate a bindgen', async (serviceName) => {
+  it.each([
+    'hello_world',
+    'example',
+    'reserved_words',
+  ])('should generate a bindgen', async (serviceName) => {
     const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 
     await generate({ didFile, outDir: OUTPUT_DIR });
@@ -110,6 +114,7 @@ describe('generate', () => {
   it.each([
     'hello_world',
     'example',
+    'reserved_words',
   ])('should generate typescript declarations for %s', async (serviceName) => {
     const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 

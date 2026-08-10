@@ -1,7 +1,7 @@
 use super::comments::PosCursor;
 use super::new_typescript_native_types::{convert_type_with_converter, is_recursive_optional};
 use super::original_typescript_types::OriginalTypescriptTypes;
-use super::utils::{EnumDeclarations, contains_unicode_characters, get_ident_guarded};
+use super::utils::{EnumDeclarations, contains_unicode_characters, get_ident_guarded_keyword_ok};
 use candid::types::{Field, Label, Type, TypeEnv, TypeInner};
 use std::collections::{HashMap, HashSet};
 use swc_core::common::{DUMMY_SP, SyntaxContext, comments::SingleThreadedComments};
@@ -680,10 +680,13 @@ impl<'a> TypeConverter<'a> {
                 });
 
                 // Create result: { field_name: null }
+                // This key is a candid field name on the wire, so it must be emitted verbatim.
+                // Reserved words are valid property names, and escaping one to `new_` would
+                // encode a field the candid type does not have.
                 let field_result = Expr::Object(ObjectLit {
                     span: DUMMY_SP,
                     props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                        key: PropName::Ident(get_ident_guarded(&field_name).into()),
+                        key: PropName::Ident(get_ident_guarded_keyword_ok(&field_name).into()),
                         value: Box::new(Expr::Lit(Lit::Null(Null { span: DUMMY_SP }))),
                     })))],
                 });
