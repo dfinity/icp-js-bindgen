@@ -28,8 +28,18 @@ vi.mock('node:fs/promises', () => ({
 const TESTS_ASSETS_DIR = './tests/assets';
 const OUTPUT_DIR = 'output';
 
-/** Legal TypeScript identifier: `ID_Start`/`ID_Continue` plus `$` and `_`. */
-const LEGAL_IDENTIFIER = /^[\p{ID_Start}$_][\p{ID_Continue}$]*$/u;
+/**
+ * The identifier shape this test enforces — deliberately *looser* than the generator's own
+ * rule, so it checks "TypeScript would accept this" rather than restating the
+ * implementation.
+ *
+ * Modelled on ECMAScript `IdentifierName` (`ID_Start`/`ID_Continue` plus `$` and `_`),
+ * omitting the zero-width joiners and unicode escape sequences the grammar also permits but
+ * that the generator never emits. The generator restricts itself to `XID_*`, which is a
+ * subset — so output that satisfies its rule always satisfies this one, and a regression
+ * that emitted a quoted or otherwise malformed name would still be caught here.
+ */
+const ENFORCED_IDENTIFIER_SHAPE = /^[\p{ID_Start}$_][\p{ID_Continue}$]*$/u;
 
 /** `export class X`, `export interface X`, `export enum X`, `class X implements Y`. */
 const DECLARED_IDENTIFIER =
@@ -78,7 +88,7 @@ describe('identifiers in binding position', () => {
       // Guards against the regex silently matching nothing and the assertion passing.
       expect(declared.length, `${file} should declare something`).toBeGreaterThan(0);
       for (const name of declared) {
-        expect(name, `${file} declares ${name}`).toMatch(LEGAL_IDENTIFIER);
+        expect(name, `${file} declares ${name}`).toMatch(ENFORCED_IDENTIFIER_SHAPE);
       }
     }
   });
