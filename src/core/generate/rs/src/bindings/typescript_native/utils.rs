@@ -323,6 +323,125 @@ pub fn get_ident(name: &str) -> Ident {
     Ident::new(name.into(), DUMMY_SP, SyntaxContext::empty())
 }
 
+/// Fallback for a name that sanitizes down to nothing at all.
+const EMPTY_IDENT_FALLBACK: &str = "_";
+
+/// Whether `c` may start a TypeScript identifier.
+///
+/// ECMAScript `IdentifierStart` is `ID_Start` plus `$` and `_`. The `XID_*` variants are
+/// used here because they are closed under normalization; they are marginally stricter
+/// than `ID_*`, which only ever means a name is sanitized that could have been left
+/// alone — never that an invalid name is accepted.
+fn is_ident_start(c: char) -> bool {
+    c == '_' || c == '$' || unicode_ident::is_xid_start(c)
+}
+
+/// Whether `c` may appear in a TypeScript identifier after the first character.
+fn is_ident_continue(c: char) -> bool {
+    c == '$' || unicode_ident::is_xid_continue(c)
+}
+
+/// Whether `name` can be used verbatim as an identifier in a binding position.
+fn is_valid_binding_ident(name: &str) -> bool {
+    let mut chars = name.chars();
+    match chars.next() {
+        Some(first) => is_ident_start(first) && chars.all(is_ident_continue),
+        None => false,
+    }
+}
+
+/// Reshapes `name` into a valid identifier, replacing characters that cannot appear in
+/// one.
+///
+/// This guarantees identifier *shape* only. It does **not** guarantee the result can be
+/// declared: a reserved word is already correctly shaped, so it is returned unchanged
+/// (`binding_ident_name("class") == "class"`, which `interface class` cannot use). Callers
+/// that emit a declaration need [`binding_ident`] or [`service_class_name`], which add the
+/// reserved-word escape on top. Callers that suffix the result (`{name}Interface`) cannot
+/// produce a reserved word and may use this directly.
+///
+/// This is the counterpart to [`get_typescript_ident`], which *quotes* names it cannot
+/// use verbatim. Quoting is correct in *property* position, where `'my-field': bigint`
+/// is legal TypeScript, and a syntax error in *binding* position — a declaration name or
+/// type reference — where `'my-field'` is a string literal rather than an identifier. The
+/// two must therefore not share a path.
+///
+/// **This function is the identity on names that are already legal identifiers.** That
+/// property is load-bearing: the generated interface name is derived from the raw `.did`
+/// basename and is a documented part of the public API (`<service-name>Interface`), and
+/// Candid restricts type ids to `(letter | '_') (letter | digit | '_')*`, so every name
+/// reaching here from a well-formed `.did` file is passed through untouched.
+///
+/// Illegal characters are collapsed to a single `_` per run, so `my-backend` and
+/// `my.backend` both yield `my_backend` — the same output as if the file had been named
+/// `my_backend.did`. A leading character that is legal only in continuation position
+/// (a digit, say) is prefixed with `_`.
+pub fn binding_ident_name(name: &str) -> String {
+    if is_valid_binding_ident(name) {
+        return name.to_string();
+    }
+
+    let mut sanitized = String::with_capacity(name.len());
+    let mut in_separator_run = false;
+    for c in name.chars() {
+        if is_ident_continue(c) {
+            sanitized.push(c);
+            in_separator_run = false;
+        } else if !in_separator_run {
+            sanitized.push('_');
+            in_separator_run = true;
+        }
+    }
+
+    // Every retained character is valid in continuation position, but the first one
+    // additionally has to be valid in *start* position.
+    match sanitized.chars().next() {
+        Some(first) if !is_ident_start(first) => format!("_{sanitized}"),
+        Some(_) => sanitized,
+        None => EMPTY_IDENT_FALLBACK.to_string(),
+    }
+}
+
+/// Suffixes `_` if `name` is a reserved word or a well-known global, so that it can be
+/// declared without shadowing or being rejected.
+fn escape_reserved(name: String) -> String {
+    if KEYWORDS.contains(&name.as_str()) {
+        format!("{name}_")
+    } else {
+        name
+    }
+}
+
+/// Identifier for something *declared* in binding position: sanitized, then escaped if
+/// it collides with a reserved word.
+pub fn binding_ident(name: &str) -> Ident {
+    get_ident(&escape_reserved(binding_ident_name(name)))
+}
+
+/// Uppercases the first character, respecting `char` boundaries.
+fn capitalize_first(name: &str) -> String {
+    let mut chars = name.chars();
+    match chars.next() {
+        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+        None => String::new(),
+    }
+}
+
+/// The identifier of the generated actor class, e.g. `hello_world` -> `Hello_world`.
+///
+/// Single source of truth: the class declaration, the `createActor` return type and the
+/// `new …()` call all resolve it through here, so they cannot disagree. They previously
+/// derived it independently, and the reserved-word escape was applied to the declaration
+/// only — so `map.did` declared `class Map_` but constructed the global `Map`.
+pub fn service_class_name(service_name: &str) -> String {
+    escape_reserved(capitalize_first(&binding_ident_name(service_name)))
+}
+
+/// Renders `name` for use in *property* position — an object or interface member key,
+/// or an enum member id — quoting it when it is not a bare identifier.
+///
+/// Use [`binding_ident_name`] instead for declaration names and type references, where a
+/// quoted string is a syntax error rather than an escape.
 pub fn get_typescript_ident(name: &str, filter_keywords: bool) -> String {
     // Handle empty names by returning a quoted empty string
     if name.is_empty() {
@@ -354,4 +473,148 @@ pub fn get_ident_guarded(name: &str) -> Ident {
 pub fn get_ident_guarded_keyword_ok(name: &str) -> Ident {
     let ident_name: String = get_typescript_ident(name, false);
     get_ident(&ident_name)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The identity property that keeps existing generated output unchanged.
+    #[test]
+    fn binding_ident_name_is_identity_on_legal_identifiers() {
+        for name in [
+            "backend",
+            "hello_world",
+            "my_backend",
+            "reserved_words",
+            "_leading_underscore",
+            "trailing_",
+            "with2digits",
+            "$dollar",
+            "ünicode",
+            "Variant_a_b",
+        ] {
+            assert_eq!(
+                binding_ident_name(name),
+                name,
+                "should be untouched: {name}"
+            );
+        }
+    }
+
+    #[test]
+    fn binding_ident_name_sanitizes_illegal_characters() {
+        // A run of illegal characters collapses to a single `_`, so a dashed name yields
+        // exactly what the underscored filename would have.
+        assert_eq!(binding_ident_name("my-backend"), "my_backend");
+        assert_eq!(binding_ident_name("my.backend"), "my_backend");
+        assert_eq!(binding_ident_name("my backend"), "my_backend");
+        assert_eq!(binding_ident_name("my--backend"), "my_backend");
+        assert_eq!(binding_ident_name("my.-. backend"), "my_backend");
+        assert_eq!(binding_ident_name("üni-code"), "üni_code");
+        assert_eq!(binding_ident_name("my-backend-"), "my_backend_");
+    }
+
+    #[test]
+    fn binding_ident_name_fixes_illegal_leading_character() {
+        assert_eq!(binding_ident_name("2fa"), "_2fa");
+        assert_eq!(binding_ident_name("-leading"), "_leading");
+        assert_eq!(binding_ident_name("123"), "_123");
+    }
+
+    #[test]
+    fn binding_ident_name_always_returns_a_legal_identifier() {
+        for name in [
+            "",
+            "-",
+            "---",
+            "...",
+            "2fa",
+            "my-backend",
+            "my.backend",
+            "ünicode",
+            "üni-code",
+            "🎉",
+            "🎉-party",
+            "a\"b",
+            "a'b",
+            "a\\b",
+            "\n",
+        ] {
+            let sanitized = binding_ident_name(name);
+            assert!(
+                is_valid_binding_ident(&sanitized),
+                "{name:?} sanitized to {sanitized:?}, which is not a legal identifier"
+            );
+        }
+    }
+
+    #[test]
+    fn service_class_name_capitalizes() {
+        assert_eq!(service_class_name("backend"), "Backend");
+        assert_eq!(service_class_name("hello_world"), "Hello_world");
+        assert_eq!(service_class_name("my-backend"), "My_backend");
+    }
+
+    /// A multi-byte leading character used to be sliced at byte 1, panicking.
+    #[test]
+    fn service_class_name_handles_multibyte_leading_character() {
+        assert_eq!(service_class_name("ünicode"), "Ünicode");
+        assert_eq!(service_class_name("日本語"), "日本語");
+        assert_eq!(service_class_name("🎉"), "_");
+    }
+
+    /// The reserved-word escape has to be applied *after* capitalization, because that is
+    /// what can turn a harmless basename into a global (`map` -> `Map`).
+    #[test]
+    fn service_class_name_escapes_reserved_words() {
+        assert_eq!(service_class_name("map"), "Map_");
+        assert_eq!(service_class_name("set"), "Set_");
+        assert_eq!(service_class_name("record"), "Record_");
+        assert_eq!(service_class_name("error"), "Error_");
+        assert_eq!(service_class_name("promise"), "Promise_");
+        // Not a reserved word once capitalized, so left alone.
+        assert_eq!(service_class_name("class"), "Class");
+    }
+
+    /// `binding_ident_name` guarantees identifier shape, not declarability. A reserved word
+    /// is already correctly shaped, so only the guarded wrappers escape it. Pinned because a
+    /// caller that confuses the two reintroduces the `map.did` class of bug.
+    #[test]
+    fn shape_is_not_the_same_as_declarable() {
+        assert_eq!(binding_ident_name("class"), "class");
+        assert_eq!(&*binding_ident("class").sym, "class_");
+
+        assert_eq!(binding_ident_name("Map"), "Map");
+        assert_eq!(&*binding_ident("Map").sym, "Map_");
+    }
+
+    #[test]
+    fn binding_ident_escapes_reserved_words() {
+        assert_eq!(&*binding_ident("Map").sym, "Map_");
+        assert_eq!(
+            &*binding_ident("Variant_other_my-tag").sym,
+            "Variant_other_my_tag"
+        );
+        assert_eq!(&*binding_ident("Variant_a_b").sym, "Variant_a_b");
+    }
+
+    /// Property position keeps quoting; binding position must not.
+    #[test]
+    fn property_and_binding_paths_differ() {
+        assert_eq!(get_typescript_ident("my-field", false), "'my-field'");
+        assert_eq!(binding_ident_name("my-field"), "my_field");
+    }
+
+    #[test]
+    fn declarations_specifier_matches_the_written_basename() {
+        // The JavaScript layer writes `<basename>.did.js`/`.did.d.ts`, so the specifier must
+        // carry the basename through verbatim.
+        for name in ["backend", "my-backend", "my.backend", "ünicode"] {
+            assert_eq!(
+                super::super::preamble::imports::declarations_module_specifier(name),
+                format!("./declarations/{name}.did")
+            );
+        }
+    }
 }

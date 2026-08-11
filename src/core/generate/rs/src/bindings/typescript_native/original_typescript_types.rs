@@ -4,6 +4,7 @@ use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::*;
 
 use super::super::javascript::escaped_ident_name;
+use super::preamble::imports::declarations_module_specifier;
 use super::utils::get_ident_guarded_keyword_ok;
 
 pub struct OriginalTypescriptTypes<'a> {
@@ -405,8 +406,6 @@ impl<'a> OriginalTypescriptTypes<'a> {
             return;
         }
 
-        let dashed_name = service_name.replace('-', "_");
-
         // Create import specifiers for each type
         let specifiers = required_imports
             .iter()
@@ -453,7 +452,7 @@ impl<'a> OriginalTypescriptTypes<'a> {
                 specifiers: sorted_specifiers,
                 src: Box::new(Str {
                     span: DUMMY_SP,
-                    value: format!("./declarations/{}.did", dashed_name).into(),
+                    value: declarations_module_specifier(service_name).into(),
                     raw: None,
                 }),
                 type_only: true,

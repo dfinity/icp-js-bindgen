@@ -1,0 +1,12 @@
+// A service whose .did basename is not a legal TypeScript identifier.
+// See https://github.com/dfinity/icp-js-bindgen/issues/156
+type VideoComment =
+ record {
+   content: text;
+   timestampEdited: opt int;
+ };
+
+service : () -> {
+  add_comment: (VideoComment) -> (VideoComment);
+  get_comment: (text) -> (opt VideoComment) query;
+}

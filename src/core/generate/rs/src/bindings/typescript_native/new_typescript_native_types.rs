@@ -2,7 +2,9 @@ use super::super::javascript::is_tuple;
 use super::comments::add_comments;
 use super::conversion_functions_generator::{TopLevelNodes, TypeConverter};
 use super::original_typescript_types::create_typed_array_type;
-use super::utils::{get_ident, get_ident_guarded, get_ident_guarded_keyword_ok};
+use super::utils::{
+    binding_ident, binding_ident_name, get_ident, get_ident_guarded, get_ident_guarded_keyword_ok,
+};
 use candid::types::{Field, Function, Label, Type, TypeEnv, TypeInner};
 use candid_parser::syntax::{self, IDLMergedProg, IDLType};
 use swc_core::common::Span;
@@ -510,12 +512,14 @@ fn create_variant_type(
                     })
                     .collect();
                 // Create the enum declaration.
-                // Unlike its members, the enum *type* name must be escaped: an identifier
-                // cannot be a reserved word. The escaped identifier is stored alongside the
-                // declaration so every reference to it (type refs, conversion functions) uses
-                // exactly the name that was declared, instead of re-deriving the escaping and
-                // risking divergence.
-                let enum_ident = get_ident_guarded(&enum_name);
+                // Unlike its members, the enum *type* name is an identifier: it must be
+                // escaped if it is a reserved word, and sanitized if the candid tags it was
+                // built from contain characters that are legal in a quoted tag but not in an
+                // identifier (`variant { "my-tag"; other }`). The resulting identifier is
+                // stored alongside the declaration so every reference to it (type refs,
+                // conversion functions) uses exactly the name that was declared, instead of
+                // re-deriving the escaping and risking divergence.
+                let enum_ident = binding_ident(&enum_name);
                 let enum_decl = TsEnumDecl {
                     span: DUMMY_SP,
                     declare: false,
@@ -1110,6 +1114,13 @@ fn create_function_type_ref() -> TsType {
     })
 }
 
+/// The interface name for a service, e.g. `hello_world` -> `hello_worldInterface`.
+///
+/// Also used for Candid *types* that resolve to a service, whose ids the Candid grammar
+/// already restricts to legal identifier characters — [`binding_ident_name`] is the
+/// identity on those, so this only ever changes the outcome for a service name derived
+/// from a `.did` filename. No reserved-word escape is needed: the `Interface` suffix
+/// means the result can never be a reserved word.
 pub fn service_interface_ident(service_name: &str) -> Ident {
-    get_ident_guarded(&format!("{}Interface", service_name))
+    get_ident(&format!("{}Interface", binding_ident_name(service_name)))
 }
