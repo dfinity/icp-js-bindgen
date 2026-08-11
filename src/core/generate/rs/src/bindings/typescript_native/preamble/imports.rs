@@ -1,6 +1,22 @@
 use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::*;
 
+/// Module specifier for the generated declarations, as imported by the actor and interface
+/// files.
+///
+/// `service_name` is the `.did` basename, which is also the basename the JavaScript layer
+/// writes the declarations file under — so the specifier and the file on disk agree by
+/// construction. Anything that transforms the name here (a previous version replaced `-`
+/// with `_`) desynchronises the two and emits an import of a module that was never
+/// written.
+///
+/// Note that the `./declarations/` prefix is rewritten away by the JavaScript layer when
+/// the `flat` option puts the declarations directly in the output directory; see
+/// `flattenImportPath` in `src/core/generate/index.ts`.
+pub fn declarations_module_specifier(service_name: &str) -> String {
+    format!("./declarations/{service_name}.did")
+}
+
 pub fn interface_imports(module: &mut Module, service_name: &str) {
     interface_core_agent_imports(module);
     core_principal_import(module);
@@ -14,8 +30,6 @@ pub fn wrapper_imports(module: &mut Module, service_name: &str) {
 }
 
 fn old_bindings_imports_interface(module: &mut Module, service_name: &str) {
-    let dashed_name = service_name.replace('-', "_");
-
     // Import _SERVICE
     module
         .body
@@ -29,7 +43,7 @@ fn old_bindings_imports_interface(module: &mut Module, service_name: &str) {
             })],
             src: Box::new(Str {
                 span: DUMMY_SP,
-                value: format!("./declarations/{}.did", dashed_name).into(),
+                value: declarations_module_specifier(service_name).into(),
                 raw: None,
             }),
             type_only: false,
@@ -39,8 +53,6 @@ fn old_bindings_imports_interface(module: &mut Module, service_name: &str) {
 }
 
 fn old_bindings_imports(module: &mut Module, service_name: &str) {
-    let dashed_name = service_name.replace('-', "_");
-
     // Import _SERVICE
     module
         .body
@@ -62,7 +74,7 @@ fn old_bindings_imports(module: &mut Module, service_name: &str) {
             ],
             src: Box::new(Str {
                 span: DUMMY_SP,
-                value: format!("./declarations/{}.did", dashed_name).into(),
+                value: declarations_module_specifier(service_name).into(),
                 raw: None,
             }),
             type_only: false,
