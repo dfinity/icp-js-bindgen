@@ -295,6 +295,8 @@ type MyType =
 
 This type is the TypeScript interface for the service. It contains all the methods that are defined in the [Candid service](https://github.com/dfinity/candid/blob/master/spec/Candid.md#services) in the `.did` file.
 
+`<service-name>` is the basename of the `.did` file. If it is not a valid TypeScript identifier, each run of unsupported characters is replaced with a single `_`, so `my-backend.did` produces `my_backendInterface` and the `My_backend` class — the same names as if the file had been called `my_backend.did`. The generated declarations are still imported under the original filename.
+
 For example, a Candid service will be represented as:
 
 <div class="code-comparison">
