@@ -1,6 +1,15 @@
 // Candid tags that are legal quoted but not legal as TypeScript identifiers. The inline
-// all-null variant derives its enum name from these tags.
+// all-null variant derives its enum name from these tags, putting a derived name in
+// binding position. `Outcome` additionally emits a `type` alias, so the alias branch is
+// covered too.
 // See https://github.com/dfinity/icp-js-bindgen/issues/156
+type Outcome =
+ variant {
+   ok: nat;
+   err: text;
+ };
+
 service : () -> {
   status: () -> (variant { "my-tag"; "with space"; other }) query;
+  run: () -> (Outcome);
 }

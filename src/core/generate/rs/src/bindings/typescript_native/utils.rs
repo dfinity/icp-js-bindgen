@@ -350,13 +350,21 @@ fn is_valid_binding_ident(name: &str) -> bool {
     }
 }
 
-/// Converts `name` into an identifier that is legal in a *binding* position — a
-/// declaration name (`class X`, `interface X`, `enum X`) or a type reference.
+/// Reshapes `name` into a valid identifier, replacing characters that cannot appear in
+/// one.
+///
+/// This guarantees identifier *shape* only. It does **not** guarantee the result can be
+/// declared: a reserved word is already correctly shaped, so it is returned unchanged
+/// (`binding_ident_name("class") == "class"`, which `interface class` cannot use). Callers
+/// that emit a declaration need [`binding_ident`] or [`service_class_name`], which add the
+/// reserved-word escape on top. Callers that suffix the result (`{name}Interface`) cannot
+/// produce a reserved word and may use this directly.
 ///
 /// This is the counterpart to [`get_typescript_ident`], which *quotes* names it cannot
 /// use verbatim. Quoting is correct in *property* position, where `'my-field': bigint`
-/// is legal TypeScript, and a syntax error in binding position, where `'my-field'` is a
-/// string literal rather than an identifier. The two must therefore not share a path.
+/// is legal TypeScript, and a syntax error in *binding* position — a declaration name or
+/// type reference — where `'my-field'` is a string literal rather than an identifier. The
+/// two must therefore not share a path.
 ///
 /// **This function is the identity on names that are already legal identifiers.** That
 /// property is load-bearing: the generated interface name is derived from the raw `.did`
@@ -567,6 +575,18 @@ mod tests {
         assert_eq!(service_class_name("promise"), "Promise_");
         // Not a reserved word once capitalized, so left alone.
         assert_eq!(service_class_name("class"), "Class");
+    }
+
+    /// `binding_ident_name` guarantees identifier shape, not declarability. A reserved word
+    /// is already correctly shaped, so only the guarded wrappers escape it. Pinned because a
+    /// caller that confuses the two reintroduces the `map.did` class of bug.
+    #[test]
+    fn shape_is_not_the_same_as_declarable() {
+        assert_eq!(binding_ident_name("class"), "class");
+        assert_eq!(&*binding_ident("class").sym, "class_");
+
+        assert_eq!(binding_ident_name("Map"), "Map");
+        assert_eq!(&*binding_ident("Map").sym, "Map_");
     }
 
     #[test]
