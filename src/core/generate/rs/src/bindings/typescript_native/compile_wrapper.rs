@@ -1,5 +1,8 @@
 use super::conversion_functions_generator::TypeConverter;
-use super::utils::{contains_unicode_characters, get_ident_guarded, get_ident_guarded_keyword_ok};
+use super::utils::{
+    contains_unicode_characters, get_ident, get_ident_guarded, get_ident_guarded_keyword_ok,
+    service_class_name,
+};
 use candid::types::{Function, Type, TypeEnv, TypeInner};
 use candid_parser::syntax::IDLMergedProg;
 use swc_core::common::{DUMMY_SP, SyntaxContext};
@@ -138,21 +141,8 @@ fn wrapper_actor_service(
 ) {
     interface_actor_service(env, syntax, module, serv, service_name, converter, span);
 
-    // Create a single TypeConverter instance
-    let capitalized_service_name = service_name
-        .chars()
-        .next()
-        .map_or(String::new(), |c| c.to_uppercase().collect::<String>())
-        + &service_name[1..];
-
     // Pass the converter to create_actor_class
-    let class_decl = create_actor_class(
-        env,
-        service_name,
-        &capitalized_service_name,
-        serv,
-        converter,
-    );
+    let class_decl = create_actor_class(env, service_name, serv, converter);
 
     converter.add_import_for_original_type_definitions(module, service_name);
 
@@ -187,18 +177,7 @@ fn wrapper_actor_var(
         }
         _ => return,
     };
-    let capitalized_service_name = service_name
-        .chars()
-        .next()
-        .map_or(String::new(), |c| c.to_uppercase().collect::<String>())
-        + &service_name[1..];
-    let class_decl = create_actor_class(
-        env,
-        service_name,
-        &capitalized_service_name,
-        serv,
-        converter,
-    );
+    let class_decl = create_actor_class(env, service_name, serv, converter);
     converter.add_import_for_original_type_definitions(module, service_name);
     module
         .body
@@ -211,7 +190,6 @@ fn wrapper_actor_var(
 fn create_actor_class(
     env: &TypeEnv,
     service_name: &str,
-    capitalized_service_name: &str,
     serv: &[(String, Type)],
     converter: &mut TypeConverter,
 ) -> ClassDecl {
@@ -294,7 +272,7 @@ fn create_actor_class(
     class_body_members.extend(methods);
 
     ClassDecl {
-        ident: get_ident_guarded(capitalized_service_name),
+        ident: get_ident(&service_class_name(service_name)),
         declare: false,
         class: Box::new(Class {
             span: DUMMY_SP,
@@ -546,11 +524,9 @@ fn add_create_actor_exports(module: &mut Module, service_name: &str) {
 fn create_actor_function(service_name: &str) -> FnDecl {
     let span = DUMMY_SP;
 
-    let capitalized_service_name = service_name
-        .chars()
-        .next()
-        .map_or(String::new(), |c| c.to_uppercase().collect::<String>())
-        + &service_name[1..];
+    // The same value annotates the return type and is constructed in the body, so the two
+    // cannot drift apart.
+    let class_name = service_class_name(service_name);
 
     FnDecl {
         ident: Ident::new("createActor".into(), span, SyntaxContext::empty()),
@@ -604,7 +580,7 @@ fn create_actor_function(service_name: &str) -> FnDecl {
             span,
             body: Some(BlockStmt {
                 span,
-                stmts: create_actor_function_body(&capitalized_service_name),
+                stmts: create_actor_function_body(&class_name),
                 ctxt: SyntaxContext::empty(),
             }),
             is_generator: false,
@@ -614,11 +590,7 @@ fn create_actor_function(service_name: &str) -> FnDecl {
                 span,
                 type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
                     span,
-                    type_name: TsEntityName::Ident(Ident::new(
-                        capitalized_service_name.into(),
-                        span,
-                        SyntaxContext::empty(),
-                    )),
+                    type_name: TsEntityName::Ident(get_ident(&class_name)),
                     type_params: None,
                 })),
             })),
@@ -627,7 +599,7 @@ fn create_actor_function(service_name: &str) -> FnDecl {
     }
 }
 
-fn create_actor_function_body(capitalized_service_name: &str) -> Vec<Stmt> {
+fn create_actor_function_body(class_name: &str) -> Vec<Stmt> {
     let span = DUMMY_SP;
 
     vec![
@@ -862,11 +834,7 @@ fn create_actor_function_body(capitalized_service_name: &str) -> Vec<Stmt> {
             span,
             arg: Some(Box::new(Expr::New(NewExpr {
                 span,
-                callee: Box::new(Expr::Ident(Ident::new(
-                    capitalized_service_name.into(),
-                    span,
-                    SyntaxContext::empty(),
-                ))),
+                callee: Box::new(Expr::Ident(get_ident(class_name))),
                 args: Some(vec![
                     ExprOrSpread {
                         spread: None,

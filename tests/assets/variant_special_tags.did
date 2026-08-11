@@ -1,0 +1,6 @@
+// Candid tags that are legal quoted but not legal as TypeScript identifiers. The inline
+// all-null variant derives its enum name from these tags.
+// See https://github.com/dfinity/icp-js-bindgen/issues/156
+service : () -> {
+  status: () -> (variant { "my-tag"; "with space"; other }) query;
+}

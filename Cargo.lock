@@ -708,6 +708,7 @@ dependencies = [
  "serde-wasm-bindgen",
  "swc_core",
  "tsify",
+ "unicode-ident",
  "wasm-bindgen",
  "wasm-bindgen-console-logger",
 ]
