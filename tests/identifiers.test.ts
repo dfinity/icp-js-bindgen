@@ -41,9 +41,13 @@ const OUTPUT_DIR = 'output';
  */
 const ENFORCED_IDENTIFIER_SHAPE = /^[\p{ID_Start}$_][\p{ID_Continue}$]*$/u;
 
-/** `export class X`, `export interface X`, `export enum X`, `class X implements Y`. */
+/**
+ * Captures the name of every declaration the generator emits: `class`, `interface`, `enum`
+ * and `type`. All four put the name in binding position, so all four must be checked —
+ * `type` included, since Candid variants with a payload become type aliases.
+ */
 const DECLARED_IDENTIFIER =
-  /^\s*(?:export\s+)?(?:declare\s+)?(?:class|interface|enum)\s+(\S+?)(?:<|\s|$)/gm;
+  /^\s*(?:export\s+)?(?:declare\s+)?(?:class|interface|enum|type)\s+(\S+?)(?:<|\s|=|$)/gm;
 
 /**
  * Service names that are not legal identifiers, or that become a reserved word once
