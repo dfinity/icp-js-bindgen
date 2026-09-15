@@ -1,7 +1,10 @@
 use super::comments::PosCursor;
 use super::new_typescript_native_types::{convert_type_with_converter, is_recursive_optional};
 use super::original_typescript_types::OriginalTypescriptTypes;
-use super::utils::{EnumDeclarations, contains_unicode_characters, get_ident_guarded_keyword_ok};
+use super::utils::{
+    EnumDeclarations, contains_unicode_characters, get_ident_guarded_keyword_ok,
+    unit_variant_enum_name,
+};
 use candid::types::{Field, Label, Type, TypeEnv, TypeInner};
 use std::collections::{HashMap, HashSet};
 use swc_core::common::{DUMMY_SP, SyntaxContext, comments::SingleThreadedComments};
@@ -632,12 +635,7 @@ impl<'a> TypeConverter<'a> {
             .all(|f| matches!(f.ty.as_ref(), TypeInner::Null));
         if all_null {
             // For enums, compare against enum members
-            let enum_name = self
-                .enum_declarations
-                .get(&fields.to_vec())
-                .unwrap()
-                .1
-                .clone();
+            let enum_name = unit_variant_enum_name(self.enum_declarations, fields);
 
             let mut result = self.create_ident(param_name); // Default fallback
 
@@ -1373,12 +1371,7 @@ impl<'a> TypeConverter<'a> {
         // For variants with all null or same simple type, return the enum member
         if all_null {
             // Determine the enum name based on whether this is a named type or anonymous
-            let enum_name = self
-                .enum_declarations
-                .get(&fields.to_vec())
-                .unwrap()
-                .1
-                .clone();
+            let enum_name = unit_variant_enum_name(self.enum_declarations, fields);
 
             let mut conditions = Vec::new();
 

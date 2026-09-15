@@ -4,9 +4,7 @@ use super::new_typescript_native_types::{
 };
 use super::preamble::imports::interface_imports;
 use super::preamble::options::interface_options_utils;
-use super::utils::EnumDeclarations;
-use super::utils::get_ident_guarded;
-use super::utils::render_ast;
+use super::utils::{EnumDeclarations, get_ident_guarded, render_ast, sorted_enum_decls};
 use crate::bindings::typescript_native::comments::add_comments;
 use candid::types::{Type, TypeEnv, TypeInner};
 use candid_parser::syntax::{IDLMergedProg, IDLType};
@@ -78,15 +76,12 @@ pub fn compile_interface(
     }
 
     // Add enum declarations to the module, sorted by name for stability
-    let mut sorted_enums: Vec<_> = enum_declarations.iter().collect();
-    sorted_enums.sort_by_key(|(_, (_, enum_name))| enum_name.clone());
-
-    for (_, enum_decl) in sorted_enums {
+    for enum_decl in sorted_enum_decls(&enum_declarations) {
         module
             .body
             .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
                 span: DUMMY_SP,
-                decl: Decl::TsEnum(Box::new(enum_decl.0.clone())),
+                decl: Decl::TsEnum(Box::new(enum_decl)),
             })));
     }
 

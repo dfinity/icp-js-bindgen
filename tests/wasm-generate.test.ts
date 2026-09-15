@@ -113,4 +113,19 @@ describe('wasmGenerate', () => {
       );
     });
   });
+
+  it('emits a distinct enum for each named unit variant with the same tags', () => {
+    const serviceName = 'duplicate_unit_variants';
+    const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+    const result = wasmGenerate({
+      did_file_path: didFile,
+      service_name: serviceName,
+      declarations: { root_exports: false },
+    });
+
+    expect(result.interface_ts).toContain('export enum RepairStatus');
+    expect(result.interface_ts).toContain('export enum SoftwareServiceStatus');
+    expect(result.interface_ts).toContain('status: SoftwareServiceStatus');
+    expect(result.service_ts).toContain('export enum SoftwareServiceStatus');
+  });
 });

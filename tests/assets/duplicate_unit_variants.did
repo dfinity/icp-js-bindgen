@@ -1,0 +1,14 @@
+type RepairStatus = variant { delivered; inProgress; ready; received };
+type SoftwareServiceStatus = variant { delivered; inProgress; ready; received };
+type ProductCategory = variant { hardware; software; accessory };
+type UserRole = variant { admin; technician; customer };
+
+type SoftwareService = record {
+  id: nat;
+  status: SoftwareServiceStatus;
+};
+
+service : {
+  updateSoftwareServiceRequestStatus: (id: nat, status: SoftwareServiceStatus) -> ();
+  getSoftwareService: (id: nat) -> (SoftwareService) query;
+}
