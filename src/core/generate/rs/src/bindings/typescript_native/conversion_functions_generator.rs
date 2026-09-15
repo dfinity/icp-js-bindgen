@@ -1,7 +1,7 @@
 use super::comments::PosCursor;
 use super::new_typescript_native_types::{convert_type_with_converter, is_recursive_optional};
 use super::original_typescript_types::OriginalTypescriptTypes;
-use super::utils::{EnumDeclarations, contains_unicode_characters, get_ident_guarded_keyword_ok};
+use super::utils::{EnumDeclarations, candid_member_prop, candid_prop_name};
 use candid::types::{Field, Label, Type, TypeEnv, TypeInner};
 use std::collections::{HashMap, HashSet};
 use swc_core::common::{DUMMY_SP, SyntaxContext, comments::SingleThreadedComments};
@@ -512,15 +512,10 @@ impl<'a> TypeConverter<'a> {
                     let field_access = Expr::Member(MemberExpr {
                         span: DUMMY_SP,
                         obj: Box::new(self.create_ident(param_name)),
-                        prop: MemberProp::Ident(
-                            Ident::new(field_name.clone().into(), DUMMY_SP, SyntaxContext::empty())
-                                .into(),
-                        ),
+                        prop: candid_member_prop(&field_name),
                     });
 
-                    let prop_name = PropName::Ident(
-                        Ident::new(field_name.into(), DUMMY_SP, SyntaxContext::empty()).into(),
-                    );
+                    let prop_name = candid_prop_name(&field_name);
 
                     // Convert the field value based on its type
                     let value = match field.ty.as_ref() {
@@ -648,29 +643,11 @@ impl<'a> TypeConverter<'a> {
                     Label::Id(n) | Label::Unnamed(n) => format!("_{}_", n),
                 };
 
-                let enum_member = if contains_unicode_characters(&field_name) {
-                    Expr::Member(MemberExpr {
-                        span: DUMMY_SP,
-                        obj: Box::new(self.create_ident(&enum_name)),
-                        prop: MemberProp::Computed(ComputedPropName {
-                            span: DUMMY_SP,
-                            expr: Box::new(Expr::Lit(Lit::Str(Str {
-                                span: DUMMY_SP,
-                                value: field_name.clone().into(),
-                                raw: None,
-                            }))),
-                        }),
-                    })
-                } else {
-                    Expr::Member(MemberExpr {
-                        span: DUMMY_SP,
-                        obj: Box::new(self.create_ident(&enum_name)),
-                        prop: MemberProp::Ident(
-                            Ident::new(field_name.clone().into(), DUMMY_SP, SyntaxContext::empty())
-                                .into(),
-                        ),
-                    })
-                };
+                let enum_member = Expr::Member(MemberExpr {
+                    span: DUMMY_SP,
+                    obj: Box::new(self.create_ident(&enum_name)),
+                    prop: candid_member_prop(&field_name),
+                });
 
                 let condition = Expr::Bin(BinExpr {
                     span: DUMMY_SP,
@@ -686,7 +663,7 @@ impl<'a> TypeConverter<'a> {
                 let field_result = Expr::Object(ObjectLit {
                     span: DUMMY_SP,
                     props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                        key: PropName::Ident(get_ident_guarded_keyword_ok(&field_name).into()),
+                        key: candid_prop_name(&field_name),
                         value: Box::new(Expr::Lit(Lit::Null(Null { span: DUMMY_SP }))),
                     })))],
                 });
@@ -735,16 +712,10 @@ impl<'a> TypeConverter<'a> {
                     }))),
                 });
 
-                // Get the field value from the object
-                // Use a clone of field_name to avoid the "use after move" error
-
                 let field_access = Expr::Member(MemberExpr {
                     span: DUMMY_SP,
                     obj: Box::new(self.create_ident(param_name)),
-                    prop: MemberProp::Ident(
-                        Ident::new(field_name.clone().into(), DUMMY_SP, SyntaxContext::empty())
-                            .into(),
-                    ),
+                    prop: candid_member_prop(&field_name),
                 });
 
                 let field_result = match field.ty.as_ref() {
@@ -801,10 +772,7 @@ impl<'a> TypeConverter<'a> {
                     cons: Box::new(Expr::Object(ObjectLit {
                         span: DUMMY_SP,
                         props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                            key: PropName::Ident(
-                                Ident::new(field_name.into(), DUMMY_SP, SyntaxContext::empty())
-                                    .into(),
-                            ),
+                            key: candid_prop_name(&field_name),
                             value: Box::new(field_result),
                         })))],
                     })),
@@ -1264,15 +1232,10 @@ impl<'a> TypeConverter<'a> {
                     let field_access = Expr::Member(MemberExpr {
                         span: DUMMY_SP,
                         obj: Box::new(self.create_ident(param_name)),
-                        prop: MemberProp::Ident(
-                            Ident::new(field_name.clone().into(), DUMMY_SP, SyntaxContext::empty())
-                                .into(),
-                        ),
+                        prop: candid_member_prop(&field_name),
                     });
 
-                    let prop_name = PropName::Ident(
-                        Ident::new(field_name.into(), DUMMY_SP, SyntaxContext::empty()).into(),
-                    );
+                    let prop_name = candid_prop_name(&field_name);
 
                     // Convert the field value based on its type
                     let value = match field.ty.as_ref() {
@@ -1401,29 +1364,11 @@ impl<'a> TypeConverter<'a> {
                 });
 
                 // Return the enum member access
-                // let result =
-                let result = if contains_unicode_characters(&field_name) {
-                    Expr::Member(MemberExpr {
-                        span: DUMMY_SP,
-                        obj: Box::new(self.create_ident(&enum_name)),
-                        prop: MemberProp::Computed(ComputedPropName {
-                            span: DUMMY_SP,
-                            expr: Box::new(Expr::Lit(Lit::Str(Str {
-                                span: DUMMY_SP,
-                                value: field_name.clone().into(),
-                                raw: None,
-                            }))),
-                        }),
-                    })
-                } else {
-                    Expr::Member(MemberExpr {
-                        span: DUMMY_SP,
-                        obj: Box::new(self.create_ident(&enum_name)),
-                        prop: MemberProp::Ident(
-                            Ident::new(field_name.into(), DUMMY_SP, SyntaxContext::empty()).into(),
-                        ),
-                    })
-                };
+                let result = Expr::Member(MemberExpr {
+                    span: DUMMY_SP,
+                    obj: Box::new(self.create_ident(&enum_name)),
+                    prop: candid_member_prop(&field_name),
+                });
 
                 conditions.push((test, result));
             }
@@ -1490,9 +1435,7 @@ impl<'a> TypeConverter<'a> {
             let field_access = Expr::Member(MemberExpr {
                 span: DUMMY_SP,
                 obj: Box::new(self.create_ident(param_name)),
-                prop: MemberProp::Ident(
-                    Ident::new(field_name.clone().into(), DUMMY_SP, SyntaxContext::empty()).into(),
-                ),
+                prop: candid_member_prop(&field_name),
             });
 
             // Convert the field value if needed
@@ -1521,9 +1464,7 @@ impl<'a> TypeConverter<'a> {
                     }))),
                     // field value property
                     PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                        key: PropName::Ident(
-                            Ident::new(field_name.into(), DUMMY_SP, SyntaxContext::empty()).into(),
-                        ),
+                        key: candid_prop_name(&field_name),
                         value: Box::new(value),
                     }))),
                 ],
