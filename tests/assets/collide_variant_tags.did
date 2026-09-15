@@ -1,0 +1,9 @@
+// Two inline all-null variants whose tags differ only by a character that is legal in a
+// quoted candid tag but not in an identifier. Both derive the same enum name, and their
+// members do not overlap — which is the dangerous shape: TypeScript merges same-named string
+// enums rather than rejecting them, so the merged enum would accept a member the candid
+// variant does not have, and the wrapper would encode it as-is.
+service : () -> {
+  a : () -> (variant { "my-f" }) query;
+  b : () -> (variant { my_f }) query;
+}

@@ -35,6 +35,13 @@ describe('generation refuses invalid output', () => {
     await expect(generateFixture('collide_class')).rejects.toThrow(/Collide_class/);
   });
 
+  it('reports two variant tag sets that sanitize to the same enum name', async () => {
+    // Sanitizing tags into an identifier is what makes these collide. Nothing downstream
+    // would report it: the members are disjoint, so TypeScript merges the two enums silently
+    // and the merged type admits members neither candid variant has.
+    await expect(generateFixture('collide_variant_tags')).rejects.toThrow(/Variant_my_f/);
+  });
+
   it('names both colliding declaration kinds, so the cause is actionable', async () => {
     await expect(generateFixture('collide_class')).rejects.toThrow(
       /interface.*class|class.*interface/s,
