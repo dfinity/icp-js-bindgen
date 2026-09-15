@@ -1,0 +1,18 @@
+// Candid names that are legal quoted but not legal as TypeScript identifiers, in the
+// positions the conversion functions emit: object literal keys and member access. A variant
+// with a payload takes the discriminated-union path rather than the enum path, and a record
+// field only reaches a conversion function when its type needs converting.
+type Outcome = variant { "ok-value" : nat; "err-value" : text };
+type Rec = record { "my-field" : principal; "other-field" : opt nat };
+
+// Reserved words are legal in both positions, so they must survive verbatim — escaping one
+// would encode a field the candid type does not have.
+type Kw = variant { new : nat; done };
+
+service : () -> {
+  get_outcome : () -> (Outcome) query;
+  put_outcome : (Outcome) -> ();
+  get_rec : () -> (Rec) query;
+  put_rec : (Rec) -> ();
+  round_trip_kw : (Kw) -> (Kw);
+}

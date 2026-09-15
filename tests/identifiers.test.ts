@@ -150,10 +150,11 @@ describe('identifiers in binding position', () => {
     await generateFixture('variant_special_tags');
     const source = await readFileFromOutput('variant_special_tags.ts');
 
-    // The tags stay quoted as enum *members* — legal there — while the enum name, which is
-    // an identifier, is sanitized.
+    // The tag survives verbatim as an enum *member* — a string literal is legal there —
+    // while the enum name, which is an identifier, is sanitized. The assertion does not pin
+    // the quote character, which is the emitter's choice.
     expect(source).toMatch(/export enum Variant_\w+ \{/);
-    expect(source).toContain("'my-tag'");
+    expect(source).toMatch(/["']my-tag["']/);
   });
 });
 
