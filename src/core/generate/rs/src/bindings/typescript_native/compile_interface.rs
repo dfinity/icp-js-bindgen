@@ -7,6 +7,7 @@ use super::preamble::options::interface_options_utils;
 use super::utils::EnumDeclarations;
 use super::utils::get_ident_guarded;
 use super::utils::render_ast;
+use super::validate::check_module;
 use crate::bindings::typescript_native::comments::add_comments;
 use candid::types::{Type, TypeEnv, TypeInner};
 use candid_parser::syntax::{IDLMergedProg, IDLType};
@@ -20,7 +21,7 @@ pub fn compile_interface(
     actor: &Option<Type>,
     service_name: &str,
     prog: &IDLMergedProg,
-) -> String {
+) -> Result<String, String> {
     let mut enum_declarations: EnumDeclarations = HashMap::new();
 
     let mut module = Module {
@@ -97,8 +98,10 @@ pub fn compile_interface(
         add_create_actor_interface_exports(&mut module, service_name);
     }
 
-    // Generate code from the AST
-    render_ast(&module, &comments)
+    // Nothing downstream re-reads these files, so they are checked here.
+    check_module(&module, "interface")?;
+
+    Ok(render_ast(&module, &comments))
 }
 
 fn interface_actor_implementation(
