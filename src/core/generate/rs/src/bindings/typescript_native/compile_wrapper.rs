@@ -16,7 +16,6 @@ use super::utils::{EnumDeclarations, render_ast};
 use super::comments::add_comments;
 use super::compile_interface::{interface_actor_service, interface_actor_var};
 use candid_parser::syntax::IDLType;
-use std::collections::HashMap;
 use swc_core::common::Span;
 
 pub fn compile_wrapper(
@@ -25,7 +24,7 @@ pub fn compile_wrapper(
     service_name: &str,
     prog: &IDLMergedProg,
 ) -> String {
-    let mut enum_declarations: EnumDeclarations = HashMap::new();
+    let mut enum_declarations = EnumDeclarations::default();
 
     let mut module = Module {
         span: DUMMY_SP,
@@ -81,16 +80,13 @@ pub fn compile_wrapper(
         }
     }
 
-    // Add enum declarations to the module, sorted by name for stability
-    let mut sorted_enums: Vec<_> = enum_declarations.clone().into_iter().collect();
-    sorted_enums.sort_by_key(|(_, (_, enum_name))| enum_name.clone());
-
-    for (_, enum_decl) in sorted_enums {
+    // `EnumDeclarations` yields these ordered by name, so output is stable.
+    for enum_decl in enum_declarations.declarations() {
         module
             .body
             .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
                 span: DUMMY_SP,
-                decl: Decl::TsEnum(Box::new(enum_decl.0)),
+                decl: Decl::TsEnum(Box::new(enum_decl.clone())),
             })));
     }
 

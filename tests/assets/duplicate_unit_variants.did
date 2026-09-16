@@ -1,0 +1,22 @@
+// Two named candid types with identical tags. Each lowers to a TypeScript enum, and
+// TypeScript enums are nominal — so they need a declaration each, and their conversion
+// functions cannot be shared even though the candid types are structurally identical.
+type RepairStatus = variant { delivered; inProgress; ready; received };
+type SoftwareServiceStatus = variant { delivered; inProgress; ready; received };
+
+type SoftwareService = record { id : nat; status : SoftwareServiceStatus };
+
+// Candid resolves an alias transitively, so the name reaching a conversion is the alias
+// rather than the type the enum was declared for. The alias must resolve to *its own* type's
+// enum, not to whichever type with matching tags was declared first.
+type SoftwareServiceStatusAlias = SoftwareServiceStatus;
+
+service : () -> {
+  get_software_service : (nat) -> (SoftwareService) query;
+  set_status : (nat, SoftwareServiceStatus) -> ();
+  set_repair_status : (nat, RepairStatus) -> ();
+  set_via_alias : (SoftwareServiceStatusAlias) -> ();
+  // An anonymous inline variant with the same tags reuses the first enum rather than
+  // declaring a third.
+  peek : () -> (variant { delivered; inProgress; ready; received }) query;
+}

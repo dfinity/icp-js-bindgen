@@ -1,5 +1,4 @@
-use candid::types::Field;
-use std::collections::HashMap;
+use candid::types::{Field, Label};
 use swc_core::common::comments::SingleThreadedComments;
 use swc_core::common::source_map::SourceMap;
 use swc_core::common::sync::Lrc;
@@ -9,7 +8,110 @@ use swc_core::ecma::{
     codegen::{Config, Emitter, text_writer::JsWriter, text_writer::WriteJs},
 };
 
-pub type EnumDeclarations = HashMap<Vec<Field>, (TsEnumDecl, String)>;
+/// The `enum` declarations lowered from all-null candid variants.
+///
+/// Entries are distinct per declared name *and* tag list.
+///
+/// Per name, because a named candid type must get its own declaration even when another type
+/// happens to share its tags — TypeScript enums are nominal, so collapsing them leaves the
+/// second type referenced everywhere and declared nowhere.
+///
+/// Per tag list as well, because two candid types can escape to the same identifier: `Map`
+/// shadows a global and becomes `Map_`, colliding with a type actually named `Map_`. Matching
+/// on the name alone would let the second reuse the first one's enum, leaving its members
+/// undeclared while every reference still resolved — invisible to any check, and `undefined`
+/// at runtime. Keeping both surfaces the collision instead.
+///
+/// Anonymous inline variants have no name of their own, so they reuse whichever enum was
+/// declared for their tag list first, including one belonging to a named type.
+#[derive(Default, Clone)]
+pub struct EnumDeclarations {
+    declared: Vec<DeclaredEnum>,
+}
+
+#[derive(Clone)]
+struct DeclaredEnum {
+    name: String,
+    fields: Vec<Field>,
+    decl: TsEnumDecl,
+}
+
+impl EnumDeclarations {
+    /// The name this variant is *declared* under, if it has been interned already.
+    ///
+    /// Strict: a named candid type matches only an entry with both its name and its tags. It
+    /// must never adopt another type's enum, which is the whole point of interning per name.
+    pub fn declared_name(&self, type_name: Option<&str>, fields: &[Field]) -> Option<String> {
+        match type_name {
+            Some(name) => {
+                let declared = candid_type_ident(name).sym.to_string();
+                self.declared
+                    .iter()
+                    .any(|e| e.name == declared && e.fields == fields)
+                    .then_some(declared)
+            }
+            None => self.first_for_tags(fields),
+        }
+    }
+
+    /// The enum a *reference* to this variant resolves to.
+    ///
+    /// Lenient where the declaration path is strict, because candid resolves `type B = A`
+    /// transitively: the name reaching a conversion can be an alias rather than the type the
+    /// enum was declared for, and the alias has no enum of its own.
+    ///
+    /// Falls back to the name the declaration path would have chosen, so a genuinely missing
+    /// enum stays visible to the consistency checks as a dangling reference rather than
+    /// aborting the generator.
+    pub fn referenced_name(&self, type_name: Option<&str>, fields: &[Field]) -> String {
+        self.declared_name(type_name, fields)
+            .or_else(|| self.first_for_tags(fields))
+            .unwrap_or_else(|| Self::anonymous_name_for(fields))
+    }
+
+    /// Whichever enum was declared for this tag list first — what an anonymous variant reuses.
+    fn first_for_tags(&self, fields: &[Field]) -> Option<String> {
+        self.declared
+            .iter()
+            .find(|e| e.fields == fields)
+            .map(|e| e.name.clone())
+    }
+
+    /// The name an enum would be declared under for these tags, whether or not one exists.
+    fn anonymous_name_for(fields: &[Field]) -> String {
+        let tags: Vec<String> = fields
+            .iter()
+            .map(|f| match &*f.id {
+                Label::Named(name) => name.clone(),
+                Label::Id(n) | Label::Unnamed(n) => format!("_{}_", n),
+            })
+            .collect();
+        candid_type_ident(&format!("Variant_{}", tags.join("_")))
+            .sym
+            .to_string()
+    }
+
+    pub fn insert(&mut self, name: String, fields: &[Field], decl: TsEnumDecl) {
+        if !self
+            .declared
+            .iter()
+            .any(|e| e.name == name && e.fields == fields)
+        {
+            self.declared.push(DeclaredEnum {
+                name,
+                fields: fields.to_vec(),
+                decl,
+            });
+        }
+    }
+
+    /// Every declaration, ordered by name so output is stable.
+    pub fn declarations(&self) -> Vec<&TsEnumDecl> {
+        let mut entries: Vec<&DeclaredEnum> = self.declared.iter().collect();
+        entries.sort_by(|a, b| a.name.cmp(&b.name));
+        entries.into_iter().map(|e| &e.decl).collect()
+    }
+}
 
 pub fn render_ast(module: &Module, comments: &SingleThreadedComments) -> String {
     let mut buf = vec![];
@@ -344,6 +446,57 @@ pub fn get_typescript_ident(name: &str, filter_keywords: bool) -> String {
 
 pub fn contains_unicode_characters(name: &str) -> bool {
     name != get_typescript_ident(name, false)
+}
+
+/// Names the generated module already occupies — everything it imports, plus the fixed
+/// preamble it declares.
+///
+/// A candid *type* of the same name would collide with one of these. TypeScript merges most
+/// of the collisions silently, so the result is not a compile error but a type that claims
+/// members the runtime value does not have.
+///
+/// Deliberately not applied to method names. A method is a property, not a declaration, so it
+/// collides with nothing — and renaming one would change the generated client's public API
+/// while the wire call kept the candid name.
+static MODULE_NAMES: [&str; 22] = [
+    // imported from @icp-sdk/core
+    "Actor",
+    "HttpAgent",
+    "HttpAgentOptions",
+    "ActorConfig",
+    "Agent",
+    "ActorSubclass",
+    "Principal",
+    // imported from the generated declarations
+    "idlFactory",
+    "_SERVICE",
+    // types the preamble declares
+    "Option",
+    "Some",
+    "None",
+    "CreateActorOptions",
+    // functions the preamble declares. An `enum` or a `class` declares a value as well as a
+    // type, so a candid type of one of these names collides with the helper rather than
+    // merging with it — two top-level bindings of the same name in one module.
+    "some",
+    "none",
+    "isSome",
+    "isNone",
+    "unwrap",
+    "candid_some",
+    "candid_none",
+    "record_opt_to_undefined",
+    "createActor",
+];
+
+/// A candid *type* name as an identifier: escaped against reserved words, the globals it
+/// would shadow, and the names the generated module already occupies.
+pub fn candid_type_ident(name: &str) -> Ident {
+    if MODULE_NAMES.contains(&name) {
+        get_ident(&format!("{name}_"))
+    } else {
+        get_ident_guarded(name)
+    }
 }
 
 pub fn get_ident_guarded(name: &str) -> Ident {
