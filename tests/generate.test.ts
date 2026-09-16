@@ -51,6 +51,22 @@ describe('generate', () => {
     expect(serviceTs).toContain(`from "./declarations/${serviceName}.did"`);
   });
 
+  it('emits a distinct enum for each named unit variant with the same tags', async () => {
+    const serviceName = 'duplicate_unit_variants';
+    const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
+
+    await generate({
+      didFile,
+      outDir: OUTPUT_DIR,
+      output: { actor: { interfaceFile: true } },
+    });
+
+    const interfaceTs = await readFileFromOutput(`${serviceName}.d.ts`);
+    expect(interfaceTs).toContain('export enum RepairStatus');
+    expect(interfaceTs).toContain('export enum SoftwareServiceStatus');
+    expect(interfaceTs).toContain('status: SoftwareServiceStatus');
+  });
+
   it.each([
     'hello_world',
     'example',

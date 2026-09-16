@@ -2,6 +2,7 @@
 
 ### Fix
 
+- **generate**: named unit variants with identical tags each get their own TypeScript enum
 - **generate**: reserved-word candid tags broke enum references (#152)
 - resolve 16 audit vulnerabilities via pnpm overrides (#153)
 

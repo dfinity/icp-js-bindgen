@@ -9,7 +9,9 @@ use swc_core::ecma::{
     codegen::{Config, Emitter, text_writer::JsWriter, text_writer::WriteJs},
 };
 
-pub type EnumDeclarations = HashMap<Vec<Field>, (TsEnumDecl, String)>;
+/// Unit-variant enums interned by Candid field list. Each named type with the
+/// same tags gets its own declaration; anonymous variants reuse the first match.
+pub type EnumDeclarations = HashMap<Vec<Field>, Vec<(TsEnumDecl, String)>>;
 
 pub fn render_ast(module: &Module, comments: &SingleThreadedComments) -> String {
     let mut buf = vec![];
@@ -354,4 +356,75 @@ pub fn get_ident_guarded(name: &str) -> Ident {
 pub fn get_ident_guarded_keyword_ok(name: &str) -> Ident {
     let ident_name: String = get_typescript_ident(name, false);
     get_ident(&ident_name)
+}
+
+/// Intern a unit-variant enum. Named types always get a declaration under their
+/// own (escaped) name, even when another type already used the same tags.
+/// Anonymous variants reuse the first enum interned for that field list.
+pub fn intern_unit_variant_enum(
+    enum_declarations: &mut EnumDeclarations,
+    fields: &[Field],
+    type_name: Option<&str>,
+    field_info: Vec<(String, swc_core::common::Span)>,
+) -> String {
+    let requested_name = match type_name {
+        Some(name) => name.to_string(),
+        None => {
+            let field_names: Vec<String> =
+                field_info.iter().map(|(name, _)| name.clone()).collect();
+            format!("Variant_{}", field_names.join("_"))
+        }
+    };
+    let enum_ident = get_ident_guarded(&requested_name);
+    let declared_name = enum_ident.sym.to_string();
+
+    let enums = enum_declarations.entry(fields.to_vec()).or_default();
+
+    if type_name.is_none()
+        && let Some((_, existing_name)) = enums.first()
+    {
+        return existing_name.clone();
+    }
+
+    if let Some((_, existing_name)) = enums.iter().find(|(_, name)| name == &declared_name) {
+        return existing_name.clone();
+    }
+
+    // Reserved words are valid enum member names and valid in member-access
+    // position (`Status.new`), so they must NOT be escaped here.
+    let members = field_info
+        .into_iter()
+        .map(|(member_name, span)| TsEnumMember {
+            span,
+            id: TsEnumMemberId::Ident(get_ident_guarded_keyword_ok(&member_name)),
+            init: Some(Box::new(Expr::Lit(Lit::Str(Str {
+                span: DUMMY_SP,
+                value: member_name.into(),
+                raw: None,
+            })))),
+        })
+        .collect();
+    let enum_decl = TsEnumDecl {
+        span: DUMMY_SP,
+        declare: false,
+        is_const: false,
+        id: enum_ident,
+        members,
+    };
+    enums.push((enum_decl, declared_name.clone()));
+    declared_name
+}
+
+pub fn unit_variant_enum_name(enum_declarations: &EnumDeclarations, fields: &[Field]) -> String {
+    enum_declarations
+        .get(&fields.to_vec())
+        .and_then(|enums| enums.first())
+        .map(|(_, name)| name.clone())
+        .expect("unit variant enum should have been interned before conversion")
+}
+
+pub fn sorted_enum_decls(enum_declarations: &EnumDeclarations) -> Vec<TsEnumDecl> {
+    let mut items: Vec<&(TsEnumDecl, String)> = enum_declarations.values().flatten().collect();
+    items.sort_by(|a, b| a.1.cmp(&b.1));
+    items.into_iter().map(|(decl, _)| decl.clone()).collect()
 }

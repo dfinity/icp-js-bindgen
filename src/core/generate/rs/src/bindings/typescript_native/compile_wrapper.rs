@@ -11,7 +11,7 @@ use super::new_typescript_native_types::{convert_type_with_converter, service_in
 use super::new_typescript_native_types::add_type_definitions;
 use super::preamble::imports::wrapper_imports;
 use super::preamble::options::{interface_options_utils, wrapper_options_utils};
-use super::utils::{EnumDeclarations, render_ast};
+use super::utils::{EnumDeclarations, render_ast, sorted_enum_decls};
 
 use super::comments::add_comments;
 use super::compile_interface::{interface_actor_service, interface_actor_var};
@@ -82,15 +82,12 @@ pub fn compile_wrapper(
     }
 
     // Add enum declarations to the module, sorted by name for stability
-    let mut sorted_enums: Vec<_> = enum_declarations.clone().into_iter().collect();
-    sorted_enums.sort_by_key(|(_, (_, enum_name))| enum_name.clone());
-
-    for (_, enum_decl) in sorted_enums {
+    for enum_decl in sorted_enum_decls(&enum_declarations) {
         module
             .body
             .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
                 span: DUMMY_SP,
-                decl: Decl::TsEnum(Box::new(enum_decl.0)),
+                decl: Decl::TsEnum(Box::new(enum_decl)),
             })));
     }
 
