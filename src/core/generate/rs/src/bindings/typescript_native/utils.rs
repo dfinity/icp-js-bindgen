@@ -688,7 +688,7 @@ pub fn service_class_name(service_name: &str, env: &TypeEnv) -> String {
 ///
 /// Not applied to method names: a method is a property, not a declaration, so it collides
 /// with nothing.
-static MODULE_NAMES: [&str; 22] = [
+static MODULE_NAMES: [&str; 23] = [
     // imported from @icp-sdk/core
     "Actor",
     "HttpAgent",
@@ -700,6 +700,8 @@ static MODULE_NAMES: [&str; 22] = [
     // imported from the generated declarations
     "idlFactory",
     "_SERVICE",
+    // referenced by the generated code, so a declaration must not shadow it
+    "Object",
     // types the preamble declares
     "Option",
     "Some",
