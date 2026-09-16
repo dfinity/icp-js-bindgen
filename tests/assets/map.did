@@ -1,0 +1,9 @@
+// A service whose .did basename capitalizes into a JavaScript global, so the generated
+// class name has to be escaped in its declaration *and* at every reference.
+// See https://github.com/dfinity/icp-js-bindgen/issues/156
+type Entry = record { key: text; value: nat };
+
+service : () -> {
+  put: (Entry) -> ();
+  get: (text) -> (opt Entry) query;
+}

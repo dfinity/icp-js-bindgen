@@ -448,6 +448,38 @@ pub fn contains_unicode_characters(name: &str) -> bool {
     name != get_typescript_ident(name, false)
 }
 
+/// Suffixes `_` if `name` is a reserved word or a well-known global, so that it can be
+/// declared without shadowing or being rejected.
+fn escape_reserved(name: String) -> String {
+    if KEYWORDS.contains(&name.as_str()) {
+        format!("{name}_")
+    } else {
+        name
+    }
+}
+
+/// Uppercases the first character, respecting `char` boundaries.
+fn capitalize_first(name: &str) -> String {
+    let mut chars = name.chars();
+    match chars.next() {
+        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+        None => String::new(),
+    }
+}
+
+/// The identifier of the generated actor class, e.g. `hello_world` -> `Hello_world`.
+///
+/// Single source of truth: the class declaration, the `createActor` return type and the
+/// `new …()` call all resolve it through here, so they cannot disagree. They previously
+/// derived it independently, and the reserved-word escape was applied to the declaration
+/// only — so `map.did` declared `class Map_` but constructed the global `Map`.
+///
+/// The escape is applied *after* capitalization, because that is what turns a harmless
+/// basename into a global.
+pub fn service_class_name(service_name: &str) -> String {
+    escape_reserved(capitalize_first(service_name))
+}
+
 /// Names the generated module already occupies — everything it imports, plus the fixed
 /// preamble it declares.
 ///
@@ -507,4 +539,43 @@ pub fn get_ident_guarded(name: &str) -> Ident {
 pub fn get_ident_guarded_keyword_ok(name: &str) -> Ident {
     let ident_name: String = get_typescript_ident(name, false);
     get_ident(&ident_name)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn service_class_name_capitalizes() {
+        assert_eq!(service_class_name("backend"), "Backend");
+        assert_eq!(service_class_name("hello_world"), "Hello_world");
+    }
+
+    /// A multi-byte leading character used to be sliced at byte 1, panicking the generator.
+    #[test]
+    fn service_class_name_handles_multibyte_leading_character() {
+        assert_eq!(service_class_name("ünicode"), "Ünicode");
+        assert_eq!(service_class_name("日本語"), "日本語");
+        assert_eq!(service_class_name(""), "");
+    }
+
+    /// The escape has to be applied *after* capitalization, because that is what turns a
+    /// harmless basename into a global.
+    #[test]
+    fn service_class_name_escapes_globals() {
+        assert_eq!(service_class_name("map"), "Map_");
+        assert_eq!(service_class_name("set"), "Set_");
+        assert_eq!(service_class_name("error"), "Error_");
+        // Not a reserved word once capitalized, so left alone.
+        assert_eq!(service_class_name("class"), "Class");
+    }
+
+    /// A candid type may be named after something the module imports or the preamble declares.
+    #[test]
+    fn candid_type_ident_escapes_names_the_module_occupies() {
+        assert_eq!(&*candid_type_ident("Option").sym, "Option_");
+        assert_eq!(&*candid_type_ident("Agent").sym, "Agent_");
+        assert_eq!(&*candid_type_ident("Principal").sym, "Principal_");
+        assert_eq!(&*candid_type_ident("Status").sym, "Status");
+    }
 }
