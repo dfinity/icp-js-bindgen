@@ -8,7 +8,7 @@ use serde::Deserialize;
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
-use crate::bindings::{javascript, typescript, typescript_native};
+use crate::bindings::{check_input, javascript, typescript, typescript_native};
 
 #[wasm_bindgen(start)]
 fn start() {
@@ -34,6 +34,10 @@ pub struct GenerateOptions {
     pub did_file_path: String,
     pub service_name: String,
     pub declarations: GenerateDeclarationsOptions,
+    /// Whether the caller wants the actor files. When it does not they are not compiled, so a
+    /// `.did` the wrapper cannot represent still yields its declarations.
+    #[serde(default)]
+    pub actor_disabled: bool,
 }
 
 #[wasm_bindgen(getter_with_clone)]
@@ -50,6 +54,7 @@ pub fn generate(options: GenerateOptions) -> Result<GenerateResult, JsError> {
     let input_path = PathBuf::from(options.did_file_path);
     let (env, actor, prog) = parser::check_file(input_path.as_path()).map_err(JsError::from)?;
     javascript::check_declaration_names(&env).map_err(|e| JsError::new(&e))?;
+    check_input::check_candid_names(&env, &actor).map_err(|e| JsError::new(&e))?;
 
     let declarations_js = javascript::compile(&env, &actor, options.declarations.root_exports);
     let declarations_ts =
@@ -61,16 +66,15 @@ pub fn generate(options: GenerateOptions) -> Result<GenerateResult, JsError> {
         String::new()
     };
 
-    let interface_ts = typescript_native::compile::compile(
-        &env,
-        &actor,
-        &options.service_name,
-        "interface",
-        &prog,
-    );
+    let compile_actor = |target| {
+        typescript_native::compile::compile(&env, &actor, &options.service_name, target, &prog)
+            .map_err(|e| JsError::new(&e))
+    };
 
-    let service_ts =
-        typescript_native::compile::compile(&env, &actor, &options.service_name, "wrapper", &prog);
+    let (interface_ts, service_ts) = match options.actor_disabled {
+        true => (String::new(), String::new()),
+        false => (compile_actor("interface")?, compile_actor("wrapper")?),
+    };
 
     Ok(GenerateResult {
         declarations_js,

@@ -9,7 +9,7 @@ pub fn compile(
     service_name: &str,
     target: &str,
     prog: &IDLMergedProg,
-) -> String {
+) -> Result<String, String> {
     if target == "interface" {
         compile_interface(env, actor, service_name, prog)
     } else if target == "wrapper" {

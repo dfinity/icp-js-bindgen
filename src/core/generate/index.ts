@@ -143,6 +143,7 @@ export async function generate(options: GenerateOptions) {
       root_exports: declarationsRootExports,
       typescript: declarationsTypescript,
     },
+    actor_disabled: output.actor?.disabled ?? false,
   });
 
   // Extract all strings from the WASM object synchronously before any async
