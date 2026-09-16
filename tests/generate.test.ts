@@ -57,6 +57,8 @@ describe('generate', () => {
     'anonymous_named_collision',
     'anonymous_named_collision_reversed',
     'anonymous_named_different_tags',
+    'map',
+    'string',
   ])('should generate a bindgen', async (serviceName) => {
     const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 

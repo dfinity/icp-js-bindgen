@@ -1,0 +1,6 @@
+// The basename capitalizes onto the name of a global constructor. Declared at module scope,
+// the class shadows that global for every reference inside the module, so `new String(actor)`
+// constructs the wrapper; nothing the module emits reaches for the global itself.
+service : {
+  greet : (text) -> (text) query;
+}
