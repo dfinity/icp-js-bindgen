@@ -1,0 +1,6 @@
+// The wrapper keeps the actor it wraps in a private `#actor` field, which no method name can
+// collide with — so a candid method named `actor` is an ordinary method.
+service : () -> {
+  actor : () -> ();
+  ok : () -> ();
+}

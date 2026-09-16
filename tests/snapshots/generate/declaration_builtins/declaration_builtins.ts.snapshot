@@ -72,13 +72,16 @@ export interface declaration_builtinsInterface {
 }
 import type { BigUint64Array_ as _BigUint64Array } from "./declarations/declaration_builtins.did";
 export class Declaration_builtins implements declaration_builtinsInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async records(arg0: Array_, arg1: Uint8Array_): Promise<BigUint64Array_> {
-        const result = await this.actor.records(arg0, arg1);
+        const result = await this.#actor.records(arg0, arg1);
         return from_candid_BigUint64Array_n1(result);
     }
     async vectors(arg0: Array<bigint>, arg1: Uint8Array): Promise<BigUint64Array> {
-        const result = await this.actor.vectors(arg0, arg1);
+        const result = await this.#actor.vectors(arg0, arg1);
         return result;
     }
 }

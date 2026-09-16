@@ -60,9 +60,12 @@ export enum Variant_x {
 export interface anonymous_named_collision_reversedInterface extends ZInterface {
 }
 export class Anonymous_named_collision_reversed implements anonymous_named_collision_reversedInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async get(): Promise<Variant_x> {
-        const result = await this.actor.get();
+        const result = await this.#actor.get();
         return from_candid_variant_n1(result);
     }
 }

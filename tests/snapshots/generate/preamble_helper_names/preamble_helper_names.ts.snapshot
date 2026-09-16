@@ -63,9 +63,12 @@ export interface preamble_helper_namesInterface {
 }
 import type { some as _some } from "./declarations/preamble_helper_names.did";
 export class Preamble_helper_names implements preamble_helper_namesInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async g(arg0: some_, arg1: createActor_): Promise<void> {
-        const result = await this.actor.g(to_candid_some_n1(arg0), arg1);
+        const result = await this.#actor.g(to_candid_some_n1(arg0), arg1);
         return result;
     }
 }

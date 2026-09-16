@@ -1,0 +1,13 @@
+// A nested service member whose type is a named `func` type keeps the type name instead of
+// spelling the signature out. Like any nested service method it keeps its name: the
+// interface it lands in never describes a runtime object.
+type F = func () -> ();
+type G = F;
+
+type S = service {
+  toString : G;
+};
+
+service : {
+  get_s : () -> (S);
+}

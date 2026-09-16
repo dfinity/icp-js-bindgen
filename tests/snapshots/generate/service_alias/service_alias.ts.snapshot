@@ -64,9 +64,12 @@ export interface BackendInterface {
 export interface service_aliasInterface extends BackendInterface {
 }
 export class Service_alias implements service_aliasInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async ping(): Promise<void> {
-        const result = await this.actor.ping();
+        const result = await this.#actor.ping();
         return result;
     }
 }

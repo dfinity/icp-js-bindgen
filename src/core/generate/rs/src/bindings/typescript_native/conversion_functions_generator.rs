@@ -2,7 +2,9 @@ use super::comments::PosCursor;
 use super::new_typescript_native_types::declaring_type_id;
 use super::new_typescript_native_types::{convert_type_with_converter, is_recursive_optional};
 use super::original_typescript_types::OriginalTypescriptTypes;
-use super::utils::{EnumDeclarations, candid_member_prop, candid_prop_name};
+use super::utils::{
+    EnumDeclarations, OBJECT_PROTOTYPE_NAMES, candid_member_prop, candid_prop_name,
+};
 use candid::types::{Field, Label, Type, TypeEnv, TypeInner};
 use std::collections::{HashMap, HashSet};
 use swc_core::common::{DUMMY_SP, SyntaxContext, comments::SingleThreadedComments};
@@ -40,30 +42,9 @@ fn unreachable_value(value: Expr, fields: &[Field]) -> Expr {
     })
 }
 
-/// Names every plain object inherits from `Object.prototype`.
-///
-/// `"name" in value` is true for all of them whatever the object holds, so a candid tag named
-/// `constructor` or `toString` matched every variant and the first such tag won outright.
-///
-/// `__proto__` is listed for completeness: a candid name of `__proto__` is refused before
-/// anything is rendered, so no conversion — reading or writing — ever carries it.
-const INHERITED_PROPERTIES: [&str; 12] = [
-    "constructor",
-    "toString",
-    "toLocaleString",
-    "valueOf",
-    "hasOwnProperty",
-    "isPrototypeOf",
-    "propertyIsEnumerable",
-    "__proto__",
-    "__defineGetter__",
-    "__defineSetter__",
-    "__lookupGetter__",
-    "__lookupSetter__",
-];
-
+/// Whether `in` would match `name` on any object, making it useless as a tag test.
 fn is_inherited_property(name: &str) -> bool {
-    INHERITED_PROPERTIES.contains(&name)
+    OBJECT_PROTOTYPE_NAMES.contains(&name)
 }
 
 /// Tests that `object` carries `name` as its own property.

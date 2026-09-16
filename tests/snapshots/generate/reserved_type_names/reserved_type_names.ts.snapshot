@@ -80,30 +80,33 @@ export interface reserved_type_namesInterface {
     as(): Promise<void>;
     f(arg0: never_, arg1: string_, arg2: as_, arg3: undefined_, arg4: keyof_): Promise<string_>;
     g(arg0: infer_): Promise<infer_>;
-    never_(): Promise<void>;
-    string_(): Promise<void>;
+    never(): Promise<void>;
+    string(): Promise<void>;
 }
 import type { infer_ as _infer, string_ as _string, undefined_ as _undefined } from "./declarations/reserved_type_names.did";
 export class Reserved_type_names implements reserved_type_namesInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async as(): Promise<void> {
-        const result = await this.actor.as();
+        const result = await this.#actor.as();
         return result;
     }
     async f(arg0: never_, arg1: string_, arg2: as_, arg3: undefined_, arg4: keyof_): Promise<string_> {
-        const result = await this.actor.f(arg0, to_candid_string_n1(arg1), arg2, to_candid_undefined_n2(arg3), arg4);
+        const result = await this.#actor.f(arg0, to_candid_string_n1(arg1), arg2, to_candid_undefined_n2(arg3), arg4);
         return from_candid_string_n4(result);
     }
     async g(arg0: infer_): Promise<infer_> {
-        const result = await this.actor.g(to_candid_infer_n5(arg0));
+        const result = await this.#actor.g(to_candid_infer_n5(arg0));
         return from_candid_infer_n6(result);
     }
-    async never_(): Promise<void> {
-        const result = await this.actor.never();
+    async never(): Promise<void> {
+        const result = await this.#actor.never();
         return result;
     }
-    async string_(): Promise<void> {
-        const result = await this.actor.string();
+    async string(): Promise<void> {
+        const result = await this.#actor.string();
         return result;
     }
 }
