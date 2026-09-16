@@ -17,6 +17,7 @@ use swc_core::ecma::visit::{Visit, VisitWith};
 
 /// Everything that must hold of a generated module before it is rendered.
 pub fn check_module(module: &Module, target: &str) -> Result<(), String> {
+    check_enum_members(module, target)?;
     check_distinct_members(module, target)?;
     check_unique_declarations(module, target)?;
     check_type_references(module, target)
@@ -26,6 +27,83 @@ pub fn check_module(module: &Module, target: &str) -> Result<(), String> {
 /// affected by them.
 const DECLARATIONS_ONLY_HINT: &str =
     " Generating only the declarations (`output.actor.disabled`) is unaffected.";
+
+/// No enum member may read as a number.
+///
+/// A candid tag is any quoted string, and an all-null variant lowers to a string enum whose
+/// members carry the tags. TypeScript refuses an enum member whose name is a numeric literal
+/// (`"0"`, `"1.5"`, `"-1"` — TS2452), and there is no other spelling for it, unlike a record
+/// field or a payload tag, which are legal as string-literal keys.
+fn check_enum_members(module: &Module, target: &str) -> Result<(), String> {
+    let mut members = EnumMemberNames::default();
+    module.visit_with(&mut members);
+
+    match members.names.into_iter().find(|name| is_numeric_name(name)) {
+        Some(name) => Err(format!(
+            "generated {target} declares the enum member `{name}`, which TypeScript refuses \
+             because it reads as a number. Rename the variant tag in the .did file.\
+             {DECLARATIONS_ONLY_HINT}"
+        )),
+        None => Ok(()),
+    }
+}
+
+/// TypeScript's test for a numeric member name: the string is what `Number(name)` prints
+/// back. `Infinity` and `NaN` are exempt, as they are in TypeScript.
+fn is_numeric_name(name: &str) -> bool {
+    name.parse::<f64>()
+        .is_ok_and(|number| number.is_finite() && js_number_to_string(number) == name)
+}
+
+/// What `Number.prototype.toString` prints for a finite number: the shortest digits that
+/// round-trip, placed as ECMAScript's Number::toString places them — plain decimal for
+/// magnitudes from 1e-6 up to 1e21, exponential with a signed exponent outside that range,
+/// and `-0` printed as `0`.
+fn js_number_to_string(number: f64) -> String {
+    if number == 0.0 {
+        return "0".to_string();
+    }
+    let scientific = format!("{:e}", number.abs());
+    let (mantissa, exponent) = scientific.split_once('e').expect("exponent");
+    let exponent: i32 = exponent.parse().expect("exponent");
+    let digits: String = mantissa.chars().filter(|c| *c != '.').collect();
+    let digits = digits.trim_end_matches('0');
+    let digits = if digits.is_empty() { "0" } else { digits };
+    let k = digits.len() as i32;
+    let n = exponent + 1;
+    let body = if k <= n && n <= 21 {
+        format!("{digits}{}", "0".repeat((n - k) as usize))
+    } else if 0 < n && n <= 21 {
+        format!("{}.{}", &digits[..n as usize], &digits[n as usize..])
+    } else if -6 < n && n <= 0 {
+        format!("0.{}{digits}", "0".repeat((-n) as usize))
+    } else {
+        let e = n - 1;
+        let sign = if e < 0 { '-' } else { '+' };
+        match k {
+            1 => format!("{digits}e{sign}{}", e.abs()),
+            _ => format!("{}.{}e{sign}{}", &digits[..1], &digits[1..], e.abs()),
+        }
+    };
+    match number < 0.0 {
+        true => format!("-{body}"),
+        false => body,
+    }
+}
+
+#[derive(Default)]
+struct EnumMemberNames {
+    names: Vec<String>,
+}
+
+impl Visit for EnumMemberNames {
+    fn visit_ts_enum_member(&mut self, node: &TsEnumMember) {
+        self.names.push(match &node.id {
+            TsEnumMemberId::Ident(ident) => ident.sym.to_string(),
+            TsEnumMemberId::Str(s) => s.value.to_string(),
+        });
+    }
+}
 
 /// No object type — type literal, interface or class — may declare the same member twice.
 ///
@@ -508,6 +586,55 @@ mod tests {
         let module = parse("export class C { a() {} a() {} }\n");
         let error = check_distinct_members(&module, "wrapper").unwrap_err();
         assert!(error.contains("`a`"), "{error}");
+    }
+
+    #[test]
+    fn numeric_enum_member_is_reported() {
+        let module = parse("export enum E { \"0\" = \"0\", other = \"other\" }\n");
+        let error = check_enum_members(&module, "wrapper").unwrap_err();
+        assert!(error.contains("`0`"), "{error}");
+    }
+
+    #[test]
+    fn numeric_looking_but_legal_enum_members_pass() {
+        // None of these is what `Number(name)` prints back, so TypeScript takes them all —
+        // `"-0"` included, since `Number("-0")` prints `0`.
+        let module = parse(concat!(
+            "export enum E { \"2fa\" = \"2fa\", \"1e3\" = \"1e3\", \"1.50\" = \"1.50\", ",
+            "\"-0\" = \"-0\", \"01\" = \"01\", \"Infinity\" = \"Infinity\" }\n"
+        ));
+        assert_eq!(check_enum_members(&module, "wrapper"), Ok(()));
+    }
+
+    /// Mirrors `Number.prototype.toString`, including where it switches to exponent form.
+    #[test]
+    fn js_number_formatting_matches_ecmascript() {
+        for (number, expected) in [
+            (0.0, "0"),
+            (-0.0, "0"),
+            (1.0, "1"),
+            (1.5, "1.5"),
+            (-1.0, "-1"),
+            (100.0, "100"),
+            (123.456, "123.456"),
+            (0.1, "0.1"),
+            (0.000001, "0.000001"),
+            (1e-7, "1e-7"),
+            (1.5e-7, "1.5e-7"),
+            (12345678.0, "12345678"),
+            (1.2345678901234567e16, "12345678901234568"),
+            (1e20, "100000000000000000000"),
+            (1e21, "1e+21"),
+            (1.2345e25, "1.2345e+25"),
+            (-1e21, "-1e+21"),
+        ] {
+            assert_eq!(js_number_to_string(number), expected, "{number}");
+        }
+        assert!(is_numeric_name("1e+21"));
+        assert!(is_numeric_name("0.000001"));
+        assert!(is_numeric_name("12345678"));
+        assert!(!is_numeric_name("1e21"));
+        assert!(!is_numeric_name("-0"));
     }
 
     fn parse(source: &str) -> Module {
