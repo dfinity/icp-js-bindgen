@@ -34,10 +34,29 @@ beforeEach(() => {
 });
 
 describe('generate', () => {
+  it('refuses two candid types that escape to one exported declaration name', async () => {
+    // The declarations files are printed, not checked, so the merge would be silent.
+    await expect(
+      generate({
+        didFile: `${TESTS_ASSETS_DIR}/collide_declaration_names.did`,
+        outDir: OUTPUT_DIR,
+      }),
+    ).rejects.toThrow(/IDL_/);
+  });
   it.each([
     'hello_world',
     'example',
     'reserved_words',
+    'duplicate_unit_variants',
+    'preamble_collisions',
+    'preamble_helper_names',
+    'service_alias',
+    'declaration_globals',
+    'declaration_builtins',
+    'reserved_type_names',
+    'anonymous_named_collision',
+    'anonymous_named_collision_reversed',
+    'anonymous_named_different_tags',
   ])('should generate a bindgen', async (serviceName) => {
     const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 
@@ -54,6 +73,8 @@ describe('generate', () => {
   it.each([
     'hello_world',
     'example',
+    'preamble_collisions',
+    'service_alias',
   ])('should generate a bindgen with interface declaration', async (serviceName) => {
     const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 
@@ -143,6 +164,7 @@ describe('generate', () => {
   it.each([
     'hello_world',
     'example',
+    'declaration_globals',
   ])('should generate typescript declarations with rootExports for %s', async (serviceName) => {
     const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 

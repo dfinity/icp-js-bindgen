@@ -313,7 +313,7 @@ pub(crate) fn pp_actor<'a>(
         TypeInner::Service(_) => service_doc.append(pp_ty_rich(env, ty, syntax, false)),
         TypeInner::Var(id) => service_doc
             .append(kwd("extends"))
-            .append(str(id.as_str()))
+            .append(ident(id.as_str()))
             .append(str(" {}")),
         TypeInner::Class(_, t) => {
             if let Some(IDLType::ClassT(_, syntax_t)) = syntax {
@@ -378,4 +378,39 @@ import type { Principal } from '@icp-sdk/core/principal';
         .append(defs)
         .append(actor);
     doc.pretty(LINE_WIDTH).to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::javascript::escaped_ident_name;
+    use super::super::javascript::tests::{bare_identifiers, every_constructor};
+    use super::*;
+
+    /// The intrinsic types the printer spells bare. None can be a candid type name in the
+    /// output because TypeScript refuses them as declaration names, which is checked and
+    /// escaped separately.
+    const INTRINSICS: [&str; 7] = [
+        "null", "boolean", "bigint", "number", "string", "any", "never",
+    ];
+
+    #[test]
+    fn typescript_printer_references_only_names_a_candid_type_cannot_take() {
+        let env = TypeEnv::new();
+        for ty in every_constructor() {
+            for is_ref in [false, true] {
+                let rendered = pp_ty(&env, &ty, is_ref).pretty(80).to_string();
+                for id in bare_identifiers(&rendered) {
+                    if INTRINSICS.contains(&id.as_str()) {
+                        continue;
+                    }
+                    assert_ne!(
+                        escaped_ident_name(&id),
+                        id,
+                        "`{id}` in `{rendered}` is emitted bare but a candid type of that name \
+                         is not escaped"
+                    );
+                }
+            }
+        }
+    }
 }

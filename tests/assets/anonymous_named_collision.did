@@ -1,0 +1,9 @@
+// An inline all-null variant derives its enum name from its tags — `Variant_x` — and a named
+// candid type of the same shape already holds that identifier. They are one enum, declared
+// once under the named type, whichever of the two is reached first: here the inline one.
+type A = service {
+  get : () -> (variant { x });
+};
+type Variant_x = variant { x };
+
+service : A

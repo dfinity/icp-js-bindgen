@@ -1,0 +1,8 @@
+// The same shapes as `anonymous_named_collision.did`, reached in the other order: the named
+// type first, then the inline variant. The output is the same one enum.
+type Variant_x = variant { x };
+type Z = service {
+  get : () -> (variant { x });
+};
+
+service : Z

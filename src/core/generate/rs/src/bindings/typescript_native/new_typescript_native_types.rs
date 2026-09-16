@@ -2,7 +2,7 @@ use super::super::javascript::is_tuple;
 use super::comments::add_comments;
 use super::conversion_functions_generator::{TopLevelNodes, TypeConverter};
 use super::original_typescript_types::create_typed_array_type;
-use super::utils::{get_ident, get_ident_guarded, get_ident_guarded_keyword_ok};
+use super::utils::{candid_type_ident, get_ident, get_ident_guarded, get_ident_guarded_keyword_ok};
 use candid::types::{Field, Function, Label, Type, TypeEnv, TypeInner};
 use candid_parser::syntax::{self, IDLMergedProg, IDLType};
 use swc_core::common::Span;
@@ -84,7 +84,7 @@ pub fn create_interface_from_service(
                         span: DUMMY_SP,
                         type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
                             span: DUMMY_SP,
-                            type_name: TsEntityName::Ident(get_ident_guarded(var_id.as_str())),
+                            type_name: TsEntityName::Ident(candid_type_ident(var_id.as_str())),
                             type_params: None,
                         })),
                     })),
@@ -179,14 +179,14 @@ pub fn convert_type(
                 } else {
                     TsType::TsTypeRef(TsTypeRef {
                         span: DUMMY_SP,
-                        type_name: TsEntityName::Ident(get_ident_guarded(id.as_str())),
+                        type_name: TsEntityName::Ident(candid_type_ident(id.as_str())),
                         type_params: None,
                     })
                 }
             } else {
                 TsType::TsTypeRef(TsTypeRef {
                     span: DUMMY_SP,
-                    type_name: TsEntityName::Ident(get_ident_guarded(id.as_str())),
+                    type_name: TsEntityName::Ident(candid_type_ident(id.as_str())),
                     type_params: None,
                 })
             }
@@ -481,54 +481,57 @@ fn create_variant_type(
                 })
                 .collect();
 
-            // Only create enum if it doesn't already exist
             let (enum_declarations, _, _) = top_level_nodes;
-            enum_declarations.entry(fs.to_vec()).or_insert_with(|| {
-                let enum_name = if let Some(name) = type_name {
-                    name.to_string()
-                } else {
-                    // Generate stable name based on field names for inline variants
-                    let field_names: Vec<String> =
-                        field_info.iter().map(|(name, _)| name.clone()).collect();
-                    format!("Variant_{}", field_names.join("_"))
-                };
-                // Create enum members.
-                // Reserved words are valid enum member names and valid in member-access
-                // position (`Status.new`), so they must NOT be escaped here: the
-                // `from_candid_*`/`to_candid_*` functions reference members by their candid
-                // tag, and escaping the declaration alone made those references dangle.
-                let members = field_info
-                    .into_iter()
-                    .map(|(member_name, span)| TsEnumMember {
-                        span,
-                        id: TsEnumMemberId::Ident(get_ident_guarded_keyword_ok(&member_name)),
-                        init: Some(Box::new(Expr::Lit(Lit::Str(Str {
+
+            // A named candid type gets an enum of its own, keyed by the candid name, so two
+            // types with identical tags — or with names that escape to the same identifier —
+            // never share one. Anonymous variants have no name to be declared under and reuse
+            // whichever enum was interned for their tag list.
+            let enum_name = match enum_declarations.declared_name(type_name, fs) {
+                Some(existing) => existing,
+                None => {
+                    // A named type declares under its own name; an anonymous variant under one
+                    // derived from its tags, kept clear of every named type's identifier unless
+                    // that type is the same variant, which it then shares.
+                    let enum_ident = match type_name {
+                        Some(name) => candid_type_ident(name),
+                        None => get_ident(&enum_declarations.anonymous_name_for(fs)),
+                    };
+                    // Members carry the candid tag verbatim. Reserved words are valid as enum
+                    // member names and after a dot, so escaping one here would leave the
+                    // conversion functions referencing a member that does not exist.
+                    let members = field_info
+                        .into_iter()
+                        .map(|(member_name, span)| TsEnumMember {
+                            span,
+                            id: TsEnumMemberId::Ident(get_ident_guarded_keyword_ok(&member_name)),
+                            init: Some(Box::new(Expr::Lit(Lit::Str(Str {
+                                span: DUMMY_SP,
+                                value: member_name.into(),
+                                raw: None,
+                            })))),
+                        })
+                        .collect();
+                    // Unlike its members, the enum *type* name is an identifier: it is escaped
+                    // against reserved words and the names the module already occupies. The
+                    // declared name is what every reference then uses, rather than re-deriving
+                    // the escaping and risking divergence.
+                    let declared = enum_ident.sym.to_string();
+                    enum_declarations.insert(
+                        type_name,
+                        declared.clone(),
+                        fs,
+                        TsEnumDecl {
                             span: DUMMY_SP,
-                            value: member_name.into(),
-                            raw: None,
-                        })))),
-                    })
-                    .collect();
-                // Create the enum declaration.
-                // Unlike its members, the enum *type* name must be escaped: an identifier
-                // cannot be a reserved word. The escaped identifier is stored alongside the
-                // declaration so every reference to it (type refs, conversion functions) uses
-                // exactly the name that was declared, instead of re-deriving the escaping and
-                // risking divergence.
-                let enum_ident = get_ident_guarded(&enum_name);
-                let enum_decl = TsEnumDecl {
-                    span: DUMMY_SP,
-                    declare: false,
-                    is_const: false,
-                    id: enum_ident.clone(),
-                    members,
-                };
-
-                // Store the enum declaration with its declared name
-                (enum_decl, enum_ident.sym.to_string())
-            });
-
-            let enum_name = enum_declarations.get(&fs.to_vec()).unwrap().1.clone();
+                            declare: false,
+                            is_const: false,
+                            id: enum_ident,
+                            members,
+                        },
+                    );
+                    declared
+                }
+            };
 
             // Return a reference to the enum type. `enum_name` is already the declared
             // (escaped) identifier, so it must not be escaped again.
@@ -657,8 +660,11 @@ pub fn add_type_definitions(
                     })));
             }
             TypeInner::Variant(fs) => {
-                // Check if all variants have null type
-                let all_null = fs.iter().all(|f| matches!(f.ty.as_ref(), TypeInner::Null));
+                // An empty variant has no tags to become enum members, so it lowers to
+                // `never` and needs a type alias like any other non-enum variant. Note
+                // `all(..)` is vacuously true for it, which is why it is excluded explicitly.
+                let all_null =
+                    !fs.is_empty() && fs.iter().all(|f| matches!(f.ty.as_ref(), TypeInner::Null));
 
                 if all_null {
                     // For variants with all null types, directly create the enum
@@ -671,7 +677,7 @@ pub fn add_type_definitions(
                     let type_alias = TsTypeAliasDecl {
                         span: DUMMY_SP,
                         declare: false,
-                        id: get_ident_guarded(id.as_str()),
+                        id: candid_type_ident(id.as_str()),
                         type_params: None,
                         type_ann: Box::new(variant_type),
                     };
@@ -686,13 +692,17 @@ pub fn add_type_definitions(
             TypeInner::Var(inner_id) => {
                 let inner_type = env.rec_find_type(inner_id).unwrap();
                 let inner_name = match inner_type.as_ref() {
-                    TypeInner::Service(_) => service_interface_ident(inner_id.as_str()),
-                    _ => get_ident_guarded(inner_id.as_str()),
+                    // The interface is declared for whichever type holds the `service`, which
+                    // an alias of an alias is several steps away from.
+                    TypeInner::Service(_) => {
+                        service_interface_ident(&declaring_type_id(env, inner_id.as_str()))
+                    }
+                    _ => candid_type_ident(inner_id.as_str()),
                 };
                 let type_alias = TsTypeAliasDecl {
                     span: DUMMY_SP,
                     declare: false,
-                    id: get_ident_guarded(id.as_str()),
+                    id: candid_type_ident(id.as_str()),
                     type_params: None,
                     type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
                         span: DUMMY_SP,
@@ -767,7 +777,7 @@ fn create_interface_from_record(
     TsInterfaceDecl {
         span: DUMMY_SP,
         declare: false,
-        id: get_ident_guarded(id),
+        id: candid_type_ident(id),
         type_params: None,
         extends: vec![],
         body: TsInterfaceBody {
@@ -788,7 +798,7 @@ fn create_type_alias_from_function(
     TsTypeAliasDecl {
         span: DUMMY_SP,
         declare: false,
-        id: get_ident_guarded(id),
+        id: candid_type_ident(id),
         type_params: None,
         type_ann: Box::new(create_function_type(top_level_nodes, env, func, syntax)),
     }
@@ -804,7 +814,7 @@ fn create_type_alias(
     TsTypeAliasDecl {
         span: DUMMY_SP,
         declare: false,
-        id: get_ident_guarded(id),
+        id: candid_type_ident(id),
         type_params: None,
         type_ann: Box::new(convert_type(top_level_nodes, env, ty, None, false)),
     }
@@ -1108,6 +1118,23 @@ fn create_function_type_ref() -> TsType {
         })
         .collect(),
     })
+}
+
+/// The candid type whose service interface is actually declared, following aliases.
+///
+/// `type S = T` declares nothing of its own, so a name derived from the alias would be a
+/// reference to an interface no one declares.
+/// Follows a chain of aliases to the candid type that declares the structure — `type B = A`
+/// resolves to whatever `A` resolves to.
+pub fn declaring_type_id(env: &TypeEnv, type_id: &str) -> String {
+    let mut current = type_id.to_string();
+    // Bounded by the number of declarations; candid rejects cyclic aliases.
+    while let Ok(ty) = env.find_type(&current)
+        && let TypeInner::Var(next) = ty.as_ref()
+    {
+        current = next.to_string();
+    }
+    current
 }
 
 pub fn service_interface_ident(service_name: &str) -> Ident {
