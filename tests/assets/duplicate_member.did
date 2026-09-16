@@ -1,0 +1,2 @@
+type V = variant { __kind__ : nat; other : text };
+service : () -> { f : (V) -> () }

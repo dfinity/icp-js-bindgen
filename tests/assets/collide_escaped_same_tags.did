@@ -1,0 +1,7 @@
+// `Map` shadows a global and is escaped to `Map_`, which is also a candid type here. Their
+// tag lists are identical, so one enum could carry both — but only one of the two candid
+// names would then be exported, and each would silently accept the other's values.
+type Map = variant { a; b };
+type Map_ = variant { a; b };
+
+service : () -> { f : (Map) -> (Map_) }

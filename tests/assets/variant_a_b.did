@@ -1,0 +1,6 @@
+// An inline all-null variant is declared as an enum named after its tags, `Variant_a_b`, and
+// that is also the class name derived from this file's basename. Neither side can step aside
+// up front — the enum name is derived while the module is built — so the module checks refuse.
+service : {
+  f : (variant { a; b }) -> ();
+}

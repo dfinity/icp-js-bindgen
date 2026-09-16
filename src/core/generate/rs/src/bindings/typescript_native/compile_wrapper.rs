@@ -15,6 +15,7 @@ use super::new_typescript_native_types::add_type_definitions;
 use super::preamble::imports::wrapper_imports;
 use super::preamble::options::{interface_options_utils, wrapper_options_utils};
 use super::utils::{EnumDeclarations, render_ast};
+use super::validate::check_module;
 
 use super::comments::add_comments;
 use super::compile_interface::{interface_actor_service, interface_actor_var};
@@ -26,7 +27,7 @@ pub fn compile_wrapper(
     actor: &Option<Type>,
     service_name: &str,
     prog: &IDLMergedProg,
-) -> String {
+) -> Result<String, String> {
     let mut enum_declarations = EnumDeclarations::new(env);
 
     let mut module = Module {
@@ -101,7 +102,10 @@ pub fn compile_wrapper(
     }
 
     // Generate code from the AST
-    render_ast(&module, &comments)
+    // Nothing downstream re-reads these files, so they are checked here.
+    check_module(&module, "wrapper")?;
+
+    Ok(render_ast(&module, &comments))
 }
 
 // Add actor implementation

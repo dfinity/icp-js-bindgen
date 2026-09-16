@@ -9,3 +9,4 @@ mod new_typescript_native_types;
 mod original_typescript_types;
 mod preamble;
 mod utils;
+mod validate;

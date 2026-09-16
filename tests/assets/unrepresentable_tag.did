@@ -1,0 +1,2 @@
+type T = variant { "__proto__"; ok };
+service : () -> { h : (T) -> () }

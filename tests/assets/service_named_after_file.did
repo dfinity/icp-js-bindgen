@@ -1,0 +1,8 @@
+// The `.did` is named after its own service type, so the interface declared for the type
+// already carries the name the actor's interface would take. The actor uses it as is instead
+// of declaring a second interface that extends itself.
+type service_named_after_file = service {
+  greet : (text) -> (text) query;
+};
+
+service : service_named_after_file

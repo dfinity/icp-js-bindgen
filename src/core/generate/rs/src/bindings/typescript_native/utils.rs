@@ -1,4 +1,5 @@
 use candid::types::{Field, Label, Type, TypeEnv, TypeInner};
+use std::collections::{BTreeMap, HashSet};
 use swc_core::common::comments::SingleThreadedComments;
 use swc_core::common::source_map::SourceMap;
 use swc_core::common::sync::Lrc;
@@ -597,19 +598,48 @@ static MODULE_NAMES: [&str; 22] = [
     "createActor",
 ];
 
-/// The local alias under which the module imports the candid shape of a type.
+/// The local aliases under which the module imports the candid shape of each named type.
 ///
 /// The `_` prefix separates that shape from the native type declared alongside it. It is not
 /// enough on its own: the module already imports the service type as `_SERVICE`, so a candid
 /// type named `SERVICE` would bind that local twice and the actor would be typed by the
-/// user's type instead of the service.
-pub fn candid_import_local(id: &str) -> String {
-    let local = format!("_{id}");
-    if MODULE_NAMES.contains(&local.as_str()) {
-        format!("{local}_")
-    } else {
-        local
+/// user's type instead of the service; a candid type can itself be named `_Foo`; and two
+/// locals that each stepped aside can land on one name. The locals are therefore allocated
+/// together, once per module, in the sorted order of the candid ids, each stepping past every
+/// name the module occupies, every type's identifier and every local allocated before it.
+pub struct ImportLocals {
+    locals: BTreeMap<String, String>,
+    taken: HashSet<String>,
+}
+
+impl ImportLocals {
+    pub fn new(env: &TypeEnv) -> Self {
+        let mut taken: HashSet<String> = MODULE_NAMES.iter().map(|name| name.to_string()).collect();
+        taken.extend(env.0.keys().map(|id| candid_type_ident(id).sym.to_string()));
+        let mut locals = BTreeMap::new();
+        for id in env.0.keys() {
+            let local = free_local(id, &taken);
+            taken.insert(local.clone());
+            locals.insert(id.clone(), local);
+        }
+        Self { locals, taken }
     }
+
+    /// The local for `id`; a name outside the environment is placed the same way.
+    pub fn get(&self, id: &str) -> String {
+        self.locals
+            .get(id)
+            .cloned()
+            .unwrap_or_else(|| free_local(id, &self.taken))
+    }
+}
+
+fn free_local(id: &str, taken: &HashSet<String>) -> String {
+    let mut local = format!("_{id}");
+    while taken.contains(&local) {
+        local.push('_');
+    }
+    local
 }
 
 /// Names TypeScript accepts as identifiers but not as a type, although they are fine
@@ -643,14 +673,45 @@ mod tests {
     use super::*;
 
     #[test]
-    fn candid_import_local_prefixes_the_candid_shape() {
-        assert_eq!(candid_import_local("Outcome"), "_Outcome");
+    fn import_local_prefixes_the_candid_shape() {
+        assert_eq!(
+            ImportLocals::new(&TypeEnv::new()).get("Outcome"),
+            "_Outcome"
+        );
     }
 
     /// `_SERVICE` is the local the module already binds for the service type.
     #[test]
-    fn candid_import_local_steps_aside_for_the_service_type() {
-        assert_eq!(candid_import_local("SERVICE"), "_SERVICE_");
+    fn import_local_steps_aside_for_the_service_type() {
+        assert_eq!(
+            ImportLocals::new(&TypeEnv::new()).get("SERVICE"),
+            "_SERVICE_"
+        );
+    }
+
+    /// A candid type can itself be named like the local another type's shape would take.
+    #[test]
+    fn import_local_steps_aside_for_a_candid_type_of_that_name() {
+        let mut env = TypeEnv::new();
+        env.0.insert("Outcome".to_string(), TypeInner::Nat.into());
+        env.0.insert("_Outcome".to_string(), TypeInner::Nat.into());
+        assert_eq!(ImportLocals::new(&env).get("Outcome"), "_Outcome_");
+        assert_eq!(ImportLocals::new(&env).get("_Outcome"), "__Outcome");
+    }
+
+    /// Stepping aside can land on the name another local would take, so the locals are
+    /// allocated against each other as well: four candid types, four distinct locals.
+    #[test]
+    fn import_locals_never_collide_with_each_other() {
+        let mut env = TypeEnv::new();
+        for id in ["Foo", "Foo_", "_Foo", "_Foo_"] {
+            env.0.insert(id.to_string(), TypeInner::Nat.into());
+        }
+        let locals: Vec<String> = ["Foo", "Foo_", "_Foo", "_Foo_"]
+            .iter()
+            .map(|id| ImportLocals::new(&env).get(id))
+            .collect();
+        assert_eq!(locals, ["_Foo__", "_Foo___", "__Foo", "__Foo_"]);
     }
 
     /// A candid type can hold the name the class would take; TypeScript would merge the two.

@@ -1,0 +1,8 @@
+// A candid type whose name equals the class name derived from the .did basename
+// (`collide_class` -> `Collide_class`). The class steps aside to `Collide_class_`; the type
+// keeps its name.
+type Collide_class = record { a : nat };
+
+service : () -> {
+  test : (Collide_class) -> ();
+}

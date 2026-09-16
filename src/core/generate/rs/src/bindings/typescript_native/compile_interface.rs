@@ -7,6 +7,7 @@ use super::preamble::options::interface_options_utils;
 use super::utils::EnumDeclarations;
 use super::utils::get_ident;
 use super::utils::render_ast;
+use super::validate::check_module;
 use crate::bindings::typescript_native::comments::add_comments;
 use candid::types::{Type, TypeEnv, TypeInner};
 use candid_parser::syntax::{IDLMergedProg, IDLType};
@@ -19,7 +20,7 @@ pub fn compile_interface(
     actor: &Option<Type>,
     service_name: &str,
     prog: &IDLMergedProg,
-) -> String {
+) -> Result<String, String> {
     let mut enum_declarations = EnumDeclarations::new(env);
 
     let mut module = Module {
@@ -94,7 +95,10 @@ pub fn compile_interface(
     }
 
     // Generate code from the AST
-    render_ast(&module, &comments)
+    // Nothing downstream re-reads these files, so they are checked here.
+    check_module(&module, "interface")?;
+
+    Ok(render_ast(&module, &comments))
 }
 
 fn interface_actor_implementation(
@@ -162,16 +166,22 @@ pub fn interface_actor_var(
     service_name: &str,
     span: Span,
 ) {
+    let actor = service_interface_ident(service_name);
+    let declaring = service_interface_ident(&declaring_type_id(env, type_id));
+    // A `.did` named after its own service type — `backend.did` holding `type backend =
+    // service { … }` — already declares this interface under the actor's name. There is
+    // nothing to extend; a second declaration would extend itself.
+    if actor.sym == declaring.sym {
+        return;
+    }
     let interface = TsInterfaceDecl {
         span: DUMMY_SP,
         declare: false,
-        id: service_interface_ident(service_name),
+        id: actor,
         type_params: None,
         extends: vec![TsExprWithTypeArgs {
             span: DUMMY_SP,
-            expr: Box::new(Expr::Ident(service_interface_ident(&declaring_type_id(
-                env, type_id,
-            )))),
+            expr: Box::new(Expr::Ident(declaring)),
             type_args: None,
         }],
         body: TsInterfaceBody {
