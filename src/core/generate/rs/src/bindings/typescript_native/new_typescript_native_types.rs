@@ -484,56 +484,57 @@ fn create_variant_type(
                 })
                 .collect();
 
-            // Only create enum if it doesn't already exist
             let (enum_declarations, _, _) = top_level_nodes;
-            enum_declarations.entry(fs.to_vec()).or_insert_with(|| {
-                let enum_name = if let Some(name) = type_name {
-                    name.to_string()
-                } else {
-                    // Generate stable name based on field names for inline variants
-                    let field_names: Vec<String> =
-                        field_info.iter().map(|(name, _)| name.clone()).collect();
-                    format!("Variant_{}", field_names.join("_"))
-                };
-                // Create enum members.
-                // Reserved words are valid enum member names and valid in member-access
-                // position (`Status.new`), so they must NOT be escaped here: the
-                // `from_candid_*`/`to_candid_*` functions reference members by their candid
-                // tag, and escaping the declaration alone made those references dangle.
-                let members = field_info
-                    .into_iter()
-                    .map(|(member_name, span)| TsEnumMember {
-                        span,
-                        id: candid_enum_member_id(&member_name),
-                        init: Some(Box::new(Expr::Lit(Lit::Str(Str {
+
+            // A named candid type is declared under its own name, so two types with identical
+            // tags get an enum each. Anonymous variants have no name to be declared under and
+            // reuse whichever enum was interned for their tag list.
+            let enum_name = match enum_declarations.name_of(type_name, fs) {
+                Some(existing) => existing,
+                None => {
+                    let requested = match type_name {
+                        Some(name) => name.to_string(),
+                        None => {
+                            let tags: Vec<String> =
+                                field_info.iter().map(|(name, _)| name.clone()).collect();
+                            format!("Variant_{}", tags.join("_"))
+                        }
+                    };
+                    // Members carry the candid tag verbatim. Reserved words are valid as enum
+                    // member names and after a dot, so escaping one here would leave the
+                    // conversion functions referencing a member that does not exist.
+                    let members = field_info
+                        .into_iter()
+                        .map(|(member_name, span)| TsEnumMember {
+                            span,
+                            id: candid_enum_member_id(&member_name),
+                            init: Some(Box::new(Expr::Lit(Lit::Str(Str {
+                                span: DUMMY_SP,
+                                value: member_name.into(),
+                                raw: None,
+                            })))),
+                        })
+                        .collect();
+                    // The enum *type* name is an identifier, so unlike its members it must be
+                    // escaped if it is a reserved word and sanitized if the tags it was built
+                    // from contain characters an identifier cannot hold. The declared name is
+                    // what every reference then uses, rather than re-deriving the escaping.
+                    let enum_ident = binding_ident(&requested);
+                    let declared = enum_ident.sym.to_string();
+                    enum_declarations.insert(
+                        declared.clone(),
+                        fs,
+                        TsEnumDecl {
                             span: DUMMY_SP,
-                            value: member_name.into(),
-                            raw: None,
-                        })))),
-                    })
-                    .collect();
-                // Create the enum declaration.
-                // Unlike its members, the enum *type* name is an identifier: it must be
-                // escaped if it is a reserved word, and sanitized if the candid tags it was
-                // built from contain characters that are legal in a quoted tag but not in an
-                // identifier (`variant { "my-tag"; other }`). The resulting identifier is
-                // stored alongside the declaration so every reference to it (type refs,
-                // conversion functions) uses exactly the name that was declared, instead of
-                // re-deriving the escaping and risking divergence.
-                let enum_ident = binding_ident(&enum_name);
-                let enum_decl = TsEnumDecl {
-                    span: DUMMY_SP,
-                    declare: false,
-                    is_const: false,
-                    id: enum_ident.clone(),
-                    members,
-                };
-
-                // Store the enum declaration with its declared name
-                (enum_decl, enum_ident.sym.to_string())
-            });
-
-            let enum_name = enum_declarations.get(&fs.to_vec()).unwrap().1.clone();
+                            declare: false,
+                            is_const: false,
+                            id: enum_ident,
+                            members,
+                        },
+                    );
+                    declared
+                }
+            };
 
             // Return a reference to the enum type. `enum_name` is already the declared
             // (escaped) identifier, so it must not be escaped again.

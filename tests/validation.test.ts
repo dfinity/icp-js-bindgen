@@ -42,6 +42,13 @@ describe('generation refuses invalid output', () => {
     await expect(generateFixture('collide_variant_tags')).rejects.toThrow(/Variant_my_f/);
   });
 
+  it('reports two candid types that escape to the same enum name', async () => {
+    // `Map` is escaped to `Map_` because it shadows a global, which collides with a candid
+    // type actually named `Map_`. Reusing one enum for both would leave the second type's
+    // members undeclared while every reference still resolved, so nothing downstream sees it.
+    await expect(generateFixture('collide_escaped_names')).rejects.toThrow(/Map_/);
+  });
+
   it('names both colliding declaration kinds, so the cause is actionable', async () => {
     await expect(generateFixture('collide_class')).rejects.toThrow(
       /interface.*class|class.*interface/s,

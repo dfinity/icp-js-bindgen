@@ -11,7 +11,6 @@ use super::validate::check_module;
 use crate::bindings::typescript_native::comments::add_comments;
 use candid::types::{Type, TypeEnv, TypeInner};
 use candid_parser::syntax::{IDLMergedProg, IDLType};
-use std::collections::HashMap;
 use swc_core::common::DUMMY_SP;
 use swc_core::common::Span;
 use swc_core::ecma::ast::*;
@@ -22,7 +21,7 @@ pub fn compile_interface(
     service_name: &str,
     prog: &IDLMergedProg,
 ) -> Result<String, String> {
-    let mut enum_declarations: EnumDeclarations = HashMap::new();
+    let mut enum_declarations = EnumDeclarations::default();
 
     let mut module = Module {
         span: DUMMY_SP,
@@ -78,16 +77,13 @@ pub fn compile_interface(
         }
     }
 
-    // Add enum declarations to the module, sorted by name for stability
-    let mut sorted_enums: Vec<_> = enum_declarations.iter().collect();
-    sorted_enums.sort_by_key(|(_, (_, enum_name))| enum_name.clone());
-
-    for (_, enum_decl) in sorted_enums {
+    // `EnumDeclarations` yields these ordered by name, so output is stable.
+    for enum_decl in enum_declarations.declarations() {
         module
             .body
             .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
                 span: DUMMY_SP,
-                decl: Decl::TsEnum(Box::new(enum_decl.0.clone())),
+                decl: Decl::TsEnum(Box::new(enum_decl.clone())),
             })));
     }
 
