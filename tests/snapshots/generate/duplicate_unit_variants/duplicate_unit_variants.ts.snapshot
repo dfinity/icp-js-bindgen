@@ -82,25 +82,28 @@ export interface duplicate_unit_variantsInterface {
 }
 import type { RepairStatus as _RepairStatus, SoftwareService as _SoftwareService, SoftwareServiceStatus as _SoftwareServiceStatus, SoftwareServiceStatusAlias as _SoftwareServiceStatusAlias } from "./declarations/duplicate_unit_variants.did";
 export class Duplicate_unit_variants implements duplicate_unit_variantsInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async get_software_service(arg0: bigint): Promise<SoftwareService> {
-        const result = await this.actor.get_software_service(arg0);
+        const result = await this.#actor.get_software_service(arg0);
         return from_candid_SoftwareService_n1(result);
     }
     async peek(): Promise<RepairStatus> {
-        const result = await this.actor.peek();
+        const result = await this.#actor.peek();
         return from_candid_variant_n4(result);
     }
     async set_repair_status(arg0: bigint, arg1: RepairStatus): Promise<void> {
-        const result = await this.actor.set_repair_status(arg0, to_candid_RepairStatus_n5(arg1));
+        const result = await this.#actor.set_repair_status(arg0, to_candid_RepairStatus_n5(arg1));
         return result;
     }
     async set_status(arg0: bigint, arg1: SoftwareServiceStatus): Promise<void> {
-        const result = await this.actor.set_status(arg0, to_candid_SoftwareServiceStatus_n6(arg1));
+        const result = await this.#actor.set_status(arg0, to_candid_SoftwareServiceStatus_n6(arg1));
         return result;
     }
     async set_via_alias(arg0: SoftwareServiceStatusAlias): Promise<void> {
-        const result = await this.actor.set_via_alias(to_candid_SoftwareServiceStatusAlias_n7(arg0));
+        const result = await this.#actor.set_via_alias(to_candid_SoftwareServiceStatusAlias_n7(arg0));
         return result;
     }
 }

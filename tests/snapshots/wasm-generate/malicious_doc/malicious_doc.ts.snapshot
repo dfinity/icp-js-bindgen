@@ -64,9 +64,12 @@ export interface malicious_docInterface {
     get(): Promise<MaliciousType>;
 }
 export class Malicious_doc implements malicious_docInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async get(): Promise<MaliciousType> {
-        const result = await this.actor.get();
+        const result = await this.#actor.get();
         return result;
     }
 }

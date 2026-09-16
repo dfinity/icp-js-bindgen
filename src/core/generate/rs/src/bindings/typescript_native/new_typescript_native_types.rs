@@ -3,8 +3,8 @@ use super::comments::add_comments;
 use super::conversion_functions_generator::{TopLevelNodes, TypeConverter};
 use super::original_typescript_types::create_typed_array_type;
 use super::utils::{
-    binding_ident_name, candid_enum_member_id, candid_param_ident, candid_prop_key,
-    candid_type_ident, get_ident, get_ident_guarded,
+    binding_ident_name, candid_enum_member_id, candid_method_key, candid_param_ident,
+    candid_prop_key, candid_type_ident, get_ident,
 };
 use candid::types::{Field, Function, Label, Type, TypeEnv, TypeInner};
 use candid_parser::syntax::{self, IDLMergedProg, IDLType};
@@ -79,7 +79,7 @@ pub fn create_interface_from_service(
                 ),
                 TypeInner::Var(var_id) => TsTypeElement::TsPropertySignature(TsPropertySignature {
                     span,
-                    key: Box::new(Expr::Ident(get_ident_guarded(method_id))),
+                    key: candid_method_key(method_id),
                     computed: false,
                     optional: false,
                     readonly: false,
@@ -1036,7 +1036,7 @@ fn create_method_signature(
 
     TsTypeElement::TsMethodSignature(TsMethodSignature {
         span,
-        key: Box::new(Expr::Ident(get_ident_guarded(method_id))),
+        key: candid_method_key(method_id),
         computed: false,
         optional: false,
         params,

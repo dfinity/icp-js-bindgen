@@ -73,13 +73,16 @@ export interface declaration_globalsInterface extends IDLInterface {
 }
 import type { Principal_ as _Principal } from "./declarations/declaration_globals.did";
 export class Declaration_globals implements declaration_globalsInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async f(arg0: ActorMethod, arg1: _SERVICE_, arg2: idlFactory_, arg3: init, arg4: idlService, arg5: idlInitArgs): Promise<void> {
-        const result = await this.actor.f(arg0, arg1, arg2, arg3, arg4, arg5);
+        const result = await this.#actor.f(arg0, arg1, arg2, arg3, arg4, arg5);
         return result;
     }
     async round_trip(arg0: Principal_): Promise<Principal_> {
-        const result = await this.actor.round_trip(to_candid_Principal_n1(arg0));
+        const result = await this.#actor.round_trip(to_candid_Principal_n1(arg0));
         return from_candid_Principal_n2(result);
     }
 }

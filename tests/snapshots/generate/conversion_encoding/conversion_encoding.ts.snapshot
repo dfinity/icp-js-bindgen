@@ -97,25 +97,28 @@ export interface conversion_encodingInterface {
 }
 import type { Falsy as _Falsy, Inherited as _Inherited, Payload as _Payload, Shadowed as _Shadowed } from "./declarations/conversion_encoding.did";
 export class Conversion_encoding implements conversion_encodingInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async round_trip_falsy(arg0: Falsy): Promise<Falsy> {
-        const result = await this.actor.round_trip_falsy(to_candid_Falsy_n1(arg0));
+        const result = await this.#actor.round_trip_falsy(to_candid_Falsy_n1(arg0));
         return from_candid_Falsy_n3(result);
     }
     async round_trip_inherited(arg0: Inherited): Promise<Inherited> {
-        const result = await this.actor.round_trip_inherited(to_candid_Inherited_n8(arg0));
+        const result = await this.#actor.round_trip_inherited(to_candid_Inherited_n8(arg0));
         return from_candid_Inherited_n9(result);
     }
     async round_trip_opt(arg0: bigint | null): Promise<bigint | null> {
-        const result = await this.actor.round_trip_opt(to_candid_opt_n10(arg0));
+        const result = await this.#actor.round_trip_opt(to_candid_opt_n10(arg0));
         return from_candid_opt_n6(result);
     }
     async round_trip_payload(arg0: Payload): Promise<Payload> {
-        const result = await this.actor.round_trip_payload(to_candid_Payload_n11(arg0));
+        const result = await this.#actor.round_trip_payload(to_candid_Payload_n11(arg0));
         return from_candid_Payload_n13(result);
     }
     async round_trip_shadowed(arg0: Shadowed): Promise<Shadowed> {
-        const result = await this.actor.round_trip_shadowed(to_candid_Shadowed_n15(arg0));
+        const result = await this.#actor.round_trip_shadowed(to_candid_Shadowed_n15(arg0));
         return from_candid_Shadowed_n17(result);
     }
 }

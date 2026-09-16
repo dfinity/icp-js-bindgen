@@ -4,21 +4,24 @@
 //! `@ts-nocheck`, so an inconsistent module reaches the user's build rather than failing
 //! here.
 //!
-//! These checks cover what can be decided from the module alone: which names it declares and
-//! which names it uses. They do *not* check that those names are well-formed identifiers —
-//! nothing here would reject `export enum 'Variant_my-tag'`, which is self-consistent and
-//! still does not parse. Semantics are the typechecker's job; `tests/typecheck.test.ts` runs
-//! `tsc` over the snapshots for that.
+//! These checks cover what can be decided from the module alone: which names it declares,
+//! which names it uses, and whether the names it emits as identifiers are ones. Semantics are
+//! the typechecker's job; `tests/typecheck.test.ts` runs `tsc` over the snapshots for that.
 
-use super::utils::KEYWORDS;
+use super::utils::{
+    KEYWORDS, OBJECT_PROTOTYPE_NAMES, PARAMETER_RESERVED, is_reserved_type_name,
+    is_valid_binding_ident,
+};
 use std::collections::HashMap;
 use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::{Visit, VisitWith};
 
 /// Everything that must hold of a generated module before it is rendered.
 pub fn check_module(module: &Module, target: &str) -> Result<(), String> {
+    check_representable_methods(module)?;
     check_enum_members(module, target)?;
     check_distinct_members(module, target)?;
+    check_identifiers(module, target)?;
     check_unique_declarations(module, target)?;
     check_type_references(module, target)
 }
@@ -120,6 +123,149 @@ fn check_distinct_members(module: &Module, target: &str) -> Result<(), String> {
              `__kind__` to a variant that carries payloads, so a candid field or tag of that \
              name collides with it, and two candid names can escape to one key. Rename it in \
              the .did file.{DECLARATIONS_ONLY_HINT}"
+        )),
+        None => Ok(()),
+    }
+}
+
+/// Names the generated wrapper class occupies itself.
+///
+/// The class body is a private `#actor` field, the constructor and the candid methods, and it
+/// extends nothing. A private name cannot collide with a method, so the constructor is the one
+/// name a method cannot take. Adding a public member to the class means adding it here.
+const CLASS_MEMBER_NAMES: [(&str, &str); 1] = [(
+    "constructor",
+    "bare or quoted, a class member of that name *is* the class constructor, and as a \
+     computed key it overwrites `prototype.constructor`",
+)];
+
+/// Method names that turn the wrapper instance into something JavaScript treats specially.
+const PROTOCOL_NAMES: [(&str, &str); 2] = [
+    (
+        "then",
+        "a class with a `then` method is a thenable, so `await actor`, returning it from an \
+         async function or `Promise.resolve(actor)` would call it",
+    ),
+    ("toJSON", "`JSON.stringify(actor)` would call it"),
+];
+
+/// A candid method whose name the wrapper class cannot carry faithfully.
+///
+/// Three groups. The class occupies `constructor` itself, and a method of that name is
+/// unreachable — TypeScript rejects the class outright. `Object.prototype` members typecheck
+/// and are callable, but override a
+/// protocol: `String(actor)` invokes `toString`, so coercing or logging the actor fires a
+/// canister call and then throws. `then` and `toJSON` are the same kind of protocol.
+/// `docs/src/content/docs/structure.md` records the restriction.
+///
+/// Only the class is subject to this. A nested `service` type is typed `Principal`, so its
+/// interface never describes a runtime object and its method names are free; `__proto__` is
+/// refused everywhere, ahead of the generators. The interface module holds no class, so the
+/// check is a no-op there and the wrapper module is where it fires.
+fn check_representable_methods(module: &Module) -> Result<(), String> {
+    let mut methods = ClassMethodNames::default();
+    module.visit_with(&mut methods);
+
+    for (reserved, reason) in CLASS_MEMBER_NAMES {
+        if methods.names.iter().any(|name| name == reserved) {
+            return Err(format!(
+                "the generated actor class cannot represent the candid method `{reserved}`: \
+                 {reason}. Rename the method in the .did file."
+            ));
+        }
+    }
+
+    for (reserved, reason) in PROTOCOL_NAMES {
+        if methods.names.iter().any(|name| name == reserved) {
+            return Err(format!(
+                "the generated actor class will not expose the candid method `{reserved}`: \
+                 {reason}, firing a canister call. Rename the method in the .did file."
+            ));
+        }
+    }
+
+    match methods
+        .names
+        .into_iter()
+        .find(|name| OBJECT_PROTOTYPE_NAMES.contains(&name.as_str()))
+    {
+        Some(name) => Err(format!(
+            "the generated actor class will not expose the candid method `{name}`: every \
+             object inherits a member of that name, and overriding it changes behaviour \
+             JavaScript relies on — coercing or logging the actor would call the method, \
+             firing a canister call. Rename the method in the .did file."
+        )),
+        None => Ok(()),
+    }
+}
+
+/// Every `Ident` the module emits must actually be an identifier.
+///
+/// The generator builds TypeScript as a typed AST, so the only way it can emit something that
+/// does not parse is by putting a name into an `Ident` that cannot be one. A candid name that
+/// is not identifier-shaped has to become a string literal or a computed key instead —
+/// `candid_prop_name`, `candid_prop_key` and `candid_member_prop` choose between those.
+///
+/// Checked on the finished module rather than at the call sites, of which there are too many
+/// to keep correct by inspection.
+fn check_identifiers(module: &Module, target: &str) -> Result<(), String> {
+    let mut idents = Identifiers::default();
+    module.visit_with(&mut idents);
+
+    if let Some(name) = idents
+        .names
+        .into_iter()
+        .find(|n| !is_valid_binding_ident(n))
+    {
+        return Err(format!(
+            "generated {target} emits `{name}` as an identifier, which is not one. A candid \
+             name that cannot be an identifier belongs in a string literal or a computed key, \
+             not in an `Ident`."
+        ));
+    }
+
+    // A parameter goes through the narrow escape: `string` or `Map` is a legal parameter
+    // name, so only what TypeScript actually refuses there is refused here.
+    if let Some(name) = idents
+        .params
+        .into_iter()
+        .find(|n| PARAMETER_RESERVED.contains(&n.as_str()))
+    {
+        return Err(format!(
+            "generated {target} binds the parameter `{name}` unescaped. Quoting rescues a \
+             property of that name but not a binding — `{{ new: … }}` is legal where \
+             `f(new: …)` is a syntax error — so a candid argument name has to go through the \
+             parameter escape first."
+        ));
+    }
+
+    // A declaration name is held as a plain `Ident`, which the shape check accepts since a
+    // reserved word is well shaped. It goes through the type-declaration escape — reserved
+    // words, referenced globals, and the names TypeScript refuses as a type name. Names the
+    // module itself occupies (its imports and preamble) are not checked here: an unescaped
+    // candid type of one of those names collides with the occupant, which
+    // `check_unique_declarations` reports.
+    let declared = module
+        .body
+        .iter()
+        .filter_map(as_decl)
+        .filter_map(binding)
+        .map(|(name, _, _)| name);
+    if let Some(name) = declared.into_iter().find(|n| is_reserved_type_name(n)) {
+        return Err(format!(
+            "generated {target} declares `{name}` unescaped, a name the type-declaration \
+             escape reserves."
+        ));
+    }
+
+    // Import locals only have to be identifiers TypeScript accepts in a binding.
+    match imported_bindings(module)
+        .into_iter()
+        .map(|(name, _, _)| name)
+        .find(|n| KEYWORDS.contains(&n.as_str()))
+    {
+        Some(name) => Err(format!(
+            "generated {target} imports `{name}` under a local that is a reserved word."
         )),
         None => Ok(()),
     }
@@ -336,6 +482,46 @@ fn member_key(key: &Expr) -> Option<String> {
         Expr::Ident(ident) => Some(ident.sym.to_string()),
         Expr::Lit(Lit::Str(s)) => Some(s.value.to_string()),
         _ => None,
+    }
+}
+
+/// The method names of every class in the module.
+#[derive(Default)]
+struct ClassMethodNames {
+    names: Vec<String>,
+}
+
+impl Visit for ClassMethodNames {
+    fn visit_class_method(&mut self, node: &ClassMethod) {
+        self.names.extend(prop_name(&node.key));
+        node.visit_children_with(self);
+    }
+}
+
+#[derive(Default)]
+struct Identifiers {
+    names: Vec<String>,
+    /// Parameter names, which refuse the reserved words as well.
+    params: Vec<String>,
+}
+
+impl Visit for Identifiers {
+    fn visit_ident(&mut self, node: &Ident) {
+        self.names.push(node.sym.to_string());
+        node.visit_children_with(self);
+    }
+
+    fn visit_ident_name(&mut self, node: &IdentName) {
+        self.names.push(node.sym.to_string());
+        node.visit_children_with(self);
+    }
+
+    /// What a declaration or a parameter binds. `{ new: … }` is a legal property key, while
+    /// `f(new: bigint)` is a syntax error, so a candid name only reaches this position
+    /// through the reserved-word escape.
+    fn visit_binding_ident(&mut self, node: &BindingIdent) {
+        self.params.push(node.id.sym.to_string());
+        node.visit_children_with(self);
     }
 }
 
@@ -564,6 +750,49 @@ mod tests {
         assert_eq!(check_type_references(&module, "interface"), Ok(()));
     }
 
+    /// The generator escapes these before they reach a binding, so this is the backstop for
+    /// the next call site that forgets to. `this` is the one reserved parameter name that
+    /// parses — as a `this` parameter — so it is the one that can be written down here.
+    #[test]
+    fn unescaped_parameter_is_reported() {
+        let module = parse("export interface I { f(this: bigint): void }\n");
+        let error = check_identifiers(&module, "interface").unwrap_err();
+        assert!(error.contains("`this`"), "{error}");
+    }
+
+    /// `as` is refused as a type name but is not a reserved word, so it is only the
+    /// type-declaration escape — not the keyword table — that keeps it out of a declaration.
+    #[test]
+    fn unescaped_type_name_reserved_by_typescript_is_reported() {
+        let module = parse("export type as = { a: string };\n");
+        let error = check_identifiers(&module, "wrapper").unwrap_err();
+        assert!(error.contains("`as`"), "{error}");
+    }
+
+    /// A type or global name is a legal parameter name, and the wider declaration escape
+    /// must not be applied to it.
+    #[test]
+    fn parameter_named_after_a_type_is_allowed() {
+        let module = parse("export interface I { f(string: bigint, Map: bigint): void }\n");
+        assert_eq!(check_identifiers(&module, "interface"), Ok(()));
+    }
+
+    /// A declaration name binds as much as a parameter does, and the AST spells it as a
+    /// plain `Ident`, so it needs collecting explicitly.
+    #[test]
+    fn unescaped_declaration_name_is_reported() {
+        let module = parse("export interface boolean { a: string }\n");
+        let error = check_identifiers(&module, "wrapper").unwrap_err();
+        assert!(error.contains("boolean"), "{error}");
+    }
+
+    /// The same name is legal as a property, which is why the check distinguishes positions.
+    #[test]
+    fn reserved_word_as_a_property_is_allowed() {
+        let module = parse("export interface I { new: bigint }\n");
+        assert_eq!(check_identifiers(&module, "interface"), Ok(()));
+    }
+
     /// Fixtures are TypeScript source rather than hand-built ASTs. The parser is a
     /// dev-dependency and is not in the shipped wasm.
     /// A type reference resolves to a type; a value binding of that name would need `typeof`.
@@ -635,6 +864,22 @@ mod tests {
         assert!(is_numeric_name("12345678"));
         assert!(!is_numeric_name("1e21"));
         assert!(!is_numeric_name("-0"));
+    }
+
+    /// A nested service type's interface never describes a runtime object, so its methods
+    /// keep any name; only the class is subject to the refusal.
+    #[test]
+    fn inherited_method_name_on_an_interface_is_allowed() {
+        let module =
+            parse("export interface SInterface { toString(): Promise<void>; then(): void }\n");
+        assert_eq!(check_representable_methods(&module), Ok(()));
+    }
+
+    #[test]
+    fn thenable_class_is_reported() {
+        let module = parse("export class C { async then(): Promise<void> {} }\n");
+        let error = check_representable_methods(&module).unwrap_err();
+        assert!(error.contains("`then`"), "{error}");
     }
 
     fn parse(source: &str) -> Module {

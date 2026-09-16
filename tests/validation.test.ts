@@ -68,6 +68,19 @@ describe('generation refuses inconsistent output', () => {
     await expect(generateFixture('collide_variant_tags')).rejects.toThrow(/Variant_my_f/);
   });
 
+  // Three groups. The class occupies `constructor` itself, so a method of that name is
+  // unreachable. `Object.prototype` members are reachable but override a protocol: coercing
+  // or logging the actor would call the method and fire a canister call. `then` and `toJSON`
+  // are the same kind of protocol, invoked by `await` and `JSON.stringify`.
+  it.each([
+    ['unrepresentable_method', /constructor/],
+    ['unrepresentable_prototype', /toString/],
+    ['unrepresentable_then', /then/],
+    ['unrepresentable_tojson', /toJSON/],
+  ])('refuses a candid method the wrapper cannot carry: %s', async (fixture, expected) => {
+    await expect(generateFixture(fixture as string)).rejects.toThrow(expected as RegExp);
+  });
+
   it('reports two candid types that escape to the same name', async () => {
     // `Map` is escaped because it shadows a global, which collides with a candid type
     // actually named `Map_`. One enum cannot carry both tag lists, and reusing one would

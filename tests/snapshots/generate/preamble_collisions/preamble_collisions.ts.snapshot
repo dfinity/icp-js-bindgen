@@ -89,25 +89,28 @@ export interface preamble_collisionsInterface {
 }
 import type { Nothing as _Nothing, SERVICE as _SERVICE_ } from "./declarations/preamble_collisions.did";
 export class Preamble_collisions implements preamble_collisionsInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async None(arg0: bigint): Promise<void> {
-        const result = await this.actor.None(arg0);
+        const result = await this.#actor.None(arg0);
         return result;
     }
     async Option(): Promise<void> {
-        const result = await this.actor.Option();
+        const result = await this.#actor.Option();
         return result;
     }
     async f(arg0: Option_, arg1: Some_, arg2: None_, arg3: CreateActorOptions_, arg4: Agent_): Promise<void> {
-        const result = await this.actor.f(arg0, arg1, arg2, arg3, arg4);
+        const result = await this.#actor.f(arg0, arg1, arg2, arg3, arg4);
         return result;
     }
     async g(arg0: Nothing): Promise<void> {
-        const result = await this.actor.g(to_candid_Nothing_n1(arg0));
+        const result = await this.#actor.g(to_candid_Nothing_n1(arg0));
         return result;
     }
     async h(arg0: SERVICE): Promise<void> {
-        const result = await this.actor.h(to_candid_SERVICE_n3(arg0));
+        const result = await this.#actor.h(to_candid_SERVICE_n3(arg0));
         return result;
     }
 }
