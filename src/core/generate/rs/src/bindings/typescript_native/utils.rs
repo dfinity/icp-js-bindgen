@@ -444,10 +444,6 @@ pub fn get_typescript_ident(name: &str, filter_keywords: bool) -> String {
     }
 }
 
-pub fn contains_unicode_characters(name: &str) -> bool {
-    name != get_typescript_ident(name, false)
-}
-
 /// Fallback for a name that sanitizes down to nothing at all.
 const EMPTY_IDENT_FALLBACK: &str = "_";
 
@@ -517,6 +513,78 @@ pub fn binding_ident_name(name: &str) -> String {
         Some(first) if !is_ident_start(first) => format!("_{sanitized}"),
         Some(_) => sanitized,
         None => EMPTY_IDENT_FALLBACK.to_string(),
+    }
+}
+
+/// A candid name that must not be written as a bare key, even though it is shaped like an
+/// identifier.
+///
+/// `{ __proto__: v }` sets the object's prototype instead of creating a property — and so
+/// does `{ '__proto__': v }`, so quoting does not help. Only a computed key creates an own
+/// property, and only then does bracket access read it back.
+const PROTO_KEY: &str = "__proto__";
+
+/// A candid field name in *property* position — an object literal key or an interface member.
+///
+/// Reserved words need no escaping here: `{ new: … }` is legal. Only the character set
+/// matters, so a name that is not identifier-shaped becomes a string literal.
+pub fn candid_prop_name(name: &str) -> PropName {
+    if name == PROTO_KEY {
+        PropName::Computed(ComputedPropName {
+            span: DUMMY_SP,
+            expr: Box::new(Expr::Lit(Lit::Str(string_literal(name)))),
+        })
+    } else if is_valid_binding_ident(name) {
+        PropName::Ident(get_ident(name).into())
+    } else {
+        PropName::Str(string_literal(name))
+    }
+}
+
+/// A candid field name as the key of a type member, which takes an expression rather than a
+/// [`PropName`]. Same rule as [`candid_prop_name`], except that a type member has no
+/// prototype to set, so `__proto__` needs no special case.
+pub fn candid_prop_key(name: &str) -> Box<Expr> {
+    Box::new(match is_valid_binding_ident(name) {
+        true => Expr::Ident(get_ident(name)),
+        false => Expr::Lit(Lit::Str(string_literal(name))),
+    })
+}
+
+/// A candid field name in *member-access* position: `value.x`, or `value["x"]` when the name
+/// is not identifier-shaped.
+///
+/// Quoting cannot rescue this position the way it does a property key — `value.'x'` is not
+/// valid TypeScript — so the access becomes computed instead.
+pub fn candid_member_prop(name: &str) -> MemberProp {
+    if name != PROTO_KEY && is_valid_binding_ident(name) {
+        MemberProp::Ident(get_ident(name).into())
+    } else {
+        MemberProp::Computed(ComputedPropName {
+            span: DUMMY_SP,
+            expr: Box::new(Expr::Lit(Lit::Str(string_literal(name)))),
+        })
+    }
+}
+
+/// A candid variant tag as an enum member id.
+///
+/// Reserved words are deliberately left bare: the conversion functions reference members by
+/// their candid tag, and `Status.new` is legal, so escaping the declaration alone would leave
+/// those references pointing at a member that does not exist.
+pub fn candid_enum_member_id(name: &str) -> TsEnumMemberId {
+    if is_valid_binding_ident(name) {
+        TsEnumMemberId::Ident(get_ident(name))
+    } else {
+        TsEnumMemberId::Str(string_literal(name))
+    }
+}
+
+fn string_literal(value: &str) -> Str {
+    Str {
+        span: DUMMY_SP,
+        value: value.into(),
+        raw: None,
     }
 }
 
@@ -606,11 +674,6 @@ pub fn candid_type_ident(name: &str) -> Ident {
 
 pub fn get_ident_guarded(name: &str) -> Ident {
     let ident_name = get_typescript_ident(name, true);
-    get_ident(&ident_name)
-}
-
-pub fn get_ident_guarded_keyword_ok(name: &str) -> Ident {
-    let ident_name: String = get_typescript_ident(name, false);
     get_ident(&ident_name)
 }
 

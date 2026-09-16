@@ -3,8 +3,8 @@ use super::comments::add_comments;
 use super::conversion_functions_generator::{TopLevelNodes, TypeConverter};
 use super::original_typescript_types::create_typed_array_type;
 use super::utils::{
-    binding_ident_name, candid_type_ident, get_ident, get_ident_guarded,
-    get_ident_guarded_keyword_ok,
+    binding_ident_name, candid_enum_member_id, candid_prop_key, candid_type_ident, get_ident,
+    get_ident_guarded,
 };
 use candid::types::{Field, Function, Label, Type, TypeEnv, TypeInner};
 use candid_parser::syntax::{self, IDLMergedProg, IDLType};
@@ -507,7 +507,7 @@ fn create_variant_type(
                         .into_iter()
                         .map(|(member_name, span)| TsEnumMember {
                             span,
-                            id: TsEnumMemberId::Ident(get_ident_guarded_keyword_ok(&member_name)),
+                            id: candid_enum_member_id(&member_name),
                             init: Some(Box::new(Expr::Lit(Lit::Str(Str {
                                 span: DUMMY_SP,
                                 value: member_name.into(),
@@ -828,7 +828,7 @@ fn create_property_signature(
     span: Span,
 ) -> TsTypeElement {
     let field_name = match &*field.id {
-        Label::Named(str) => Box::new(Expr::Ident(get_ident_guarded_keyword_ok(str))),
+        Label::Named(str) => candid_prop_key(str),
         Label::Id(n) | Label::Unnamed(n) => Box::new(Expr::Ident(Ident::new(
             format!("_{}_", n).into(),
             DUMMY_SP,
@@ -871,7 +871,7 @@ fn create_property_signature_for_variant(
     span: Span,
 ) -> TsTypeElement {
     let field_name = match &*field.id {
-        Label::Named(str) => Box::new(Expr::Ident(get_ident_guarded_keyword_ok(str))),
+        Label::Named(str) => candid_prop_key(str),
         Label::Id(n) | Label::Unnamed(n) => Box::new(Expr::Ident(Ident::new(
             format!("_{}_", n).into(),
             DUMMY_SP,

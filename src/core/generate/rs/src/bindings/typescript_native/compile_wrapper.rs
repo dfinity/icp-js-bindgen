@@ -1,8 +1,5 @@
 use super::conversion_functions_generator::TypeConverter;
-use super::utils::{
-    contains_unicode_characters, get_ident, get_ident_guarded, get_ident_guarded_keyword_ok,
-    service_class_name,
-};
+use super::utils::{candid_member_prop, get_ident, get_ident_guarded, service_class_name};
 use candid::types::{Function, Type, TypeEnv, TypeInner};
 use candid_parser::syntax::IDLMergedProg;
 use swc_core::common::{DUMMY_SP, SyntaxContext};
@@ -379,53 +376,24 @@ fn create_actor_method(
         })
         .collect::<Vec<_>>();
 
-    let actor_call = if contains_unicode_characters(method_id) {
-        Expr::Call(CallExpr {
+    let actor_call = Expr::Call(CallExpr {
+        span: DUMMY_SP,
+        callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
             span: DUMMY_SP,
-            callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
+            obj: Box::new(Expr::Member(MemberExpr {
                 span: DUMMY_SP,
-                obj: Box::new(Expr::Member(MemberExpr {
+                obj: Box::new(Expr::This(ThisExpr { span: DUMMY_SP })),
+                prop: MemberProp::Ident(IdentName {
                     span: DUMMY_SP,
-                    obj: Box::new(Expr::This(ThisExpr { span: DUMMY_SP })),
-                    prop: MemberProp::Ident(IdentName {
-                        span: DUMMY_SP,
-                        sym: "actor".into(),
-                    }),
-                })),
-                prop: MemberProp::Computed(ComputedPropName {
-                    span: DUMMY_SP,
-                    expr: Box::new(Expr::Lit(Lit::Str(Str {
-                        span: DUMMY_SP,
-                        value: method_id.into(),
-                        raw: None,
-                    }))),
+                    sym: "actor".into(),
                 }),
-            }))),
-            args: converted_args,
-            type_args: None,
-            ctxt: SyntaxContext::empty(),
-        })
-    } else {
-        // Create the function call to the actor method
-        Expr::Call(CallExpr {
-            span: DUMMY_SP,
-            callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
-                span: DUMMY_SP,
-                obj: Box::new(Expr::Member(MemberExpr {
-                    span: DUMMY_SP,
-                    obj: Box::new(Expr::This(ThisExpr { span: DUMMY_SP })),
-                    prop: MemberProp::Ident(IdentName {
-                        span: DUMMY_SP,
-                        sym: "actor".into(),
-                    }),
-                })),
-                prop: MemberProp::Ident(get_ident_guarded_keyword_ok(method_id).into()),
-            }))),
-            args: converted_args,
-            type_args: None,
-            ctxt: SyntaxContext::empty(),
-        })
-    };
+            })),
+            prop: candid_member_prop(method_id),
+        }))),
+        args: converted_args,
+        type_args: None,
+        ctxt: SyntaxContext::empty(),
+    });
 
     // Create await expression to call the actor
     let await_expr = Expr::Await(AwaitExpr {
