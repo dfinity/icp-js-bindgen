@@ -1,0 +1,11 @@
+// Candid names that are legal TypeScript identifiers but not ASCII. Quoting them is legal in
+// property position, so the two positions used to disagree: the type members were quoted and
+// the conversions two functions below were not. `opt` fields and a payload variant force the
+// conversion path.
+type R = record { "日本語" : nat; "$dollar" : opt nat };
+type V = variant { "Ünicode" : nat; other };
+
+service : () -> {
+  round_trip_record : (R) -> (R);
+  round_trip_variant : (V) -> (V);
+}

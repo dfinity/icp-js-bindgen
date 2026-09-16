@@ -5,7 +5,7 @@ use swc_core::ecma::ast::*;
 
 use super::super::javascript::escaped_ident_name;
 use super::preamble::imports::declarations_module_specifier;
-use super::utils::{ImportLocals, get_ident_guarded_keyword_ok};
+use super::utils::{ImportLocals, candid_prop_key};
 
 pub struct OriginalTypescriptTypes<'a> {
     env: &'a TypeEnv,
@@ -156,11 +156,7 @@ impl<'a> OriginalTypescriptTypes<'a> {
                                 TsTypeElement::TsPropertySignature(TsPropertySignature {
                                     span: DUMMY_SP,
                                     readonly: false,
-                                    key: Box::new(Expr::Ident(Ident::new(
-                                        field_name.into(),
-                                        DUMMY_SP,
-                                        SyntaxContext::empty(),
-                                    ))),
+                                    key: candid_prop_key(&field_name),
                                     computed: false,
                                     optional: false,
                                     type_ann: Some(Box::new(TsTypeAnn {
@@ -353,12 +349,8 @@ impl<'a> OriginalTypescriptTypes<'a> {
 
     fn create_property_signature(&mut self, field: &Field) -> TsTypeElement {
         let field_name = match &*field.id {
-            Label::Named(str) => Box::new(Expr::Ident(get_ident_guarded_keyword_ok(str))),
-            Label::Id(n) | Label::Unnamed(n) => Box::new(Expr::Ident(Ident::new(
-                format!("_{}_", n).into(),
-                DUMMY_SP,
-                SyntaxContext::empty(),
-            ))),
+            Label::Named(str) => candid_prop_key(str),
+            Label::Id(n) | Label::Unnamed(n) => candid_prop_key(&format!("_{}_", n)),
         };
 
         TsTypeElement::TsPropertySignature(TsPropertySignature {

@@ -100,6 +100,8 @@ describe('generate', () => {
     'collide_class',
     'import_local_collision',
     'method_arg_names',
+    'variant_payload_tags',
+    'unicode_names',
   ])('should generate a bindgen', async (serviceName) => {
     const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 
