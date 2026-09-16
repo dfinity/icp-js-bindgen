@@ -28,7 +28,7 @@ pub(crate) fn is_tuple_fields(fs: &[Field]) -> bool {
     true
 }
 
-static KEYWORDS: [&str; 64] = [
+pub(crate) static KEYWORDS: [&str; 64] = [
     "abstract",
     "arguments",
     "await",

@@ -130,11 +130,7 @@ export async function generate(options: GenerateOptions) {
 
   const didFilePath = resolve(didFile);
   const outputFileName = basename(didFile, DID_FILE_EXTENSION);
-
-  await ensureDir(outDir);
-  if (!declarationsFlat) {
-    await ensureDir(resolve(outDir, 'declarations'));
-  }
+  const actorDisabled = output.actor?.disabled ?? false;
 
   const result = wasmGenerate({
     did_file_path: didFilePath,
@@ -143,7 +139,7 @@ export async function generate(options: GenerateOptions) {
       root_exports: declarationsRootExports,
       typescript: declarationsTypescript,
     },
-    actor_disabled: output.actor?.disabled ?? false,
+    actor_disabled: actorDisabled,
   });
 
   // Extract all strings from the WASM object synchronously before any async
@@ -160,6 +156,12 @@ export async function generate(options: GenerateOptions) {
     service_ts: result.service_ts,
   };
   result.free();
+
+  // Only once generation has succeeded, so a refused input leaves nothing behind.
+  await ensureDir(outDir);
+  if (!declarationsFlat) {
+    await ensureDir(resolve(outDir, 'declarations'));
+  }
 
   await writeBindings({
     bindings,
