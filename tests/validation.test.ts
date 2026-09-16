@@ -42,11 +42,24 @@ describe('generation refuses inconsistent output', () => {
     // prototype rather than declaring the member, so it is missing at runtime. There is no
     // computed form for an enum member, so quoting cannot rescue it either.
     await expect(generateFixture('unrepresentable_tag')).rejects.toThrow(/__proto__/);
+  });
+
   it('reports two variant tag sets that sanitize to the same enum name', async () => {
     // Sanitizing tags into an identifier is what makes these collide. Their members are
     // disjoint, so TypeScript would merge the two enums and the merged type would accept a
     // member neither candid variant has.
     await expect(generateFixture('collide_variant_tags')).rejects.toThrow(/Variant_my_f/);
+  });
+
+  // Two groups. The class occupies `constructor` and `actor` itself, so a method of either
+  // name is unreachable. `Object.prototype` members are reachable but override a protocol:
+  // coercing or logging the actor would call the method and fire a canister call.
+  it.each([
+    ['unrepresentable_method', /constructor/],
+    ['unrepresentable_actor', /actor/],
+    ['unrepresentable_prototype', /toString/],
+  ])('refuses a candid method the wrapper cannot carry: %s', async (fixture, expected) => {
+    await expect(generateFixture(fixture as string)).rejects.toThrow(expected as RegExp);
   });
 
   it('reports two candid types that escape to the same name', async () => {

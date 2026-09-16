@@ -49,6 +49,24 @@ describe('generated conversions, executed', () => {
     expect(from_candid_Falsy(wire as never)).toEqual({ zero: 0n, no: false, empty: '' });
   });
 
+  it('keeps a record field named __proto__ as an own property', async () => {
+    const { to_candid_Proto, from_candid_Proto } = await conversionsFor('conversion_encoding');
+
+    // A computed key in the *input* too: `{ __proto__: 7n }` would set the prototype here
+    // rather than create the field, which is the same trap the generator has to avoid.
+    const input = { ['__proto__']: 7n, ok: 1n };
+    const wire = to_candid_Proto(input as never) as Record<string, unknown>;
+
+    // A bare or quoted key would have set the prototype and dropped the field instead.
+    expect(Object.hasOwn(wire, '__proto__')).toBe(true);
+    expect(wire['__proto__']).toEqual([7n]);
+    expect(Object.getPrototypeOf(wire)).toBe(Object.prototype);
+
+    const back = from_candid_Proto(wire as never) as Record<string, unknown>;
+    expect(Object.hasOwn(back, '__proto__')).toBe(true);
+    expect(back['__proto__']).toBe(7n);
+  });
+
   it('does not match variant tags inherited from Object.prototype', async () => {
     const { from_candid_Inherited } = await conversionsFor('conversion_encoding');
 

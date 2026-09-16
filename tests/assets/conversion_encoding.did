@@ -12,7 +12,12 @@ type Falsy = record {
 
 type Inherited = variant { constructor; toString; plain };
 
+// `{ __proto__: v }` sets the prototype instead of creating a property, and so does the
+// quoted form — only a computed key creates an own property that bracket access reads back.
+type Proto = record { "__proto__" : opt nat; ok : nat };
+
 service : () -> {
   round_trip_falsy : (Falsy) -> (Falsy);
   round_trip_inherited : (Inherited) -> (Inherited);
+  round_trip_proto : (Proto) -> (Proto);
 }

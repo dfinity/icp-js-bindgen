@@ -402,6 +402,49 @@ If both the `agent` and `agentOptions` are provided, the `agentOptions` will be 
 
 If provided, the `actorOptions` will be passed to the [`Actor.createActor`](https://js.icp.build/core/latest/libs/agent/api/classes/actor/#createactor) function. Otherwise, the default options will be used.
 
+## Names the generator cannot carry
+
+Most candid names pass through untouched. Where a name cannot be spelled in TypeScript, the
+generator sanitizes or quotes it; where it cannot be carried faithfully at all, generation
+fails with a diagnostic rather than emitting something that does not compile or silently does
+the wrong thing.
+
+### Type names
+
+A candid type is declared under its own name, escaped when that name is a reserved word, a
+JavaScript global, or something the generated module already occupies — the types it imports
+from `@icp-sdk/core`, and the `Option` / `Some` / `None` / `CreateActorOptions` helpers it
+declares. So `type Option` in a `.did` becomes `Option_`, and `type Agent` becomes `Agent_`.
+
+Two candid types that escape to the same name, or two variants whose tags sanitize to the
+same enum name, fail generation. TypeScript would merge those declarations silently, producing
+a type that claims members the value does not have.
+
+### Method names
+
+Method names are property keys, not declarations, so they are never escaped: a method keeps
+exactly the name the `.did` gives it, quoted where it has to be. `"my-method"` and `"new"` are
+both fine — the latter is quoted because a bare `new(): T` would declare the interface
+*constructible* rather than declaring a method called `new`.
+
+Three groups are refused:
+
+| method name | why |
+| --- | --- |
+| `constructor` | a class member of that name *is* the constructor; the spelling that is not overwrites `prototype.constructor` |
+| `actor` | the wrapper holds the actor it wraps in a field of that name, so the field shadows the method |
+| `toString`, `valueOf`, `hasOwnProperty`, and the rest of `Object.prototype` | overriding these changes behaviour JavaScript relies on |
+
+The first two are unreachable whichever way they are emitted. The third group is a deliberate
+restriction rather than an impossibility: such a method would work if you called it directly,
+but it also overrides a protocol — `String(actor)` invokes `toString`, so interpolating or
+logging the actor would fire a canister call and then throw `Cannot convert object to
+primitive value`. Refusing is the safer default.
+
+If you need one of these names, the `.did` has to rename the method. Please open an issue if
+that is a real constraint for your canister — the restriction is a judgement, not a hard
+limit of the language.
+
 ## `declarations/`
 
 This folder contains the actual Candid JS bindings. It generates the same bindings that the [`dfx generate`](https://internetcomputer.org/docs/building-apps/developer-tools/dfx/dfx-generate) command was generating.

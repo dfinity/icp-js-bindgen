@@ -26,9 +26,15 @@ export interface Falsy {
 export type Inherited = { 'toString' : null } |
   { 'constructor' : null } |
   { 'plain' : null };
+/**
+ * `{ __proto__: v }` sets the prototype instead of creating a property, and so does the
+ * quoted form — only a computed key creates an own property that bracket access reads back.
+ */
+export interface Proto { 'ok' : bigint, '__proto__' : [] | [bigint] }
 export interface _SERVICE {
   'round_trip_falsy' : ActorMethod<[Falsy], Falsy>,
   'round_trip_inherited' : ActorMethod<[Inherited], Inherited>,
+  'round_trip_proto' : ActorMethod<[Proto], Proto>,
 }
 export declare const idlFactory: IDL.InterfaceFactory;
 export declare const init: (args: { IDL: typeof IDL }) => IDL.Type[];

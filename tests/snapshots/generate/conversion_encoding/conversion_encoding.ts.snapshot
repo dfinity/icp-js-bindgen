@@ -64,6 +64,14 @@ export interface Falsy {
     zero?: bigint;
     empty?: string;
 }
+/**
+ * `{ __proto__: v }` sets the prototype instead of creating a property, and so does the
+ * quoted form — only a computed key creates an own property that bracket access reads back.
+ */
+export interface Proto {
+    ok: bigint;
+    __proto__?: bigint;
+}
 export enum Inherited {
     toString = "toString",
     constructor = "constructor",
@@ -72,8 +80,9 @@ export enum Inherited {
 export interface conversion_encodingInterface {
     round_trip_falsy(arg0: Falsy): Promise<Falsy>;
     round_trip_inherited(arg0: Inherited): Promise<Inherited>;
+    round_trip_proto(arg0: Proto): Promise<Proto>;
 }
-import type { Falsy as _Falsy, Inherited as _Inherited } from "./declarations/conversion_encoding.did";
+import type { Falsy as _Falsy, Inherited as _Inherited, Proto as _Proto } from "./declarations/conversion_encoding.did";
 export class Conversion_encoding implements conversion_encodingInterface {
     constructor(private actor: ActorSubclass<_SERVICE>){}
     async round_trip_falsy(arg0: Falsy): Promise<Falsy> {
@@ -84,12 +93,19 @@ export class Conversion_encoding implements conversion_encodingInterface {
         const result = await this.actor.round_trip_inherited(to_candid_Inherited_n8(arg0));
         return from_candid_Inherited_n9(result);
     }
+    async round_trip_proto(arg0: Proto): Promise<Proto> {
+        const result = await this.actor.round_trip_proto(to_candid_Proto_n10(arg0));
+        return from_candid_Proto_n12(result);
+    }
 }
 function from_candid_Falsy_n3(value: _Falsy): Falsy {
     return from_candid_record_n4(value);
 }
 function from_candid_Inherited_n9(value: _Inherited): Inherited {
     return "toString" in value && Object.hasOwn(value, "toString") ? Inherited.toString : "constructor" in value && Object.hasOwn(value, "constructor") ? Inherited.constructor : "plain" in value ? Inherited.plain : value as never;
+}
+function from_candid_Proto_n12(value: _Proto): Proto {
+    return from_candid_record_n13(value);
 }
 function from_candid_opt_n5(value: [] | [boolean]): boolean | null {
     return value.length === 0 ? null : value[0];
@@ -99,6 +115,18 @@ function from_candid_opt_n6(value: [] | [bigint]): bigint | null {
 }
 function from_candid_opt_n7(value: [] | [string]): string | null {
     return value.length === 0 ? null : value[0];
+}
+function from_candid_record_n13(value: {
+    ok: bigint;
+    __proto__: [] | [bigint];
+}): {
+    ok: bigint;
+    __proto__?: bigint;
+} {
+    return {
+        ok: value.ok,
+        ["__proto__"]: record_opt_to_undefined(from_candid_opt_n6(value["__proto__"]))
+    };
 }
 function from_candid_record_n4(value: {
     no: [] | [boolean];
@@ -129,6 +157,21 @@ function to_candid_Inherited_n8(value: Inherited): _Inherited {
     } : value == Inherited.plain ? {
         plain: null
     } : value;
+}
+function to_candid_Proto_n10(value: Proto): _Proto {
+    return to_candid_record_n11(value);
+}
+function to_candid_record_n11(value: {
+    ok: bigint;
+    __proto__?: bigint;
+}): {
+    ok: bigint;
+    __proto__: [] | [bigint];
+} {
+    return {
+        ok: value.ok,
+        ["__proto__"]: value["__proto__"] !== undefined && value["__proto__"] !== null ? candid_some(value["__proto__"]) : candid_none()
+    };
 }
 function to_candid_record_n2(value: {
     no?: boolean;

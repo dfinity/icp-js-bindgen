@@ -1,0 +1,9 @@
+// Method names are property keys, not declarations: they collide with nothing in the module's
+// namespace, so they are quoted where they must be and otherwise left exactly as candid
+// spells them. Renaming one would change the generated client's public API while the wire
+// call kept the candid name.
+service : () -> {
+  "my-method" : () -> ();
+  "new" : () -> ();
+  ok : () -> ();
+}

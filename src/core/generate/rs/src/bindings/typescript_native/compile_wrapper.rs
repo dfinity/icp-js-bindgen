@@ -1,5 +1,5 @@
 use super::conversion_functions_generator::TypeConverter;
-use super::utils::{candid_member_prop, get_ident, get_ident_guarded, service_class_name};
+use super::utils::{candid_member_prop, candid_method_name, get_ident, service_class_name};
 use candid::types::{Function, Type, TypeEnv, TypeInner};
 use candid_parser::syntax::IDLMergedProg;
 use swc_core::common::{DUMMY_SP, SyntaxContext};
@@ -438,7 +438,7 @@ fn create_actor_method(
 
     ClassMember::Method(ClassMethod {
         span: DUMMY_SP,
-        key: PropName::Ident(get_ident_guarded(method_id).into()),
+        key: candid_method_name(method_id),
         function: Box::new(swc_core::ecma::ast::Function {
             params,
             decorators: vec![],

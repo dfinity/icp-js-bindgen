@@ -425,25 +425,6 @@ pub fn get_ident(name: &str) -> Ident {
     Ident::new(name.into(), DUMMY_SP, SyntaxContext::empty())
 }
 
-pub fn get_typescript_ident(name: &str, filter_keywords: bool) -> String {
-    // Handle empty names by returning a quoted empty string
-    if name.is_empty() {
-        return "\"\"".to_string();
-    }
-
-    if filter_keywords && KEYWORDS.contains(&name) {
-        return format!("{}_", name);
-    }
-
-    if name.chars().any(|c| !c.is_ascii_alphanumeric() && c != '_') {
-        // If the name contains non-alphanumeric characters (except underscore),
-        // or contains quotes, we need to quote it to make it a valid TypeScript property name
-        format!("'{}'", name.escape_debug())
-    } else {
-        name.to_string()
-    }
-}
-
 /// Fallback for a name that sanitizes down to nothing at all.
 const EMPTY_IDENT_FALLBACK: &str = "_";
 
@@ -567,6 +548,54 @@ pub fn candid_member_prop(name: &str) -> MemberProp {
     }
 }
 
+/// Names every plain object inherits from `Object.prototype`.
+///
+/// Two things go wrong with them, in different places. `"name" in value` is true for all of
+/// them whatever an object holds, so a variant tag of one of these names matched everything.
+/// And a wrapper *method* of one of these names overrides behaviour JavaScript relies on:
+/// `String(actor)` invokes `toString`, so coercing or logging the actor fires a canister call
+/// and then throws `Cannot convert object to primitive value`.
+pub static OBJECT_PROTOTYPE_NAMES: [&str; 12] = [
+    "constructor",
+    "toString",
+    "toLocaleString",
+    "valueOf",
+    "hasOwnProperty",
+    "isPrototypeOf",
+    "propertyIsEnumerable",
+    "__proto__",
+    "__defineGetter__",
+    "__defineSetter__",
+    "__lookupGetter__",
+    "__lookupSetter__",
+];
+
+/// A candid *method* name, as an interface member or a class method.
+///
+/// Quoted when it is not identifier-shaped, and also when it is `new`: a bare `new(): T` in an
+/// interface declares the type *constructible* rather than declaring a method called `new`,
+/// and `"new"(): T` is the spelling that means the latter.
+///
+/// Never escaped. A method is a property, not a declaration, so it collides with nothing in
+/// the module — and renaming one would change the generated client's public API while the
+/// wire call kept the candid name.
+pub fn candid_method_name(name: &str) -> PropName {
+    if name != "new" && is_valid_binding_ident(name) {
+        PropName::Ident(get_ident(name).into())
+    } else {
+        PropName::Str(string_literal(name))
+    }
+}
+
+/// The same name as the key of a type member, which takes an expression rather than a
+/// [`PropName`].
+pub fn candid_method_key(name: &str) -> Box<Expr> {
+    Box::new(match candid_method_name(name) {
+        PropName::Ident(ident) => Expr::Ident(get_ident(&ident.sym)),
+        _ => Expr::Lit(Lit::Str(string_literal(name))),
+    })
+}
+
 /// A candid variant tag as an enum member id.
 ///
 /// Reserved words are deliberately left bare: the conversion functions reference members by
@@ -670,11 +699,6 @@ pub fn candid_type_ident(name: &str) -> Ident {
     } else {
         get_ident(&escape_reserved(shaped))
     }
-}
-
-pub fn get_ident_guarded(name: &str) -> Ident {
-    let ident_name = get_typescript_ident(name, true);
-    get_ident(&ident_name)
 }
 
 #[cfg(test)]
@@ -786,10 +810,11 @@ mod sanitizer_tests {
         assert_eq!(&*candid_type_ident("Map").sym, "Map_");
     }
 
-    /// Property position keeps quoting; binding position must not.
+    /// Property position takes a string literal; binding position is sanitized. Neither
+    /// puts a quoted name inside an `Ident`, which is what the two used to share.
     #[test]
     fn property_and_binding_paths_differ() {
-        assert_eq!(get_typescript_ident("my-field", false), "'my-field'");
+        assert!(matches!(candid_prop_name("my-field"), PropName::Str(_)));
         assert_eq!(binding_ident_name("my-field"), "my_field");
     }
 }

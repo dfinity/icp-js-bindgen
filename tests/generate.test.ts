@@ -43,6 +43,7 @@ describe('generate', () => {
     'preamble_helper_names',
     'variant_payload_tags',
     'conversion_encoding',
+    'method_names',
   ])('should generate a bindgen', async (serviceName) => {
     const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 

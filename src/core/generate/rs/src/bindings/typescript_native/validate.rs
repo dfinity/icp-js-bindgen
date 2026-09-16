@@ -10,14 +10,16 @@
 //! still does not parse. Semantics are the typechecker's job; `tests/typecheck.test.ts` runs
 //! `tsc` over the snapshots for that.
 
-use super::utils::KEYWORDS;
+use super::utils::{KEYWORDS, OBJECT_PROTOTYPE_NAMES};
 use std::collections::HashMap;
 use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::{Visit, VisitWith};
 
 /// Everything that must hold of a generated module before it is rendered.
 pub fn check_module(module: &Module, target: &str) -> Result<(), String> {
+    check_representable_methods(module, target)?;
     check_representable_enum_members(module, target)?;
+    check_identifiers(module, target)?;
     check_unique_declarations(module, target)?;
     check_type_references(module, target)
 }
@@ -42,6 +44,105 @@ fn check_representable_enum_members(module: &Module, target: &str) -> Result<(),
              member, so it would be missing at runtime. Rename the tag in the .did file."
         )),
         None => Ok(()),
+    }
+}
+
+/// Names the generated wrapper class occupies itself.
+///
+/// The class body is exactly its constructor plus the candid methods, and it extends nothing
+/// — so this is those two names. Adding a member to the class means adding it here.
+const CLASS_MEMBER_NAMES: [(&str, &str); 2] = [
+    (
+        "constructor",
+        "a class member of that name is the class constructor, and the spelling that is not \
+         overwrites `prototype.constructor`",
+    ),
+    (
+        "actor",
+        "the wrapper holds the actor it wraps in a field of that name, which shadows the \
+         method at runtime",
+    ),
+];
+
+/// A candid method whose name the wrapper cannot carry faithfully.
+///
+/// Two groups. The class occupies `constructor` and `actor` itself, and a method of either
+/// name is unreachable — TypeScript rejects the class outright, or the constructor's field
+/// assignment wins.
+///
+/// The rest are `Object.prototype` members, which JavaScript invokes on its own behalf. A
+/// method named `toString` is reachable and typechecks, but it overrides a protocol: coercing
+/// or logging the actor calls it, so `String(actor)` fires a canister call and then throws
+/// `Cannot convert object to primitive value`. `valueOf` and `toLocaleString` do the same, and
+/// library code calls `hasOwnProperty` on objects it knows nothing about.
+///
+/// Refusing those is a judgement rather than a necessity: the method itself would work, and a
+/// `.did` naming one becomes ungeneratable. It is the safer default — a canister call should
+/// not happen because something interpolated the actor into a string — and it is recorded in
+/// `docs/src/content/docs/structure.md` so the limitation is discoverable rather than a
+/// surprise.
+fn check_representable_methods(module: &Module, target: &str) -> Result<(), String> {
+    let mut methods = ClassMethodNames::default();
+    module.visit_with(&mut methods);
+
+    for (reserved, reason) in CLASS_MEMBER_NAMES {
+        if methods.names.iter().any(|name| name == reserved) {
+            return Err(format!(
+                "generated {target} cannot represent the candid method `{reserved}`: {reason}. \
+                 Rename the method in the .did file."
+            ));
+        }
+    }
+
+    match methods
+        .names
+        .into_iter()
+        .find(|name| OBJECT_PROTOTYPE_NAMES.contains(&name.as_str()))
+    {
+        Some(name) => Err(format!(
+            "generated {target} will not expose the candid method `{name}`: every object \
+             inherits a member of that name, and overriding it changes behaviour JavaScript \
+             relies on — coercing or logging the actor would call the method, firing a \
+             canister call. Rename the method in the .did file."
+        )),
+        None => Ok(()),
+    }
+}
+
+/// Every `Ident` the module emits must actually be an identifier.
+///
+/// The generator builds TypeScript as a typed AST, so the only way it can emit something that
+/// does not parse is by putting a name into an `Ident` that cannot be one. A candid name that
+/// is not identifier-shaped has to become a string literal or a computed key instead —
+/// `candid_prop_name`, `candid_prop_key` and `candid_member_prop` choose between those.
+///
+/// Checking the finished module rather than the call sites is the point: the recurring defect
+/// was a caller deciding its name needed no guarding, and there are far too many `Ident`
+/// constructions to keep that judgement correct by inspection.
+fn check_identifiers(module: &Module, target: &str) -> Result<(), String> {
+    let mut idents = Identifiers::default();
+    module.visit_with(&mut idents);
+
+    match idents.names.into_iter().find(|n| !is_valid_ident(n)) {
+        Some(name) => Err(format!(
+            "generated {target} emits `{name}` as an identifier, which is not one. A candid \
+             name that cannot be an identifier belongs in a string literal or a computed key, \
+             not in an `Ident`."
+        )),
+        None => Ok(()),
+    }
+}
+
+/// Deliberately looser than the generator's own rule, so this asks "would TypeScript accept
+/// this" rather than restating the implementation.
+fn is_valid_ident(name: &str) -> bool {
+    let mut chars = name.chars();
+    match chars.next() {
+        Some(first) => {
+            (first == '_' || first == '$' || unicode_ident::is_xid_start(first))
+                && chars.all(|c| c == '$' || unicode_ident::is_xid_continue(c))
+        }
+        None => false,
     }
 }
 
@@ -176,6 +277,40 @@ impl Visit for EnumMemberNames {
             TsEnumMemberId::Str(s) => s.value.to_string(),
         };
         self.names.push(name);
+        node.visit_children_with(self);
+    }
+}
+
+#[derive(Default)]
+struct ClassMethodNames {
+    names: Vec<String>,
+}
+
+impl Visit for ClassMethodNames {
+    fn visit_class_method(&mut self, node: &ClassMethod) {
+        let name = match &node.key {
+            PropName::Ident(ident) => Some(ident.sym.to_string()),
+            PropName::Str(s) => Some(s.value.to_string()),
+            _ => None,
+        };
+        self.names.extend(name);
+        node.visit_children_with(self);
+    }
+}
+
+#[derive(Default)]
+struct Identifiers {
+    names: Vec<String>,
+}
+
+impl Visit for Identifiers {
+    fn visit_ident(&mut self, node: &Ident) {
+        self.names.push(node.sym.to_string());
+        node.visit_children_with(self);
+    }
+
+    fn visit_ident_name(&mut self, node: &IdentName) {
+        self.names.push(node.sym.to_string());
         node.visit_children_with(self);
     }
 }
