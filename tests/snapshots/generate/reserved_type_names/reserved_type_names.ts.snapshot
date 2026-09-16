@@ -126,7 +126,7 @@ function to_candid_record_n3(value: {
     c: [] | [bigint];
 } {
     return {
-        c: value.c ? candid_some(value.c) : candid_none()
+        c: value.c !== undefined && value.c !== null ? candid_some(value.c) : candid_none()
     };
 }
 function to_candid_string_n1(value: string_): _string {
