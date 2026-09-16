@@ -295,6 +295,12 @@ type MyType =
 
 This type is the TypeScript interface for the service. It contains all the methods that are defined in the [Candid service](https://github.com/dfinity/candid/blob/master/spec/Candid.md#services) in the `.did` file.
 
+`<service-name>` is the basename of the `.did` file. Characters that cannot appear in a generated identifier are replaced with a single `_` per run, so `my-backend.did` produces `my_backendInterface` and the `My_backend` class — the same names as if the file had been called `my_backend.did`. The generated declarations are still imported under the original filename.
+
+Accepted characters are ASCII letters, digits, `_` and `$`, plus Unicode characters in `XID_Start`/`XID_Continue`. That is marginally stricter than TypeScript's own identifier grammar, so a small number of uncommon Unicode characters are replaced even though TypeScript would have accepted them.
+
+The class name is additionally suffixed with `_` when capitalizing it would shadow a JavaScript built-in, so `map.did` produces the class `Map_` rather than `Map`.
+
 For example, a Candid service will be represented as:
 
 <div class="code-comparison">
@@ -316,7 +322,7 @@ service : {
 <div class="code-right">
 
 ```typescript title="hello_world.ts"
-interface helloWorldInterface = {
+interface hello_worldInterface = {
   greet: (name: string) => Promise<string>;
 };
 ```
@@ -350,7 +356,7 @@ service : {
 <div class="code-right">
 
 ```typescript title="hello_world.ts"
-class HelloWorld implements helloWorldInterface {
+class Hello_world implements hello_worldInterface {
   constructor(
     private actor: ActorSubclass<_SERVICE>,
   ) {}

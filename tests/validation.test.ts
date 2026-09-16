@@ -42,6 +42,11 @@ describe('generation refuses inconsistent output', () => {
     // prototype rather than declaring the member, so it is missing at runtime. There is no
     // computed form for an enum member, so quoting cannot rescue it either.
     await expect(generateFixture('unrepresentable_tag')).rejects.toThrow(/__proto__/);
+  it('reports two variant tag sets that sanitize to the same enum name', async () => {
+    // Sanitizing tags into an identifier is what makes these collide. Their members are
+    // disjoint, so TypeScript would merge the two enums and the merged type would accept a
+    // member neither candid variant has.
+    await expect(generateFixture('collide_variant_tags')).rejects.toThrow(/Variant_my_f/);
   });
 
   it('reports two candid types that escape to the same name', async () => {
