@@ -1,0 +1,16 @@
+// Candid types whose names are already taken by the fixed preamble the generator emits.
+// They have to be escaped like any other name the module already uses, which the candid
+// author cannot be asked to avoid — the .did is often someone else's canister.
+type Option = record { a : nat };
+type Some = record { b : nat };
+type None = record { c : nat };
+type CreateActorOptions = record { d : nat };
+
+// An empty variant has no tags to become enum members, so it lowers to `never` and needs a
+// type alias rather than an enum declaration.
+type Nothing = variant {};
+
+service : () -> {
+  f : (Option, Some, None, CreateActorOptions) -> ();
+  g : (Nothing) -> ();
+}

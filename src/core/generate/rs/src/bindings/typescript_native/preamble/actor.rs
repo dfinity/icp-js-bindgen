@@ -1,7 +1,7 @@
 use swc_core::common::DUMMY_SP;
 use swc_core::ecma::ast::*;
 
-use crate::bindings::typescript_native::utils::get_ident_guarded;
+use crate::bindings::typescript_native::utils::get_ident;
 
 /// Creates the CreateActorOptions interface used by both wrapper and interface files
 pub fn create_actor_options_interface() -> TsInterfaceDecl {
@@ -17,14 +17,14 @@ pub fn create_actor_options_interface() -> TsInterfaceDecl {
                 TsTypeElement::TsPropertySignature(TsPropertySignature {
                     span: DUMMY_SP,
                     readonly: false,
-                    key: Box::new(Expr::Ident(get_ident_guarded("agent"))),
+                    key: Box::new(Expr::Ident(get_ident("agent"))),
                     computed: false,
                     optional: true,
                     type_ann: Some(Box::new(TsTypeAnn {
                         span: DUMMY_SP,
                         type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
                             span: DUMMY_SP,
-                            type_name: TsEntityName::Ident(get_ident_guarded("Agent")),
+                            type_name: TsEntityName::Ident(get_ident("Agent")),
                             type_params: None,
                         })),
                     })),
@@ -32,14 +32,14 @@ pub fn create_actor_options_interface() -> TsInterfaceDecl {
                 TsTypeElement::TsPropertySignature(TsPropertySignature {
                     span: DUMMY_SP,
                     readonly: false,
-                    key: Box::new(Expr::Ident(get_ident_guarded("agentOptions"))),
+                    key: Box::new(Expr::Ident(get_ident("agentOptions"))),
                     computed: false,
                     optional: true,
                     type_ann: Some(Box::new(TsTypeAnn {
                         span: DUMMY_SP,
                         type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
                             span: DUMMY_SP,
-                            type_name: TsEntityName::Ident(get_ident_guarded("HttpAgentOptions")),
+                            type_name: TsEntityName::Ident(get_ident("HttpAgentOptions")),
                             type_params: None,
                         })),
                     })),
@@ -47,14 +47,14 @@ pub fn create_actor_options_interface() -> TsInterfaceDecl {
                 TsTypeElement::TsPropertySignature(TsPropertySignature {
                     span: DUMMY_SP,
                     readonly: false,
-                    key: Box::new(Expr::Ident(get_ident_guarded("actorOptions"))),
+                    key: Box::new(Expr::Ident(get_ident("actorOptions"))),
                     computed: false,
                     optional: true,
                     type_ann: Some(Box::new(TsTypeAnn {
                         span: DUMMY_SP,
                         type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
                             span: DUMMY_SP,
-                            type_name: TsEntityName::Ident(get_ident_guarded("ActorConfig")),
+                            type_name: TsEntityName::Ident(get_ident("ActorConfig")),
                             type_params: None,
                         })),
                     })),

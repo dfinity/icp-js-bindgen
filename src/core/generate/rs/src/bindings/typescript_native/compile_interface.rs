@@ -5,7 +5,7 @@ use super::new_typescript_native_types::{
 use super::preamble::imports::interface_imports;
 use super::preamble::options::interface_options_utils;
 use super::utils::EnumDeclarations;
-use super::utils::get_ident_guarded;
+use super::utils::get_ident;
 use super::utils::render_ast;
 use super::validate::check_module;
 use crate::bindings::typescript_native::comments::add_comments;
@@ -194,7 +194,7 @@ fn add_create_actor_interface_exports(module: &mut Module, service_name: &str) {
 
     // createActor function declaration (no implementation)
     let create_actor_fn_decl = FnDecl {
-        ident: get_ident_guarded("createActor"),
+        ident: get_ident("createActor"),
         declare: true,
         function: Box::new(swc_core::ecma::ast::Function {
             params: vec![
@@ -202,7 +202,7 @@ fn add_create_actor_interface_exports(module: &mut Module, service_name: &str) {
                     span: DUMMY_SP,
                     decorators: vec![],
                     pat: Pat::Ident(BindingIdent {
-                        id: get_ident_guarded("canisterId"),
+                        id: get_ident("canisterId"),
                         type_ann: Some(Box::new(TsTypeAnn {
                             span: DUMMY_SP,
                             type_ann: Box::new(TsType::TsKeywordType(TsKeywordType {
@@ -218,14 +218,12 @@ fn add_create_actor_interface_exports(module: &mut Module, service_name: &str) {
                     pat: Pat::Assign(AssignPat {
                         span: DUMMY_SP,
                         left: Box::new(Pat::Ident(BindingIdent {
-                            id: get_ident_guarded("options"),
+                            id: get_ident("options"),
                             type_ann: Some(Box::new(TsTypeAnn {
                                 span: DUMMY_SP,
                                 type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
                                     span: DUMMY_SP,
-                                    type_name: TsEntityName::Ident(get_ident_guarded(
-                                        "CreateActorOptions",
-                                    )),
+                                    type_name: TsEntityName::Ident(get_ident("CreateActorOptions")),
                                     type_params: None,
                                 })),
                             })),

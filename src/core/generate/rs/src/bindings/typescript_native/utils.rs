@@ -256,7 +256,7 @@ impl<W: WriteJs> WriteJs for NewlineAfterBlockComments<W> {
 use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::*;
 
-pub static KEYWORDS: [&str; 125] = [
+pub static KEYWORDS: [&str; 129] = [
     // Original JavaScript keywords
     "abstract",
     "arguments",
@@ -387,6 +387,12 @@ pub static KEYWORDS: [&str; 125] = [
     "console",
     "document",
     "window",
+    // Declared by the generated preamble, so a candid type of the same name would collide
+    // with it in the module rather than shadow something in the environment.
+    "Option",
+    "Some",
+    "None",
+    "CreateActorOptions",
 ];
 
 pub fn get_ident(name: &str) -> Ident {

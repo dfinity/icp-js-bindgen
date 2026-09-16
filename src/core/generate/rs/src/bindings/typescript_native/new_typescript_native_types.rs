@@ -663,8 +663,11 @@ pub fn add_type_definitions(
                     })));
             }
             TypeInner::Variant(fs) => {
-                // Check if all variants have null type
-                let all_null = fs.iter().all(|f| matches!(f.ty.as_ref(), TypeInner::Null));
+                // An empty variant has no tags to become enum members, so it lowers to
+                // `never` and needs a type alias like any other non-enum variant. Note
+                // `all(..)` is vacuously true for it, which is why it is excluded explicitly.
+                let all_null =
+                    !fs.is_empty() && fs.iter().all(|f| matches!(f.ty.as_ref(), TypeInner::Null));
 
                 if all_null {
                     // For variants with all null types, directly create the enum
