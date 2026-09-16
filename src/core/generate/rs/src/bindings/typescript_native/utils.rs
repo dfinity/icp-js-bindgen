@@ -33,10 +33,16 @@ impl EnumDeclarations {
     pub fn name_of(&self, type_name: Option<&str>, fields: &[Field]) -> Option<String> {
         match type_name {
             Some(name) => {
+                // The tag list has to match too. Two candid types can escape to the same
+                // identifier — `Map` and `Map_` both become `Map_` — and reusing the first
+                // one's enum for the second would leave its members undeclared, which nothing
+                // downstream can see: there is one declaration, and the reference resolves.
+                // Falling through to `insert` instead keeps both, so the duplicate-declaration
+                // check reports the collision.
                 let declared = binding_ident(name).sym.to_string();
                 self.declared
                     .iter()
-                    .any(|e| e.name == declared)
+                    .any(|e| e.name == declared && e.fields == fields)
                     .then_some(declared)
             }
             None => self
