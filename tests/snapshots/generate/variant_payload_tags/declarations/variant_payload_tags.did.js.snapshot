@@ -15,7 +15,7 @@ export const idlFactory = ({ IDL }) => {
     'other-field' : IDL.Opt(IDL.Nat),
   });
   const Kw = IDL.Variant({ 'new' : IDL.Nat, 'done' : IDL.Null });
-  const Proto = IDL.Record({ '__proto__' : IDL.Opt(IDL.Nat) });
+  const Proto = IDL.Record({ ['__proto__' ]: IDL.Opt(IDL.Nat) });
   
   return IDL.Service({
     'get_outcome' : IDL.Func([], [Outcome], ['query']),

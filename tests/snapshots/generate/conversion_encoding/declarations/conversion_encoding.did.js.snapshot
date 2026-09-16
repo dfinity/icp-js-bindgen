@@ -20,7 +20,10 @@ export const idlFactory = ({ IDL }) => {
     'constructor' : IDL.Null,
     'plain' : IDL.Null,
   });
-  const Proto = IDL.Record({ 'ok' : IDL.Nat, '__proto__' : IDL.Opt(IDL.Nat) });
+  const Proto = IDL.Record({
+    'ok' : IDL.Nat,
+    ['__proto__' ]: IDL.Opt(IDL.Nat),
+  });
   
   return IDL.Service({
     'round_trip_falsy' : IDL.Func([Falsy], [Falsy], []),

@@ -152,8 +152,16 @@ fn pp_ty(ty: &Type) -> RcDoc<'_> {
     }
 }
 
+/// A field name as a key in the `IDL.Record({…})` / `IDL.Variant({…})` object literal.
+///
+/// `__proto__` needs a computed key. Quoting is not enough: `{ '__proto__': t }` sets the
+/// object's prototype exactly as the bare form does, so the field is never registered and
+/// disappears from the schema — and with it from every encode and decode.
 fn pp_label(id: &SharedLabel) -> RcDoc<'_> {
     match &**id {
+        Label::Named(str) if str == "__proto__" => {
+            RcDoc::text("[").append(quote_ident(str)).append("]")
+        }
         Label::Named(str) => quote_ident(str),
         Label::Id(n) | Label::Unnamed(n) => str("_")
             .append(RcDoc::as_string(n))
