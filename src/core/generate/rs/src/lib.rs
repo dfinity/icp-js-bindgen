@@ -66,10 +66,12 @@ pub fn generate(options: GenerateOptions) -> Result<GenerateResult, JsError> {
         &options.service_name,
         "interface",
         &prog,
-    );
+    )
+    .map_err(|e| JsError::new(&e))?;
 
     let service_ts =
-        typescript_native::compile::compile(&env, &actor, &options.service_name, "wrapper", &prog);
+        typescript_native::compile::compile(&env, &actor, &options.service_name, "wrapper", &prog)
+            .map_err(|e| JsError::new(&e))?;
 
     Ok(GenerateResult {
         declarations_js,

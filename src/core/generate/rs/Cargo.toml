@@ -27,4 +27,9 @@ pretty = "0.12"
 serde = { version = "1.0", features = ["derive"] }
 serde-wasm-bindgen = "0.6"
 tsify = { version = "0.5", features = ["js"] }
-swc_core = { version = "44.0.0", features = ["common", "ecma_ast", "ecma_codegen"] }
+swc_core = { version = "44.0.0", features = ["common", "ecma_ast", "ecma_codegen", "ecma_visit"] }
+
+[dev-dependencies]
+# Test fixtures are written as TypeScript source and parsed into a module, so the assertions
+# read as the code they are about. Not compiled into the published wasm.
+swc_core = { version = "44.0.0", features = ["ecma_parser"] }
