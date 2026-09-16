@@ -1,0 +1,18 @@
+// Values whose JavaScript encoding is easy to get wrong.
+//
+// `zero`, `no` and `empty` are present-but-falsy optionals: a truthiness test encodes them as
+// absent. `constructor` and `toString` are variant tags that exist on `Object.prototype`, so
+// an `in` test matches them on every object.
+type Falsy = record {
+  zero : opt nat;
+  no : opt bool;
+  empty : opt text;
+  missing : opt nat;
+};
+
+type Inherited = variant { constructor; toString; plain };
+
+service : () -> {
+  round_trip_falsy : (Falsy) -> (Falsy);
+  round_trip_inherited : (Inherited) -> (Inherited);
+}

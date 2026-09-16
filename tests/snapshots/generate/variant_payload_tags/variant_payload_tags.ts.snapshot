@@ -214,7 +214,7 @@ function to_candid_record_n15(value: {
     __proto__: [] | [bigint];
 } {
     return {
-        ["__proto__"]: value["__proto__"] ? candid_some(value["__proto__"]) : candid_none()
+        ["__proto__"]: value["__proto__"] !== undefined && value["__proto__"] !== null ? candid_some(value["__proto__"]) : candid_none()
     };
 }
 function to_candid_record_n9(value: {
@@ -226,7 +226,7 @@ function to_candid_record_n9(value: {
 } {
     return {
         "my-field": value["my-field"],
-        "other-field": value["other-field"] ? candid_some(value["other-field"]) : candid_none()
+        "other-field": value["other-field"] !== undefined && value["other-field"] !== null ? candid_some(value["other-field"]) : candid_none()
     };
 }
 function to_candid_variant_n11(value: {

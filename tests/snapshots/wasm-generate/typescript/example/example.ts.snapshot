@@ -766,7 +766,7 @@ function to_candid_record_n38(value: {
         }];
 } {
     return {
-        nested: value.nested ? candid_some(value.nested) : candid_none()
+        nested: value.nested !== undefined && value.nested !== null ? candid_some(value.nested) : candid_none()
     };
 }
 function to_candid_record_n4(value: {
@@ -814,7 +814,7 @@ function to_candid_variant_n22(value: {
     return value.__kind__ === "A" ? {
         A: value.A
     } : value.__kind__ === "B" ? {
-        B: value.B ? candid_some(value.B) : candid_none()
+        B: value.B !== undefined && value.B !== null ? candid_some(value.B) : candid_none()
     } : value;
 }
 function to_candid_variant_n30(value: {

@@ -20,6 +20,138 @@ fn is_unit_variant(fields: &[Field]) -> bool {
             .all(|f| matches!(f.ty.as_ref(), TypeInner::Null))
 }
 
+/// `value as never`, for the arm that cannot be reached once every tag has been tested.
+fn unreachable_value(value: Expr, fields: &[Field]) -> Expr {
+    // `in` alone narrows the union away, so the arm is already `never` and needs no help.
+    if !fields.iter().any(|f| match &*f.id {
+        Label::Named(name) => is_inherited_property(name),
+        _ => false,
+    }) {
+        return value;
+    }
+    Expr::TsAs(TsAsExpr {
+        span: DUMMY_SP,
+        expr: Box::new(value),
+        type_ann: Box::new(TsType::TsKeywordType(TsKeywordType {
+            span: DUMMY_SP,
+            kind: TsKeywordTypeKind::TsNeverKeyword,
+        })),
+    })
+}
+
+/// Names every plain object inherits from `Object.prototype`.
+///
+/// `"name" in value` is true for all of them whatever the object holds, so a candid tag named
+/// `constructor` or `toString` matched every variant and the first such tag won outright.
+const INHERITED_PROPERTIES: [&str; 12] = [
+    "constructor",
+    "toString",
+    "toLocaleString",
+    "valueOf",
+    "hasOwnProperty",
+    "isPrototypeOf",
+    "propertyIsEnumerable",
+    "__proto__",
+    "__defineGetter__",
+    "__defineSetter__",
+    "__lookupGetter__",
+    "__lookupSetter__",
+];
+
+fn is_inherited_property(name: &str) -> bool {
+    INHERITED_PROPERTIES.contains(&name)
+}
+
+/// Tests that `object` carries `name` as its own property.
+///
+/// `in` is used wherever it is already correct, because TypeScript discriminates the variant
+/// union with it — replacing it outright would cost the member access inside each arm and the
+/// exhaustiveness of the last one. For the handful of names `in` gets wrong, `Object.hasOwn`
+/// is conjoined: redundant at runtime, since `in` is implied by `hasOwn`, but it keeps the
+/// narrowing while fixing the semantics.
+fn has_own_property(object: Expr, name: &str) -> Expr {
+    let in_test = Expr::Bin(BinExpr {
+        span: DUMMY_SP,
+        op: BinaryOp::In,
+        left: Box::new(Expr::Lit(Lit::Str(Str {
+            span: DUMMY_SP,
+            value: name.into(),
+            raw: None,
+        }))),
+        right: Box::new(object.clone()),
+    });
+
+    if !is_inherited_property(name) {
+        return in_test;
+    }
+
+    Expr::Bin(BinExpr {
+        span: DUMMY_SP,
+        op: BinaryOp::LogicalAnd,
+        left: Box::new(in_test),
+        right: Box::new(has_own_call(object, name)),
+    })
+}
+
+fn has_own_call(object: Expr, name: &str) -> Expr {
+    Expr::Call(CallExpr {
+        span: DUMMY_SP,
+        callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
+            span: DUMMY_SP,
+            obj: Box::new(Expr::Ident(Ident::new(
+                "Object".into(),
+                DUMMY_SP,
+                SyntaxContext::empty(),
+            ))),
+            prop: MemberProp::Ident(IdentName {
+                span: DUMMY_SP,
+                sym: "hasOwn".into(),
+            }),
+        }))),
+        args: vec![
+            ExprOrSpread {
+                spread: None,
+                expr: Box::new(object),
+            },
+            ExprOrSpread {
+                spread: None,
+                expr: Box::new(Expr::Lit(Lit::Str(Str {
+                    span: DUMMY_SP,
+                    value: name.into(),
+                    raw: None,
+                }))),
+            },
+        ],
+        type_args: None,
+        ctxt: SyntaxContext::empty(),
+    })
+}
+
+/// `value !== undefined && value !== null`.
+///
+/// An optional field used to be tested for truthiness, so a present `opt nat` of `0`, an
+/// `opt bool` of `false` and an `opt text` of `""` were all encoded as absent.
+fn is_present(value: Expr) -> Expr {
+    let not_equal = |right: Expr| {
+        Expr::Bin(BinExpr {
+            span: DUMMY_SP,
+            op: BinaryOp::NotEqEq,
+            left: Box::new(value.clone()),
+            right: Box::new(right),
+        })
+    };
+    Expr::Bin(BinExpr {
+        span: DUMMY_SP,
+        op: BinaryOp::LogicalAnd,
+        left: Box::new(not_equal(Expr::Ident(Ident::new(
+            "undefined".into(),
+            DUMMY_SP,
+            SyntaxContext::empty(),
+        )))),
+        right: Box::new(not_equal(Expr::Lit(Lit::Null(Null { span: DUMMY_SP })))),
+    })
+}
+
 pub type TopLevelNodes<'a> = (
     &'a mut EnumDeclarations,
     &'a mut SingleThreadedComments,
@@ -553,7 +685,7 @@ impl<'a> TypeConverter<'a> {
                             if !self.needs_conversion(inner) {
                                 Expr::Cond(CondExpr {
                                     span: DUMMY_SP,
-                                    test: Box::new(field_access.clone()),
+                                    test: Box::new(is_present(field_access.clone())),
                                     cons: Box::new(self.create_call(
                                         "candid_some",
                                         vec![self.create_arg(field_access.clone())],
@@ -566,7 +698,7 @@ impl<'a> TypeConverter<'a> {
 
                                 Expr::Cond(CondExpr {
                                     span: DUMMY_SP,
-                                    test: Box::new(field_access.clone()),
+                                    test: Box::new(is_present(field_access.clone())),
                                     cons: Box::new(self.create_call(
                                         "candid_some",
                                         vec![self.create_arg(self.create_call(
@@ -770,7 +902,7 @@ impl<'a> TypeConverter<'a> {
                         if !self.needs_conversion(inner) {
                             Expr::Cond(CondExpr {
                                 span: DUMMY_SP,
-                                test: Box::new(field_access.clone()),
+                                test: Box::new(is_present(field_access.clone())),
                                 cons: Box::new(self.create_call(
                                     "candid_some",
                                     vec![self.create_arg(field_access.clone())],
@@ -783,7 +915,7 @@ impl<'a> TypeConverter<'a> {
 
                             Expr::Cond(CondExpr {
                                 span: DUMMY_SP,
-                                test: Box::new(field_access.clone()),
+                                test: Box::new(is_present(field_access.clone())),
                                 cons: Box::new(self.create_call(
                                     "candid_some",
                                     vec![self.create_arg(self.create_call(
@@ -1415,16 +1547,7 @@ impl<'a> TypeConverter<'a> {
                 };
 
                 // Check if this field exists in the input object
-                let test = Expr::Bin(BinExpr {
-                    span: DUMMY_SP,
-                    op: BinaryOp::In,
-                    left: Box::new(Expr::Lit(Lit::Str(Str {
-                        span: DUMMY_SP,
-                        value: field_name.clone().into(),
-                        raw: None,
-                    }))),
-                    right: Box::new(self.create_ident(param_name)),
-                });
+                let test = has_own_property(self.create_ident(param_name), &field_name);
 
                 // Return the enum member access
                 // let result =
@@ -1457,8 +1580,10 @@ impl<'a> TypeConverter<'a> {
                 span: DUMMY_SP,
                 test: Box::new(last_test),
                 cons: Box::new(last_result),
-                // If we get here, it's an error
-                alt: Box::new(self.create_ident(param_name)),
+                // Unreachable for a well-formed candid value: every tag is covered above. The
+                // assertion says so, since `Object.hasOwn` does not narrow the union away the
+                // way `in` did.
+                alt: Box::new(unreachable_value(self.create_ident(param_name), fields)),
             });
 
             // Add the rest of the conditions
@@ -1484,16 +1609,7 @@ impl<'a> TypeConverter<'a> {
             };
 
             // Check if this field exists in the input object
-            let test = Expr::Bin(BinExpr {
-                span: DUMMY_SP,
-                op: BinaryOp::In,
-                left: Box::new(Expr::Lit(Lit::Str(Str {
-                    span: DUMMY_SP,
-                    value: field_name.clone().into(),
-                    raw: None,
-                }))),
-                right: Box::new(self.create_ident(param_name)),
-            });
+            let test = has_own_property(self.create_ident(param_name), &field_name);
 
             // Get the field value
             let field_access = Expr::Member(MemberExpr {
@@ -1557,8 +1673,10 @@ impl<'a> TypeConverter<'a> {
             span: DUMMY_SP,
             test: Box::new(last_test),
             cons: Box::new(last_result),
-            // If we get here, it's likely an error but return the input for robustness
-            alt: Box::new(self.create_ident(param_name)),
+            // Unreachable for a well-formed candid value: every tag is covered above. The
+            // assertion says so, since `Object.hasOwn` does not narrow the union away the
+            // way `in` did.
+            alt: Box::new(unreachable_value(self.create_ident(param_name), fields)),
         });
 
         // Add the rest of the conditions
