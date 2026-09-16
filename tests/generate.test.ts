@@ -39,6 +39,7 @@ describe('generate', () => {
     'example',
     'reserved_words',
     'variant_payload_tags',
+    'duplicate_unit_variants',
   ])('should generate a bindgen', async (serviceName) => {
     const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 

@@ -1,5 +1,4 @@
 use candid::types::Field;
-use std::collections::HashMap;
 use swc_core::common::comments::SingleThreadedComments;
 use swc_core::common::source_map::SourceMap;
 use swc_core::common::sync::Lrc;
@@ -9,7 +8,72 @@ use swc_core::ecma::{
     codegen::{Config, Emitter, text_writer::JsWriter, text_writer::WriteJs},
 };
 
-pub type EnumDeclarations = HashMap<Vec<Field>, (TsEnumDecl, String)>;
+/// The `enum` declarations lowered from all-null candid variants.
+///
+/// A named candid type is declared under its own name, so two types with identical tags get
+/// an enum each. TypeScript enums are nominal: collapsing them onto one declaration leaves
+/// the second type referenced everywhere and declared nowhere.
+///
+/// Anonymous inline variants have no name of their own, so they reuse whichever enum was
+/// declared for their tag list first — including one belonging to a named type.
+#[derive(Default, Clone)]
+pub struct EnumDeclarations {
+    declared: Vec<DeclaredEnum>,
+}
+
+#[derive(Clone)]
+struct DeclaredEnum {
+    name: String,
+    fields: Vec<Field>,
+    decl: TsEnumDecl,
+}
+
+impl EnumDeclarations {
+    /// The name this variant's enum is declared under, if it has been interned already.
+    pub fn name_of(&self, type_name: Option<&str>, fields: &[Field]) -> Option<String> {
+        match type_name {
+            Some(name) => {
+                let declared = binding_ident(name).sym.to_string();
+                self.declared
+                    .iter()
+                    .any(|e| e.name == declared)
+                    .then_some(declared)
+            }
+            None => self
+                .declared
+                .iter()
+                .find(|e| e.fields == fields)
+                .map(|e| e.name.clone()),
+        }
+    }
+
+    /// Interns `decl` under `name`.
+    ///
+    /// Entries are distinct per name *and* tag list. Two different tag lists that want the
+    /// same name — two anonymous variants whose tags sanitize alike, say — are therefore both
+    /// kept, so the duplicate-declaration check reports the collision instead of one silently
+    /// winning and the other's members going missing.
+    pub fn insert(&mut self, name: String, fields: &[Field], decl: TsEnumDecl) {
+        if !self
+            .declared
+            .iter()
+            .any(|e| e.name == name && e.fields == fields)
+        {
+            self.declared.push(DeclaredEnum {
+                name,
+                fields: fields.to_vec(),
+                decl,
+            });
+        }
+    }
+
+    /// Every declaration, ordered by name so output is stable.
+    pub fn declarations(&self) -> Vec<&TsEnumDecl> {
+        let mut entries: Vec<&DeclaredEnum> = self.declared.iter().collect();
+        entries.sort_by(|a, b| a.name.cmp(&b.name));
+        entries.into_iter().map(|e| &e.decl).collect()
+    }
+}
 
 pub fn render_ast(module: &Module, comments: &SingleThreadedComments) -> String {
     let mut buf = vec![];
