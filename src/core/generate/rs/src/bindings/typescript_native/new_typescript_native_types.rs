@@ -2,7 +2,10 @@ use super::super::javascript::is_tuple;
 use super::comments::add_comments;
 use super::conversion_functions_generator::{TopLevelNodes, TypeConverter};
 use super::original_typescript_types::create_typed_array_type;
-use super::utils::{candid_type_ident, get_ident, get_ident_guarded, get_ident_guarded_keyword_ok};
+use super::utils::{
+    binding_ident_name, candid_param_ident, candid_type_ident, get_ident, get_ident_guarded,
+    get_ident_guarded_keyword_ok,
+};
 use candid::types::{Field, Function, Label, Type, TypeEnv, TypeInner};
 use candid_parser::syntax::{self, IDLMergedProg, IDLType};
 use swc_core::common::Span;
@@ -931,6 +934,41 @@ fn func_arg_names(syntax: Option<&IDLType>) -> Vec<Option<String>> {
     }
 }
 
+/// The parameter names of one signature, each usable as a binding and distinct from the rest.
+///
+/// Every labelled argument keeps its label unless an earlier label already shaped into the
+/// same identifier — `("a-b" : nat, a_b : nat)` gives `a_b` twice, which TypeScript rejects
+/// as a duplicate parameter. Labels are placed first, so a label of `arg1` is never displaced
+/// by another argument's fallback. The remaining positions then take the positional name,
+/// suffixed with `_` until it is free: `(arg1 : nat, nat)` gives `arg1` and `arg1_`.
+fn parameter_idents(arg_names: &[Option<String>], arity: usize) -> Vec<Ident> {
+    let mut chosen: Vec<Option<String>> = (0..arity)
+        .map(|i| arg_names.get(i).and_then(|n| n.as_deref()))
+        .map(|label| label.map(|name| candid_param_ident(name).sym.to_string()))
+        .collect();
+    let mut taken: Vec<String> = Vec::with_capacity(arity);
+    for name in chosen.iter_mut() {
+        match name {
+            Some(shaped) if !taken.contains(shaped) => taken.push(shaped.clone()),
+            _ => *name = None,
+        }
+    }
+    for (i, name) in chosen.iter_mut().enumerate() {
+        if name.is_none() {
+            let mut fallback = format!("arg{i}");
+            while taken.contains(&fallback) {
+                fallback.push('_');
+            }
+            taken.push(fallback.clone());
+            *name = Some(fallback);
+        }
+    }
+    chosen
+        .into_iter()
+        .map(|name| get_ident(&name.expect("every position is named")))
+        .collect()
+}
+
 // Create TS method signature from Candid function
 fn create_method_signature(
     top_level_nodes: &mut TopLevelNodes,
@@ -941,18 +979,15 @@ fn create_method_signature(
     span: Span,
 ) -> TsTypeElement {
     let arg_names = func_arg_names(syntax);
+    let param_idents = parameter_idents(&arg_names, func.args.len());
     // Create parameters
     let params = func
         .args
         .iter()
         .enumerate()
         .map(|(i, arg_ty)| {
-            let var_name = arg_names
-                .get(i)
-                .and_then(|n| n.clone())
-                .unwrap_or_else(|| format!("arg{}", i));
             TsFnParam::Ident(BindingIdent {
-                id: Ident::new(var_name.into(), DUMMY_SP, SyntaxContext::empty()),
+                id: param_idents[i].clone(),
                 type_ann: Some(Box::new(TsTypeAnn {
                     span: DUMMY_SP,
                     type_ann: Box::new(convert_type(top_level_nodes, env, arg_ty, None, true)),
@@ -1021,18 +1056,15 @@ fn create_function_type(
     syntax: Option<&IDLType>,
 ) -> TsType {
     let arg_names = func_arg_names(syntax);
+    let param_idents = parameter_idents(&arg_names, func.args.len());
     // Create parameters
     let params = func
         .args
         .iter()
         .enumerate()
         .map(|(i, arg_ty)| {
-            let var_name = arg_names
-                .get(i)
-                .and_then(|n| n.clone())
-                .unwrap_or_else(|| format!("arg{}", i));
             TsFnParam::Ident(BindingIdent {
-                id: Ident::new(var_name.into(), DUMMY_SP, SyntaxContext::empty()),
+                id: param_idents[i].clone(),
                 type_ann: Some(Box::new(TsTypeAnn {
                     span: DUMMY_SP,
                     type_ann: Box::new(convert_type(top_level_nodes, env, arg_ty, None, true)),
@@ -1137,6 +1169,12 @@ pub fn declaring_type_id(env: &TypeEnv, type_id: &str) -> String {
     current
 }
 
+/// The interface name for a service, e.g. `hello_world` -> `hello_worldInterface`.
+///
+/// Also used for candid *types* that resolve to a service, whose ids candid already restricts
+/// to legal identifier characters — [`binding_ident_name`] is the identity on those, so this
+/// only ever changes the outcome for a name derived from a `.did` filename. No reserved-word
+/// escape is needed: the `Interface` suffix means the result can never be one.
 pub fn service_interface_ident(service_name: &str) -> Ident {
-    get_ident_guarded(&format!("{}Interface", service_name))
+    get_ident(&format!("{}Interface", binding_ident_name(service_name)))
 }

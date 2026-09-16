@@ -1,0 +1,17 @@
+// Candid names its function arguments, and those names reach the generated method signature
+// as parameter bindings — and a named `func` type's signature, which is built separately. `<name>` allows a quoted string, and a reserved word is a legal
+// candid name, so neither is guaranteed to be usable where TypeScript expects an identifier.
+type Named = func ("a-b" : nat, a_b : nat, arg1 : nat, nat, await : nat) -> ();
+
+service : {
+  k : (Named) -> ();
+  f : ("my-arg" : nat, new : nat, ok : text) -> ();
+  // Legal as parameter names although they name a type or a global; a `this` parameter
+  // would declare the receiver's type rather than an argument.
+  j : (string : nat, Map : nat, this : nat, arguments : nat) -> ();
+  // Two distinct candid names that shape into one identifier, which TypeScript rejects as a
+  // duplicate parameter. The positional name is always free.
+  g : ("a-b" : nat, a_b : nat) -> ();
+  // A candid label that claims the positional name the next argument would fall back to.
+  h : (arg1 : nat, nat) -> ();
+}

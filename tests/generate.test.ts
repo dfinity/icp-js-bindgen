@@ -2,6 +2,8 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fs as memFs, vol } from 'memfs';
 import { readFile } from 'node:fs/promises';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { generate } from '../src/core/generate/index.ts';
 import { testWasmInit } from './utils/wasm.ts';
@@ -43,6 +45,41 @@ describe('generate', () => {
       }),
     ).rejects.toThrow(/IDL_/);
   });
+
+  // The name is rejected before anything is read, so these files do not exist — and `?` is
+  // not a legal filename on Windows, so one of them could not be checked out.
+  it.each([
+    'my#backend',
+    'my?backend',
+    'my%backend',
+  ])('refuses a .did name no module specifier can carry: %s', async (serviceName) => {
+    await expect(
+      generate({ didFile: `${TESTS_ASSETS_DIR}/${serviceName}.did`, outDir: OUTPUT_DIR }),
+    ).rejects.toThrow(/module specifier/);
+  });
+
+  // On Windows `\\` is a path separator, so `basename` would strip it before the check.
+  it.runIf(process.platform !== 'win32')('refuses a .did name containing a backslash', async () => {
+    await expect(
+      generate({ didFile: `${TESTS_ASSETS_DIR}/my\\backend.did`, outDir: OUTPUT_DIR }),
+    ).rejects.toThrow(/module specifier/);
+  });
+
+  it('accepts such a name when only the declarations are wanted', async () => {
+    // Nothing the declarations-only output writes carries a module specifier, so the
+    // restriction does not apply to it. The wasm reads the .did from the real filesystem, so
+    // the file is created there rather than committed under a name some tooling dislikes.
+    const dir = mkdtempSync(join(tmpdir(), 'icp-bindgen-'));
+    const didFile = join(dir, 'my#backend.did');
+    writeFileSync(didFile, readFileSync(`${TESTS_ASSETS_DIR}/hello_world.did`));
+    try {
+      await generate({ didFile, outDir: OUTPUT_DIR, output: { actor: { disabled: true } } });
+      expect(fileExists(`${OUTPUT_DIR}/declarations/my#backend.did.js`)).toBe(true);
+      expect(fileExists(`${OUTPUT_DIR}/declarations/my#backend.did.d.ts`)).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
   it.each([
     'hello_world',
     'example',
@@ -62,6 +99,7 @@ describe('generate', () => {
     'service_named_after_file',
     'collide_class',
     'import_local_collision',
+    'method_arg_names',
   ])('should generate a bindgen', async (serviceName) => {
     const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 
