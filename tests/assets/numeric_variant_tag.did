@@ -1,0 +1,6 @@
+// A candid tag can be any quoted string, and an all-null variant lowers to a string enum
+// whose members carry the tags. TypeScript refuses an enum member whose name reads as a
+// number, and there is no other spelling for it.
+service : () -> {
+  level : () -> (variant { "0"; "1"; "2" }) query;
+}

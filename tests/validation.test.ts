@@ -91,6 +91,11 @@ describe('generation refuses inconsistent output', () => {
     await expect(generateFixture('collide_anonymous_variant_names')).rejects.toThrow(/Variant_a_b/);
   });
 
+  it('refuses a variant tag that reads as a number', async () => {
+    // `enum E { "0" = "0" }` is TS2452, and an all-null variant has no other lowering.
+    await expect(generateFixture('numeric_variant_tag')).rejects.toThrow(/`0`/);
+  });
+
   it('reports a candid tag that collides with the injected discriminant', async () => {
     // A variant carrying payloads gains a `__kind__` discriminant, so a candid tag of that
     // name lands twice in the same object type and the later member wins.
