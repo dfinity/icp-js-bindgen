@@ -1,0 +1,8 @@
+// Two inline all-null variants whose tags join to the same name: `a_b` on its own, and `a`
+// beside `b`. Both derive `Variant_a_b`, and their members do not overlap — TypeScript would
+// merge the two enums into one accepting a member neither variant declares, and the wrapper
+// would encode it as-is.
+service : () -> {
+  f : () -> (variant { a_b }) query;
+  g : () -> (variant { a; b }) query;
+}

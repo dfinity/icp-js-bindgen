@@ -423,6 +423,22 @@ An inline all-null variant is declared as an enum named after its tags, `Variant
 `variant { x }`. A named candid type of that name with the same tags shares the enum; with
 different tags, the inline variant is declared as `Variant_x_` instead.
 
+Two candid names that end up as one generated name — two inline variants whose tags join to
+the same `Variant_…`, a type named like the actor class, a type named like a conversion
+function — fail generation, since TypeScript would merge the declarations into a type
+claiming members the value does not have.
+
+### Refused names
+
+A candid name of `__proto__` — as a record field, a variant tag or a method — cannot be
+carried by any generated file: JavaScript treats it as the object's prototype wherever it
+appears, so the member would be missing at runtime. Generation fails whichever files are
+wanted. A variant that carries payloads gains a `__kind__` discriminant, so a tag of that
+name is refused as well.
+
+Every other refusal on this page concerns the actor files only. Generating the declarations
+alone (`output.actor.disabled`, or `--actor-disabled` on the CLI) still succeeds.
+
 ## `declarations/`
 
 This folder contains the actual Candid JS bindings. It generates the same bindings that the [`dfx generate`](https://internetcomputer.org/docs/building-apps/developer-tools/dfx/dfx-generate) command was generating.

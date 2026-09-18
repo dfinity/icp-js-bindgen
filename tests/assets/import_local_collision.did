@@ -1,0 +1,12 @@
+// The wrapper imports each named type's candid shape under a `_`-prefixed local, and a candid
+// type can itself be named that way. The locals are allocated together, so `Foo` and `Foo_`
+// step past the types `_Foo` and `_Foo_` and past each other: `_Foo__` and `_Foo___`.
+type Foo = variant { a; b };
+type Foo_ = variant { c; d };
+type _Foo = record { x : nat };
+type _Foo_ = record { y : nat };
+
+service : {
+  f : (Foo) -> (_Foo);
+  g : (Foo_) -> (_Foo_);
+}

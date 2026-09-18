@@ -4,11 +4,12 @@ use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::*;
 
 use super::super::javascript::escaped_ident_name;
-use super::utils::{candid_import_local, get_ident_guarded_keyword_ok};
+use super::utils::{ImportLocals, get_ident_guarded_keyword_ok};
 
 pub struct OriginalTypescriptTypes<'a> {
     env: &'a TypeEnv,
     required_candid_imports: HashSet<String>,
+    import_locals: ImportLocals,
 }
 
 impl<'a> OriginalTypescriptTypes<'a> {
@@ -16,6 +17,7 @@ impl<'a> OriginalTypescriptTypes<'a> {
         Self {
             env,
             required_candid_imports: HashSet::new(),
+            import_locals: ImportLocals::new(env),
         }
     }
 
@@ -54,7 +56,7 @@ impl<'a> OriginalTypescriptTypes<'a> {
         TsType::TsTypeRef(TsTypeRef {
             span: DUMMY_SP,
             type_name: TsEntityName::Ident(Ident::new(
-                candid_import_local(id).into(),
+                self.import_locals.get(id).into(),
                 DUMMY_SP,
                 SyntaxContext::empty(),
             )),
@@ -417,7 +419,7 @@ impl<'a> OriginalTypescriptTypes<'a> {
                 ImportSpecifier::Named(ImportNamedSpecifier {
                     span: DUMMY_SP,
                     local: Ident::new(
-                        candid_import_local(id).into(),
+                        self.import_locals.get(id).into(),
                         DUMMY_SP,
                         SyntaxContext::empty(),
                     ),
