@@ -512,6 +512,73 @@ pub fn contains_unicode_characters(name: &str) -> bool {
     name != get_typescript_ident(name, false)
 }
 
+/// Fallback for a name that sanitizes down to nothing at all.
+const EMPTY_IDENT_FALLBACK: &str = "_";
+
+/// Whether `c` may start a TypeScript identifier.
+///
+/// ECMAScript `IdentifierStart` is `ID_Start` plus `$` and `_`. The `XID_*` variants are used
+/// here because they are closed under normalization; they are marginally stricter than
+/// `ID_*`, which only ever means a name is sanitized that could have been left alone — never
+/// that an invalid name is accepted.
+fn is_ident_start(c: char) -> bool {
+    c == '_' || c == '$' || unicode_ident::is_xid_start(c)
+}
+
+/// Whether `c` may appear in a TypeScript identifier after the first character.
+///
+/// ECMAScript allows ZWNJ and ZWJ in `IdentifierPart`, which `XID_Continue` does not, and a
+/// name that is already a legal identifier has to come back unchanged.
+fn is_ident_continue(c: char) -> bool {
+    c == '$' || c == '\u{200C}' || c == '\u{200D}' || unicode_ident::is_xid_continue(c)
+}
+
+/// Whether `name` can be used verbatim as an identifier in a binding position.
+fn is_valid_binding_ident(name: &str) -> bool {
+    let mut chars = name.chars();
+    match chars.next() {
+        Some(first) => is_ident_start(first) && chars.all(is_ident_continue),
+        None => false,
+    }
+}
+
+/// Reshapes `name` into a valid identifier, replacing characters that cannot appear in one.
+///
+/// Guarantees identifier *shape* only: a reserved word is already well-shaped and comes back
+/// unchanged, so callers emitting a declaration add the escape themselves.
+///
+/// Identity on names that are already legal identifiers, which keeps output unchanged — the
+/// interface name comes from the raw `.did` basename and candid restricts type ids to
+/// identifier-safe characters.
+///
+/// Illegal characters collapse to one `_` per run, so `my-backend` and `my.backend` both
+/// yield `my_backend`. A leading character legal only in continuation position gains a `_`.
+pub fn binding_ident_name(name: &str) -> String {
+    if is_valid_binding_ident(name) {
+        return name.to_string();
+    }
+
+    let mut sanitized = String::with_capacity(name.len());
+    let mut in_separator_run = false;
+    for c in name.chars() {
+        if is_ident_continue(c) {
+            sanitized.push(c);
+            in_separator_run = false;
+        } else if !in_separator_run {
+            sanitized.push('_');
+            in_separator_run = true;
+        }
+    }
+
+    // Every retained character is valid in continuation position, but the first one
+    // additionally has to be valid in *start* position.
+    match sanitized.chars().next() {
+        Some(first) if !is_ident_start(first) => format!("_{sanitized}"),
+        Some(_) => sanitized,
+        None => EMPTY_IDENT_FALLBACK.to_string(),
+    }
+}
+
 /// Suffixes `_` if `name` is a reserved word or a well-known global, so that it can be
 /// declared without shadowing or being rejected.
 fn escape_reserved(name: String) -> String {
@@ -542,7 +609,7 @@ fn capitalize_first(name: &str) -> String {
 /// it, so the class steps aside with `_` while a candid type holds the name, the way it does
 /// for a basename that capitalizes onto a global.
 pub fn service_class_name(service_name: &str, env: &TypeEnv) -> String {
-    let capitalized = capitalize_first(service_name);
+    let capitalized = capitalize_first(&binding_ident_name(service_name));
     let mut name = if MODULE_NAMES.contains(&capitalized.as_str()) {
         format!("{capitalized}_")
     } else {
@@ -648,13 +715,89 @@ fn free_local(id: &str, taken: &HashSet<String>) -> String {
 /// type is referenced. `as(): Promise<void>` is a legal method.
 static TYPE_NAME_RESERVED: [&str; 5] = ["as", "infer", "keyof", "readonly", "unique"];
 
+/// Names that cannot bind a parameter: the ECMAScript reserved words, the ones reserved in
+/// strict mode, `this`, which parses as a `this` parameter rather than an argument, and
+/// `await`, which a named function type at the top level of a module refuses. That is the
+/// union of what `tsc` rejects in a method signature and in a named function type, applied
+/// to both positions so that one allocator serves both; `await` is the one name escaped in a
+/// method signature that would have been legal there.
+///
+/// Deliberately narrower than [`KEYWORDS`]: `string`, `Map` or `Promise` are legal parameter
+/// names, and renaming one would change a signature that already worked.
+pub static PARAMETER_RESERVED: [&str; 48] = [
+    "arguments",
+    "await",
+    "break",
+    "case",
+    "catch",
+    "class",
+    "const",
+    "continue",
+    "debugger",
+    "default",
+    "delete",
+    "do",
+    "else",
+    "enum",
+    "eval",
+    "export",
+    "extends",
+    "false",
+    "finally",
+    "for",
+    "function",
+    "if",
+    "implements",
+    "import",
+    "in",
+    "instanceof",
+    "interface",
+    "let",
+    "new",
+    "null",
+    "package",
+    "private",
+    "protected",
+    "public",
+    "return",
+    "static",
+    "super",
+    "switch",
+    "this",
+    "throw",
+    "true",
+    "try",
+    "typeof",
+    "var",
+    "void",
+    "while",
+    "with",
+    "yield",
+];
+
+/// A candid argument name in *binding* position: a parameter of a method signature.
+///
+/// Both halves of the escape matter here. `f(my-arg: bigint)` does not parse because of the
+/// character set, and `f(new: bigint)` does not parse because `new` is reserved — unlike a
+/// property key, where both spellings are legal. Callers pass arguments positionally, so the
+/// name is documentation and reshaping it changes nothing they can observe.
+pub fn candid_param_ident(name: &str) -> Ident {
+    let shaped = binding_ident_name(name);
+    if PARAMETER_RESERVED.contains(&shaped.as_str()) {
+        get_ident(&format!("{shaped}_"))
+    } else {
+        get_ident(&shaped)
+    }
+}
+
 /// A candid *type* name as an identifier: escaped against reserved words, the globals it
 /// would shadow, and the names the generated module already occupies.
 pub fn candid_type_ident(name: &str) -> Ident {
-    if MODULE_NAMES.contains(&name) || TYPE_NAME_RESERVED.contains(&name) {
-        get_ident(&format!("{name}_"))
+    let shaped = binding_ident_name(name);
+    if MODULE_NAMES.contains(&shaped.as_str()) || TYPE_NAME_RESERVED.contains(&shaped.as_str()) {
+        get_ident(&format!("{shaped}_"))
     } else {
-        get_ident_guarded(name)
+        get_ident(&escape_reserved(shaped))
     }
 }
 
@@ -671,6 +814,24 @@ pub fn get_ident_guarded_keyword_ok(name: &str) -> Ident {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The three keyword tables nest: what cannot bind a parameter is a JavaScript reserved
+    /// word, and every JavaScript reserved word is in the wider type-name table.
+    #[test]
+    fn keyword_tables_nest() {
+        for word in PARAMETER_RESERVED {
+            assert!(
+                super::super::super::javascript::KEYWORDS.contains(&word),
+                "`{word}` is reserved for parameters but not a JavaScript keyword"
+            );
+        }
+        for word in super::super::super::javascript::KEYWORDS {
+            assert!(
+                KEYWORDS.contains(&word),
+                "`{word}` is a JavaScript keyword missing here"
+            );
+        }
+    }
 
     #[test]
     fn import_local_prefixes_the_candid_shape() {
@@ -741,7 +902,9 @@ mod tests {
         assert_eq!(service_class_name("ünicode", &TypeEnv::new()), "Ünicode");
         assert_eq!(service_class_name("日本語", &TypeEnv::new()), "日本語");
         assert_eq!(service_class_name("ßx", &TypeEnv::new()), "SSx");
-        assert_eq!(service_class_name("", &TypeEnv::new()), "");
+        // A name with nothing legal left in it still has to yield a legal identifier.
+        assert_eq!(service_class_name("", &TypeEnv::new()), "_");
+        assert_eq!(service_class_name("🎉", &TypeEnv::new()), "_");
     }
 
     /// The escape runs after capitalization, which is what turns a basename into a global.
@@ -772,5 +935,81 @@ mod tests {
         assert_eq!(&*candid_type_ident("Agent").sym, "Agent_");
         assert_eq!(&*candid_type_ident("Principal").sym, "Principal_");
         assert_eq!(&*candid_type_ident("Status").sym, "Status");
+    }
+}
+
+#[cfg(test)]
+mod sanitizer_tests {
+    use super::*;
+
+    /// The identity property that keeps existing generated output unchanged.
+    #[test]
+    fn binding_ident_name_is_identity_on_legal_identifiers() {
+        for name in [
+            "backend",
+            "hello_world",
+            "reserved_words",
+            "_leading",
+            "trailing_",
+            "with2digits",
+            "$dollar",
+            "ünicode",
+            "Variant_a_b",
+        ] {
+            assert_eq!(
+                binding_ident_name(name),
+                name,
+                "should be untouched: {name}"
+            );
+        }
+    }
+
+    #[test]
+    fn binding_ident_name_sanitizes_illegal_characters() {
+        // A run of illegal characters collapses to one `_`, so a dashed name yields exactly
+        // what the underscored filename would have.
+        assert_eq!(binding_ident_name("my-backend"), "my_backend");
+        assert_eq!(binding_ident_name("my.backend"), "my_backend");
+        assert_eq!(binding_ident_name("my--backend"), "my_backend");
+        assert_eq!(binding_ident_name("üni-code"), "üni_code");
+        assert_eq!(binding_ident_name("2fa"), "_2fa");
+    }
+
+    #[test]
+    fn binding_ident_name_always_returns_a_legal_identifier() {
+        for name in [
+            "",
+            "-",
+            "...",
+            "2fa",
+            "my-backend",
+            "🎉",
+            "a\"b",
+            "a\\b",
+            "\n",
+        ] {
+            let sanitized = binding_ident_name(name);
+            assert!(
+                is_valid_binding_ident(&sanitized),
+                "{name:?} sanitized to {sanitized:?}, which is not a legal identifier"
+            );
+        }
+    }
+
+    /// Shape is not the same as declarability: a reserved word is already correctly shaped,
+    /// so only the escaping wrappers change it. Pinned because confusing the two reintroduces
+    /// the `map.did` class of bug.
+    #[test]
+    fn shape_is_not_the_same_as_declarable() {
+        assert_eq!(binding_ident_name("class"), "class");
+        assert_eq!(service_class_name("map", &TypeEnv::new()), "Map_");
+        assert_eq!(&*candid_type_ident("Map").sym, "Map_");
+    }
+
+    /// Property position keeps quoting; binding position must not.
+    #[test]
+    fn property_and_binding_paths_differ() {
+        assert_eq!(get_typescript_ident("my-field", false), "'my-field'");
+        assert_eq!(binding_ident_name("my-field"), "my_field");
     }
 }

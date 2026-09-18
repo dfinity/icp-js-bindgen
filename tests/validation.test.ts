@@ -61,6 +61,13 @@ describe('generation refuses inconsistent output', () => {
     ).rejects.toThrow(/__proto__/);
   });
 
+  it('reports two variant tag sets that sanitize to the same enum name', async () => {
+    // Sanitizing tags into an identifier is what makes these collide. Their members are
+    // disjoint, so TypeScript would merge the two enums and the merged type would accept a
+    // member neither candid variant has.
+    await expect(generateFixture('collide_variant_tags')).rejects.toThrow(/Variant_my_f/);
+  });
+
   it('reports two candid types that escape to the same name', async () => {
     // `Map` is escaped because it shadows a global, which collides with a candid type
     // actually named `Map_`. One enum cannot carry both tag lists, and reusing one would

@@ -51,6 +51,10 @@ pub struct GenerateResult {
 
 #[wasm_bindgen]
 pub fn generate(options: GenerateOptions) -> Result<GenerateResult, JsError> {
+    // Decided from the file name alone, so it comes before the file is read.
+    if !options.actor_disabled {
+        check_input::check_service_name(&options.service_name).map_err(|e| JsError::new(&e))?;
+    }
     let input_path = PathBuf::from(options.did_file_path);
     let (env, actor, prog) = parser::check_file(input_path.as_path()).map_err(JsError::from)?;
     javascript::check_declaration_names(&env).map_err(|e| JsError::new(&e))?;
