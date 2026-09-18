@@ -316,9 +316,9 @@ service : {
 <div class="code-right">
 
 ```typescript title="hello_world.ts"
-interface helloWorldInterface = {
-  greet: (name: string) => Promise<string>;
-};
+interface hello_worldInterface {
+  greet(name: string): Promise<string>;
+}
 ```
 
 </div>
@@ -350,7 +350,7 @@ service : {
 <div class="code-right">
 
 ```typescript title="hello_world.ts"
-class HelloWorld implements helloWorldInterface {
+class Hello_world implements hello_worldInterface {
   constructor(
     private actor: ActorSubclass<_SERVICE>,
   ) {}
@@ -389,7 +389,7 @@ interface CreateActorOptions {
     actorOptions?: ActorConfig;
 }
 
-function createActor(canisterId: string, options: CreateActorOptions = {}): <service-name>Interface;
+function createActor(canisterId: string, options: CreateActorOptions = {}): Hello_world;
 ```
 
 If both the `agent` and `agentOptions` are provided, the `agentOptions` will be ignored and the `agent` will be used. Otherwise, a new [`HttpAgent`](https://js.icp.build/core/latest/libs/agent/api/classes/httpagent/) will be created using the `agentOptions` if provided.
