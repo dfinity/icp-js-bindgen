@@ -1,0 +1,11 @@
+// A nested `service` type is typed `Principal` in the wrapper, so its interface never
+// describes a runtime object. Its methods keep any name, including ones the actor class
+// itself could not carry.
+type S = service {
+  toString : () -> ();
+  then : () -> ();
+};
+
+service : {
+  get_s : () -> (S);
+}

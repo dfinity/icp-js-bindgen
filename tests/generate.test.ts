@@ -100,10 +100,14 @@ describe('generate', () => {
     'collide_class',
     'import_local_collision',
     'method_arg_names',
+    'nested_service_inherited_method',
+    'nested_service_func_alias_method',
+    'method_named_actor',
     'variant_payload_tags',
     'unicode_names',
     'conversion_encoding',
     'object_global',
+    'method_names',
   ])('should generate a bindgen', async (serviceName) => {
     const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
 

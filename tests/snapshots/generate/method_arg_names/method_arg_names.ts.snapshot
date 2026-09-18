@@ -76,25 +76,28 @@ export interface method_arg_namesInterface {
     k(arg0: [Principal, string]): Promise<void>;
 }
 export class Method_arg_names implements method_arg_namesInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async f(arg0: bigint, arg1: bigint, arg2: string): Promise<void> {
-        const result = await this.actor.f(arg0, arg1, arg2);
+        const result = await this.#actor.f(arg0, arg1, arg2);
         return result;
     }
     async g(arg0: bigint, arg1: bigint): Promise<void> {
-        const result = await this.actor.g(arg0, arg1);
+        const result = await this.#actor.g(arg0, arg1);
         return result;
     }
     async h(arg0: bigint, arg1: bigint): Promise<void> {
-        const result = await this.actor.h(arg0, arg1);
+        const result = await this.#actor.h(arg0, arg1);
         return result;
     }
     async j(arg0: bigint, arg1: bigint, arg2: bigint, arg3: bigint): Promise<void> {
-        const result = await this.actor.j(arg0, arg1, arg2, arg3);
+        const result = await this.#actor.j(arg0, arg1, arg2, arg3);
         return result;
     }
     async k(arg0: [Principal, string]): Promise<void> {
-        const result = await this.actor.k(arg0);
+        const result = await this.#actor.k(arg0);
         return result;
     }
 }

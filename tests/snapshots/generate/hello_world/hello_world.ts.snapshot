@@ -55,9 +55,12 @@ export interface hello_worldInterface {
     greet(name: string): Promise<string>;
 }
 export class Hello_world implements hello_worldInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async greet(arg0: string): Promise<string> {
-        const result = await this.actor.greet(arg0);
+        const result = await this.#actor.greet(arg0);
         return result;
     }
 }

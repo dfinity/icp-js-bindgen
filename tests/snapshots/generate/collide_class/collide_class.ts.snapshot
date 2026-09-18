@@ -63,9 +63,12 @@ export interface collide_classInterface {
     test(arg0: Collide_class): Promise<void>;
 }
 export class Collide_class_ implements collide_classInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async test(arg0: Collide_class): Promise<void> {
-        const result = await this.actor.test(arg0);
+        const result = await this.#actor.test(arg0);
         return result;
     }
 }

@@ -1,5 +1,5 @@
 use super::conversion_functions_generator::TypeConverter;
-use super::utils::{candid_member_prop, get_ident, get_ident_guarded, service_class_name};
+use super::utils::{candid_member_prop, candid_method_name, get_ident, service_class_name};
 use candid::types::{Function, Type, TypeEnv, TypeInner};
 use candid_parser::syntax::IDLMergedProg;
 use swc_core::common::{DUMMY_SP, SyntaxContext};
@@ -189,53 +189,51 @@ fn create_actor_class(
     serv: &[(String, Type)],
     converter: &mut TypeConverter,
 ) -> ClassDecl {
-    // Create constructor
+    // The actor lives in a private field: a `#`-name cannot collide with a candid method,
+    // whatever the method is called.
+    let actor_field = ClassMember::PrivateProp(PrivateProp {
+        span: DUMMY_SP,
+        ctxt: SyntaxContext::empty(),
+        key: actor_private_name(),
+        value: None,
+        type_ann: Some(Box::new(actor_subclass_type_ann())),
+        is_static: false,
+        decorators: vec![],
+        accessibility: None,
+        is_optional: false,
+        is_override: false,
+        readonly: true,
+        definite: false,
+    });
+
     let constructor = ClassMember::Constructor(Constructor {
         span: DUMMY_SP,
         key: PropName::Ident(
             Ident::new("constructor".into(), DUMMY_SP, SyntaxContext::empty()).into(),
         ),
-        params: vec![ParamOrTsParamProp::TsParamProp(TsParamProp {
+        params: vec![ParamOrTsParamProp::Param(Param {
             span: DUMMY_SP,
             decorators: vec![],
-            accessibility: Some(Accessibility::Private),
-            is_override: false,
-            readonly: false,
-            param: TsParamPropParam::Ident(BindingIdent {
-                id: Ident {
-                    span: DUMMY_SP,
-                    sym: "actor".into(),
-                    optional: false,
-                    ctxt: SyntaxContext::empty(),
-                },
-                type_ann: Some(Box::new(TsTypeAnn {
-                    span: DUMMY_SP,
-                    type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
-                        span: DUMMY_SP,
-                        type_name: TsEntityName::Ident(Ident::new(
-                            "ActorSubclass".into(),
-                            DUMMY_SP,
-                            SyntaxContext::empty(),
-                        )),
-                        type_params: Some(Box::new(TsTypeParamInstantiation {
-                            span: DUMMY_SP,
-                            params: vec![Box::new(TsType::TsTypeRef(TsTypeRef {
-                                span: DUMMY_SP,
-                                type_name: TsEntityName::Ident(Ident::new(
-                                    "_SERVICE".into(),
-                                    DUMMY_SP,
-                                    SyntaxContext::empty(),
-                                )),
-                                type_params: None,
-                            }))],
-                        })),
-                    })),
-                })),
+            pat: Pat::Ident(BindingIdent {
+                id: Ident::new("actor".into(), DUMMY_SP, SyntaxContext::empty()),
+                type_ann: Some(Box::new(actor_subclass_type_ann())),
             }),
         })],
         body: Some(BlockStmt {
             span: DUMMY_SP,
-            stmts: vec![],
+            stmts: vec![Stmt::Expr(ExprStmt {
+                span: DUMMY_SP,
+                expr: Box::new(Expr::Assign(AssignExpr {
+                    span: DUMMY_SP,
+                    op: AssignOp::Assign,
+                    left: AssignTarget::Simple(SimpleAssignTarget::Member(actor_field_access())),
+                    right: Box::new(Expr::Ident(Ident::new(
+                        "actor".into(),
+                        DUMMY_SP,
+                        SyntaxContext::empty(),
+                    ))),
+                })),
+            })],
             ctxt: SyntaxContext::empty(),
         }),
         accessibility: None,
@@ -264,7 +262,7 @@ fn create_actor_class(
         .collect();
 
     // Combine all members
-    let mut class_body_members = vec![constructor];
+    let mut class_body_members = vec![actor_field, constructor];
     class_body_members.extend(methods);
 
     ClassDecl {
@@ -285,6 +283,49 @@ fn create_actor_class(
             decorators: vec![],
             ctxt: SyntaxContext::empty(),
         }),
+    }
+}
+
+fn actor_private_name() -> PrivateName {
+    PrivateName {
+        span: DUMMY_SP,
+        name: "actor".into(),
+    }
+}
+
+/// `this.#actor`
+fn actor_field_access() -> MemberExpr {
+    MemberExpr {
+        span: DUMMY_SP,
+        obj: Box::new(Expr::This(ThisExpr { span: DUMMY_SP })),
+        prop: MemberProp::PrivateName(actor_private_name()),
+    }
+}
+
+/// `ActorSubclass<_SERVICE>`
+fn actor_subclass_type_ann() -> TsTypeAnn {
+    TsTypeAnn {
+        span: DUMMY_SP,
+        type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
+            span: DUMMY_SP,
+            type_name: TsEntityName::Ident(Ident::new(
+                "ActorSubclass".into(),
+                DUMMY_SP,
+                SyntaxContext::empty(),
+            )),
+            type_params: Some(Box::new(TsTypeParamInstantiation {
+                span: DUMMY_SP,
+                params: vec![Box::new(TsType::TsTypeRef(TsTypeRef {
+                    span: DUMMY_SP,
+                    type_name: TsEntityName::Ident(Ident::new(
+                        "_SERVICE".into(),
+                        DUMMY_SP,
+                        SyntaxContext::empty(),
+                    )),
+                    type_params: None,
+                }))],
+            })),
+        })),
     }
 }
 
@@ -380,14 +421,7 @@ fn create_actor_method(
         span: DUMMY_SP,
         callee: Callee::Expr(Box::new(Expr::Member(MemberExpr {
             span: DUMMY_SP,
-            obj: Box::new(Expr::Member(MemberExpr {
-                span: DUMMY_SP,
-                obj: Box::new(Expr::This(ThisExpr { span: DUMMY_SP })),
-                prop: MemberProp::Ident(IdentName {
-                    span: DUMMY_SP,
-                    sym: "actor".into(),
-                }),
-            })),
+            obj: Box::new(Expr::Member(actor_field_access())),
             prop: candid_member_prop(method_id),
         }))),
         args: converted_args,
@@ -438,7 +472,7 @@ fn create_actor_method(
 
     ClassMember::Method(ClassMethod {
         span: DUMMY_SP,
-        key: PropName::Ident(get_ident_guarded(method_id).into()),
+        key: candid_method_name(method_id),
         function: Box::new(swc_core::ecma::ast::Function {
             params,
             decorators: vec![],

@@ -66,13 +66,16 @@ export interface mapInterface {
 }
 import type { Entry as _Entry } from "./declarations/map.did";
 export class Map_ implements mapInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async get(arg0: string): Promise<Entry | null> {
-        const result = await this.actor.get(arg0);
+        const result = await this.#actor.get(arg0);
         return from_candid_opt_n1(result);
     }
     async put(arg0: Entry): Promise<void> {
-        const result = await this.actor.put(arg0);
+        const result = await this.#actor.put(arg0);
         return result;
     }
 }
