@@ -1,0 +1,18 @@
+// Names TypeScript accepts as identifiers but not as a type: the intrinsics are refused as a
+// declaration name (`interface never { … }` is TS2427), `as` as an alias name, and `keyof` or
+// `infer` parse as the type operator wherever the type is referenced. All legal candid ids.
+type never = record { a : nat };
+type string = variant { x; y };
+type as = record { b : nat };
+type undefined = record { c : opt nat };
+type keyof = record { d : nat };
+type infer = variant { p; q };
+
+service : () -> {
+  f : (never, string, as, undefined, keyof) -> (string);
+  g : (infer) -> (infer);
+  // The same names as methods.
+  "as" : () -> ();
+  never : () -> ();
+  string : () -> ();
+}

@@ -1,0 +1,11 @@
+// Names the declarations type printer references bare: `Array` for a vector, and a typed
+// array for a vector of fixed-width integers. A candid type of one of those names would be
+// what every such reference in the file resolves to, so it is escaped on both sides.
+type Array = record { x : nat };
+type Uint8Array = record { y : nat };
+type BigUint64Array = variant { a; b };
+
+service : {
+  vectors : (vec nat, vec nat8) -> (vec nat64);
+  records : (Array, Uint8Array) -> (BigUint64Array);
+}

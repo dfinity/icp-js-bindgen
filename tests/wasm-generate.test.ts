@@ -38,7 +38,11 @@ describe('wasmGenerate', () => {
   });
 
   describe('with rootExport: true', () => {
-    it.each(['hello_world', 'example'])('should generate a bindgen for %s', async (serviceName) => {
+    it.each([
+      'hello_world',
+      'example',
+      'declaration_globals',
+    ])('should generate a bindgen for %s', async (serviceName) => {
       const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
       const snapshotsDir = `${SNAPSHOTS_BASE_DIR}/root-export`;
 
@@ -93,6 +97,7 @@ describe('wasmGenerate', () => {
     it.each([
       'hello_world',
       'example',
+      'declaration_globals',
     ])('should generate a merged .did.ts with root exports for %s', async (serviceName) => {
       const didFile = `${TESTS_ASSETS_DIR}/${serviceName}.did`;
       const snapshotsDir = `${SNAPSHOTS_BASE_DIR}/typescript-root-export`;

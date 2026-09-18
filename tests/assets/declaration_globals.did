@@ -1,0 +1,21 @@
+// Names the generated declarations files occupy themselves: the JavaScript factory imports
+// `IDL` and binds it as its parameter, the TypeScript declarations import `Principal` and
+// `ActorMethod`, and both export `_SERVICE`, `idlFactory` and `init` — plus `idlService` and
+// `idlInitArgs` with root exports. The main service is the `IDL` alias so the actor
+// reference is escaped the same way as the declaration it points at. The variant is here so
+// the conversion path — which imports the candid shape under the escaped name — is
+// exercised too.
+type Principal = variant { a; b };
+type ActorMethod = record { y : nat };
+type _SERVICE = record { t : nat };
+type idlFactory = record { p : nat };
+type init = record { q : nat };
+type idlService = record { r : nat };
+type idlInitArgs = record { s : nat };
+
+type IDL = service {
+  round_trip : (Principal) -> (Principal);
+  f : (ActorMethod, _SERVICE, idlFactory, init, idlService, idlInitArgs) -> ();
+};
+
+service : IDL

@@ -1,0 +1,50 @@
+import { IDL } from '@icp-sdk/core/candid';
+
+export const ActorMethod_ = IDL.Record({ 'y' : IDL.Nat });
+export const _SERVICE_ = IDL.Record({ 't' : IDL.Nat });
+export const idlFactory_ = IDL.Record({ 'p' : IDL.Nat });
+export const init_ = IDL.Record({ 'q' : IDL.Nat });
+export const idlService_ = IDL.Record({ 'r' : IDL.Nat });
+export const idlInitArgs_ = IDL.Record({ 's' : IDL.Nat });
+export const Principal_ = IDL.Variant({ 'a' : IDL.Null, 'b' : IDL.Null });
+export const IDL_ = IDL.Service({
+  'f' : IDL.Func(
+      [ActorMethod_, _SERVICE_, idlFactory_, init_, idlService_, idlInitArgs_],
+      [],
+      [],
+    ),
+  'round_trip' : IDL.Func([Principal_], [Principal_], []),
+});
+
+export const idlService = IDL_;
+
+export const idlInitArgs = [];
+
+export const idlFactory = ({ IDL }) => {
+  const ActorMethod_ = IDL.Record({ 'y' : IDL.Nat });
+  const _SERVICE_ = IDL.Record({ 't' : IDL.Nat });
+  const idlFactory_ = IDL.Record({ 'p' : IDL.Nat });
+  const init_ = IDL.Record({ 'q' : IDL.Nat });
+  const idlService_ = IDL.Record({ 'r' : IDL.Nat });
+  const idlInitArgs_ = IDL.Record({ 's' : IDL.Nat });
+  const Principal_ = IDL.Variant({ 'a' : IDL.Null, 'b' : IDL.Null });
+  const IDL_ = IDL.Service({
+    'f' : IDL.Func(
+        [
+          ActorMethod_,
+          _SERVICE_,
+          idlFactory_,
+          init_,
+          idlService_,
+          idlInitArgs_,
+        ],
+        [],
+        [],
+      ),
+    'round_trip' : IDL.Func([Principal_], [Principal_], []),
+  });
+  
+  return IDL_;
+};
+
+export const init = ({ IDL }) => { return []; };

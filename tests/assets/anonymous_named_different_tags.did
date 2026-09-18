@@ -1,0 +1,9 @@
+// A named type holds the identifier an inline variant would derive, but with different
+// tags. Two enums of one name would merge into a type accepting members neither variant has,
+// so the inline one steps aside to `Variant_x_` and the named type keeps `Variant_x`.
+type Variant_x = variant { y };
+
+service : {
+  h : () -> (variant { x });
+  v : () -> (Variant_x);
+}

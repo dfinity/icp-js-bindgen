@@ -94,14 +94,101 @@ static KEYWORDS: [&str; 64] = [
     "with",
     "yield",
 ];
+/// Every identifier the generated declarations files write that is not a candid type: what
+/// they import, what they export, and the built-in types the `.did.d.ts` printer references.
+/// A candid type of one of these names is escaped, since inside the file it would be the
+/// thing every such reference resolves to.
+///
+/// The JavaScript factory imports `IDL` *and* binds it as its parameter, so a candid type of
+/// that name produced `const IDL = IDL.Record(…)` — a `SyntaxError`, not just a shadow. The
+/// TypeScript declarations import `Principal` and `ActorMethod`, where a type of either name
+/// is a duplicate identifier and every reference to it silently means the wrong type. The
+/// exports collide with themselves: `_SERVICE` merges with a same-named interface, and a
+/// second `export const idlFactory` does not parse. And a `vec` is printed as `Array<…>` or
+/// as the typed array for its element, so a candid type named `Uint8Array` would type every
+/// `vec nat8` in the file as that record.
+///
+/// The type printers are closed over candid's constructors, so this list is complete. The
+/// tests in this module and in `typescript.rs` render every constructor through the type
+/// printers and check the built-ins; the imports and exports are pinned by the
+/// `declaration_globals` fixture.
+pub(crate) static DECLARATIONS_MODULE_NAMES: [&str; 17] = [
+    "IDL",
+    "Principal",
+    "ActorMethod",
+    "_SERVICE",
+    "idlFactory",
+    "init",
+    "idlService",
+    "idlInitArgs",
+    "Array",
+    "Uint8Array",
+    "Uint16Array",
+    "Uint32Array",
+    "BigUint64Array",
+    "Int8Array",
+    "Int16Array",
+    "Int32Array",
+    "BigInt64Array",
+];
+
+/// Names TypeScript accepts as identifiers but not as a type: the intrinsic types, which it
+/// refuses as a declaration name (`export interface never { … }` is `TS2427`); `as`, which it
+/// refuses as an alias name; and the type operators `keyof`, `readonly`, `infer` and
+/// `unique`, which declare fine but parse as the operator wherever the type is referenced.
+/// The reserved words in `KEYWORDS` cover the rest.
+static TYPESCRIPT_RESERVED_TYPE_NAMES: [&str; 14] = [
+    "any",
+    "as",
+    "bigint",
+    "infer",
+    "keyof",
+    "never",
+    "number",
+    "object",
+    "readonly",
+    "string",
+    "symbol",
+    "undefined",
+    "unique",
+    "unknown",
+];
+
+/// Refuses two candid types that escape to one exported name, e.g. `IDL` and `IDL_`.
+///
+/// The declarations files are printed rather than built as an AST, so nothing downstream
+/// sees the duplicate: TypeScript merges the two interfaces, and every reference to either
+/// type resolves to the merged one.
+pub(crate) fn check_declaration_names(env: &TypeEnv) -> Result<(), String> {
+    let mut seen: Vec<(String, &str)> = Vec::new();
+    for (id, _) in env.0.iter() {
+        let escaped = escaped_ident_name(id);
+        if let Some((_, previous)) = seen.iter().find(|(name, _)| *name == escaped) {
+            return Err(format!(
+                "candid types `{previous}` and `{id}` would both be exported as `{escaped}` \
+                 from the generated declarations, where TypeScript merges them silently. \
+                 Rename one of them in the .did file."
+            ));
+        }
+        seen.push((escaped, id.as_str()));
+    }
+    Ok(())
+}
+
 /// The naming rule for identifiers exported by the generated declarations files.
 ///
 /// Anything importing from those files must escape names with this same rule, or the
-/// import will name a member that does not exist. Note this list is deliberately narrower
-/// than `typescript_native::utils::KEYWORDS`, which also covers TypeScript built-in type
-/// names — escaping an import with that wider list would over-escape.
+/// import will name a member that does not exist. Note the keyword list is deliberately
+/// narrower than `typescript_native::utils::KEYWORDS`, which also covers TypeScript built-in
+/// type names — escaping an import with that wider list would over-escape.
+///
+/// Applied to candid *type* names only. Field and method names are quoted keys, which
+/// collide with nothing.
 pub(crate) fn escaped_ident_name(id: &str) -> String {
-    if KEYWORDS.contains(&id) {
+    if KEYWORDS.contains(&id)
+        || DECLARATIONS_MODULE_NAMES.contains(&id)
+        || TYPESCRIPT_RESERVED_TYPE_NAMES.contains(&id)
+    {
         format!("{}_", id)
     } else {
         id.to_string()
@@ -356,9 +443,9 @@ fn pp_actor<'a>(ty: &'a Type, recs: &'a BTreeSet<&'a str>) -> RcDoc<'a> {
         TypeInner::Service(_) => pp_ty(ty),
         TypeInner::Var(id) => {
             if recs.contains(id.as_str()) {
-                str(id.as_str()).append(".getType()")
+                ident(id.as_str()).append(".getType()")
             } else {
-                str(id.as_str())
+                ident(id.as_str())
             }
         }
         TypeInner::Class(_, t) => pp_actor(t, recs),
@@ -561,4 +648,71 @@ pub fn compile_typescript(
     };
 
     format!("{}\n{}\n", ts_prefix, js_code)
+}
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use super::*;
+
+    /// Every candid type constructor, each leaf also as the element of a `vec` and an `opt`.
+    pub(crate) fn every_constructor() -> Vec<Type> {
+        use TypeInner::*;
+        let leaves: std::vec::Vec<Type> = [
+            Null, Bool, Nat, Int, Nat8, Nat16, Nat32, Nat64, Int8, Int16, Int32, Int64, Float32,
+            Float64, Text, Reserved, Empty, Principal,
+        ]
+        .into_iter()
+        .map(Type::from)
+        .collect();
+        let mut all = leaves.clone();
+        all.extend(leaves.iter().map(|t| Type::from(Vec(t.clone()))));
+        all.extend(leaves.iter().map(|t| Type::from(Opt(t.clone()))));
+        all.push(Type::from(Record(vec![])));
+        all.push(Type::from(Variant(vec![])));
+        all.push(Type::from(Func(Function {
+            modes: vec![],
+            args: vec![],
+            rets: vec![],
+        })));
+        all.push(Type::from(Service(vec![])));
+        all
+    }
+
+    /// The identifiers in a rendered type that a candid type name could collide with: every
+    /// bare identifier, i.e. one not reached through a `.`.
+    pub(crate) fn bare_identifiers(rendered: &str) -> Vec<String> {
+        let mut out = Vec::new();
+        let chars: Vec<char> = rendered.chars().collect();
+        let mut i = 0;
+        while i < chars.len() {
+            if chars[i].is_ascii_alphabetic() || chars[i] == '_' {
+                let start = i;
+                while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
+                    i += 1;
+                }
+                let preceded_by_dot = start > 0 && chars[start - 1] == '.';
+                if !preceded_by_dot {
+                    out.push(chars[start..i].iter().collect());
+                }
+            } else {
+                i += 1;
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn javascript_printer_references_only_names_a_candid_type_cannot_take() {
+        for ty in every_constructor() {
+            let rendered = pp_ty(&ty).pretty(80).to_string();
+            for id in bare_identifiers(&rendered) {
+                assert_ne!(
+                    escaped_ident_name(&id),
+                    id,
+                    "`{id}` in `{rendered}` is emitted bare but a candid type of that name is \
+                     not escaped"
+                );
+            }
+        }
+    }
 }

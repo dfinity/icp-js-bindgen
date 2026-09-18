@@ -396,6 +396,33 @@ If both the `agent` and `agentOptions` are provided, the `agentOptions` will be 
 
 If provided, the `actorOptions` will be passed to the [`Actor.createActor`](https://js.icp.build/core/latest/libs/agent/api/classes/actor/#createactor) function. Otherwise, the default options will be used.
 
+## Names the generator cannot carry
+
+Most candid names pass through untouched. Where a name would collide with something the
+generated files themselves use, the generator escapes it; where two candid names would end
+up as one, generation fails with a diagnostic rather than emitting something TypeScript would
+merge silently.
+
+### Type names
+
+A candid type is declared under its own name, escaped with a trailing `_` when that name is a
+reserved word, a JavaScript global, a name TypeScript cannot use as a type (`never`, `string`,
+`as`, `keyof`, …), or something the generated module already occupies — the types it imports
+from `@icp-sdk/core` and the `Option` / `Some` / `None` / `CreateActorOptions` helpers it
+declares. So `type Option` becomes `Option_` and `type Map` becomes `Map_`.
+
+The declarations files apply the same rule to the names they occupy themselves: `IDL`,
+`Principal`, `ActorMethod`, their own exports (`_SERVICE`, `idlFactory`, `init`, `idlService`,
+`idlInitArgs`), and the built-in types they print for a `vec` (`Array`, `Uint8Array` and the
+other typed arrays). A candid type of one of those names is exported as `IDL_` or
+`Uint8Array_`, and the wrapper imports it under that name.
+
+Two candid types that escape to one exported name — `IDL` and `IDL_` — fail generation.
+
+An inline all-null variant is declared as an enum named after its tags, `Variant_x` for
+`variant { x }`. A named candid type of that name with the same tags shares the enum; with
+different tags, the inline variant is declared as `Variant_x_` instead.
+
 ## `declarations/`
 
 This folder contains the actual Candid JS bindings. It generates the same bindings that the [`dfx generate`](https://internetcomputer.org/docs/building-apps/developer-tools/dfx/dfx-generate) command was generating.
