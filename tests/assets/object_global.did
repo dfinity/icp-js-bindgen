@@ -1,0 +1,10 @@
+// The conversions reference the global `Object` to test own properties, so a candid type of
+// that name must not shadow it. The variant carries an inherited tag, which is what makes the
+// generated conversion reach for the global in the first place.
+type Object = variant { toString; plain };
+
+service : () -> {
+  round_trip : (Object) -> (Object);
+  // A *method* of that name is a property and keeps it.
+  "Object" : () -> ();
+}
