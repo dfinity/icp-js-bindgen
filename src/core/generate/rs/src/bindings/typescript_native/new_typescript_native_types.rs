@@ -780,32 +780,27 @@ fn create_property_signature_for_variant(
         ))),
     };
 
-    // Check if the field type is optional
-    let (is_optional, type_ann) = if let TypeInner::Opt(inner_type) = field.ty.as_ref() {
-        (
-            true,
-            convert_type(top_level_nodes, env, inner_type, syntax, true),
-        )
-    } else {
-        (
-            false,
-            convert_type(top_level_nodes, env, &field.ty, syntax, true),
-        )
-    };
-
-    let type_ann = if is_optional {
-        TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
-            span: DUMMY_SP,
-            types: vec![
-                Box::new(type_ann),
-                Box::new(TsType::TsKeywordType(TsKeywordType {
-                    span: DUMMY_SP,
-                    kind: TsKeywordTypeKind::TsNullKeyword,
-                })),
-            ],
-        }))
-    } else {
-        type_ann
+    // A payload of `opt X` is `T | null`, `null` being the absent payload. A payload has no
+    // slot of its own for the outer level, so when `X` is itself optional — whether spelled
+    // out or reached through a name — the payload is typed as the standalone `opt X`,
+    // `Some<T | null> | None`, rather than collapsing two candid states onto one `null`.
+    let type_ann = match field.ty.as_ref() {
+        TypeInner::Opt(inner) if resolves_to_opt(env, inner) => {
+            convert_type(top_level_nodes, env, &field.ty, syntax, true)
+        }
+        TypeInner::Opt(inner) => {
+            TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
+                span: DUMMY_SP,
+                types: vec![
+                    Box::new(convert_type(top_level_nodes, env, inner, syntax, true)),
+                    Box::new(TsType::TsKeywordType(TsKeywordType {
+                        span: DUMMY_SP,
+                        kind: TsKeywordTypeKind::TsNullKeyword,
+                    })),
+                ],
+            }))
+        }
+        _ => convert_type(top_level_nodes, env, &field.ty, syntax, true),
     };
 
     TsTypeElement::TsPropertySignature(TsPropertySignature {
