@@ -1,0 +1,19 @@
+// An option is nested whenever its own type is, including where a name stands for the inner
+// option: `opt Inner` below is the same candid type as `opt opt Cfg`, so it is declared and
+// converted the same way. An option that reaches itself resolves to an option as well, which
+// is what keeps its declaration from referencing itself in a circle. A name carrying no
+// option is not one.
+type Cfg = record { x : nat };
+type Inner = opt Cfg;
+type ViaAlias = opt Inner;
+type SelfOpt = opt SelfOpt;
+type Ping = Pong;
+type Pong = opt Ping;
+type Name = text;
+
+service : {
+  via_alias : (ViaAlias) -> (ViaAlias);
+  self_referential : (opt SelfOpt) -> (opt SelfOpt);
+  through_a_chain : (Pong) -> (Pong);
+  not_an_option : (opt Name) -> (opt Name);
+}

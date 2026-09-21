@@ -23,13 +23,8 @@ const OUTPUT_DIR = 'output';
 /**
  * Diagnostics the generator is known to produce today, by TypeScript error code. An entry here
  * is a bug with an owner, not an accepted state: delete it when the mapping is fixed.
- *
- * `opt opt T` where `T` needs a conversion: the record field is declared `T | null` while the
- * conversion yields `Option<T | null>`, so the two disagree (TS2322).
  */
-const KNOWN_DIAGNOSTICS: Record<string, number[]> = {
-  internet_identity: [2322, 2322, 2322, 2322, 2322],
-};
+const KNOWN_DIAGNOSTICS: Record<string, number[]> = {};
 
 let tmpDir: string;
 

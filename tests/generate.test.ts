@@ -98,6 +98,8 @@ describe('generate', () => {
     'string',
     'service_named_after_file',
     'collide_class',
+    'nested_option_fields',
+    'option_aliases',
     'import_local_collision',
     'method_arg_names',
     'nested_service_inherited_method',

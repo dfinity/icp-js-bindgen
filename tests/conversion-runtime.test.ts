@@ -74,6 +74,79 @@ describe('generated conversions, executed', () => {
     expect(from_candid_Payload(wire as never)).toMatchObject({ count: 0n });
   });
 
+  it('round-trips nested optional fields through undefined, null and a value', async () => {
+    const { to_candid_Settings, from_candid_Settings } =
+      await conversionsFor('nested_option_fields');
+
+    // `a?: Cfg | null`: omitted is absent, `null` is present with an absent inner value,
+    // a value is present. Three levels deep the middle is a `Some`/`None` of its own.
+    expect(to_candid_Settings({} as never)).toEqual({ a: [], b: [], c: [], d: [] });
+    expect(to_candid_Settings({ a: null, b: 5n, c: { __kind__: 'None' } } as never)).toEqual({
+      a: [[]],
+      b: [[5n]],
+      c: [[]],
+      d: [],
+    });
+    expect(
+      to_candid_Settings({ a: { x: 1n }, c: { __kind__: 'Some', value: null } } as never),
+    ).toMatchObject({ a: [[{ x: 1n }]], c: [[[]]] });
+
+    expect(from_candid_Settings({ a: [], b: [], c: [], d: [] } as never)).toEqual({});
+    expect(from_candid_Settings({ a: [[]], b: [[7n]], c: [[]], d: [] } as never)).toEqual({
+      a: null,
+      b: 7n,
+      c: { __kind__: 'None' },
+    });
+    expect(
+      from_candid_Settings({ a: [[{ x: 2n }]], b: [], c: [[[{ x: 3n }]]], d: [] } as never),
+    ).toEqual({
+      a: { x: 2n },
+      c: { __kind__: 'Some', value: { x: 3n } },
+    });
+  });
+
+  // `d : opt Inner` and `a : opt opt Cfg` are one candid type, so one wire value and one
+  // declared value: a name standing for the inner option changes neither.
+  it('round-trips an aliased nested optional field exactly as the spelled-out one', async () => {
+    const { to_candid_Settings, from_candid_Settings } =
+      await conversionsFor('nested_option_fields');
+
+    for (const value of [undefined, null, { x: 9n }]) {
+      const encoded = to_candid_Settings({ a: value, d: value } as never) as {
+        a: unknown;
+        d: unknown;
+      };
+      expect(encoded.d).toEqual(encoded.a);
+
+      const decoded = from_candid_Settings({
+        a: encoded.a,
+        b: [],
+        c: [],
+        d: encoded.d,
+      } as never) as { a: unknown; d: unknown };
+      expect(decoded.d).toEqual(decoded.a);
+      expect(decoded.a).toEqual(value === undefined ? undefined : value);
+    }
+  });
+
+  it('round-trips an option reached through a name as a nested one', async () => {
+    const { to_candid_ViaAlias, from_candid_ViaAlias } = await conversionsFor('option_aliases');
+
+    // Three states, so `Some`/`None` rather than a second `null`.
+    expect(to_candid_ViaAlias({ __kind__: 'None' } as never)).toEqual([]);
+    expect(to_candid_ViaAlias({ __kind__: 'Some', value: null } as never)).toEqual([[]]);
+    expect(to_candid_ViaAlias({ __kind__: 'Some', value: { x: 4n } } as never)).toEqual([
+      [{ x: 4n }],
+    ]);
+
+    expect(from_candid_ViaAlias([] as never)).toEqual({ __kind__: 'None' });
+    expect(from_candid_ViaAlias([[]] as never)).toEqual({ __kind__: 'Some', value: null });
+    expect(from_candid_ViaAlias([[{ x: 4n }]] as never)).toEqual({
+      __kind__: 'Some',
+      value: { x: 4n },
+    });
+  });
+
   it('keeps a present-but-falsy standalone optional', async () => {
     const { to_candid_opt } = await conversionsFor('conversion_encoding');
     expect(to_candid_opt, 'the standalone opt conversion should be extracted').toBeTypeOf(
