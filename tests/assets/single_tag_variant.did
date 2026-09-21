@@ -1,0 +1,10 @@
+// A variant with one tag lowers to a single object type rather than a union, so testing its
+// tag never narrows the input to `never`. The conversion's unreachable arm asserts it.
+type One = variant { p : opt nat };
+type Two = variant { p : opt nat; z };
+
+service : {
+  take_one : (One) -> ();
+  give_one : () -> (One);
+  take_two : (Two) -> ();
+}
