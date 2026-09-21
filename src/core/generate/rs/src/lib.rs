@@ -51,12 +51,13 @@ pub struct GenerateResult {
 
 #[wasm_bindgen]
 pub fn generate(options: GenerateOptions) -> Result<GenerateResult, JsError> {
-    // Decided from the file name alone, so it comes before the file is read.
-    if !options.actor_disabled {
-        check_input::check_service_name(&options.service_name).map_err(|e| JsError::new(&e))?;
-    }
     let input_path = PathBuf::from(options.did_file_path);
     let (env, actor, prog) = parser::check_file(input_path.as_path()).map_err(JsError::from)?;
+    // Only the actor files import by the file's name, so a name they cannot import is refused
+    // only when they are produced.
+    if !options.actor_disabled && actor.is_some() {
+        check_input::check_service_name(&options.service_name).map_err(|e| JsError::new(&e))?;
+    }
     javascript::check_declaration_names(&env).map_err(|e| JsError::new(&e))?;
     check_input::check_candid_names(&env, &actor).map_err(|e| JsError::new(&e))?;
 
@@ -75,7 +76,9 @@ pub fn generate(options: GenerateOptions) -> Result<GenerateResult, JsError> {
             .map_err(|e| JsError::new(&e))
     };
 
-    let (interface_ts, service_ts) = match options.actor_disabled {
+    // A `.did` without a service has nothing to build an actor from; its declarations are
+    // the whole output, exactly as when the actor files are not wanted.
+    let (interface_ts, service_ts) = match options.actor_disabled || actor.is_none() {
         true => (String::new(), String::new()),
         false => (compile_actor("interface")?, compile_actor("wrapper")?),
     };

@@ -82,9 +82,10 @@ replaced with `_` where the name is used as one, so `my-backend.did` and `my.bac
 yield the same identifiers as `my_backend.did` would. A `#`, `?`, `%` or `\` in the file name is
 refused instead: the wrapper imports the declarations by that name, a module specifier is
 resolved as a URL, and no spelling of it resolves the file in both Node and a bundler. Only
-the actor files carry such an import, so generating `declarations/` alone still works.
+the actor files carry such an import, so the name is accepted whenever they are not produced:
+with `output.actor.disabled`, or for a `.did` without a `service`.
 
-Set the [`output.actor.disabled`](./core/api/type-aliases/GenerateOutputOptions.md#disabled) option to `true` to skip generating this file.
+Set the [`output.actor.disabled`](./core/api/type-aliases/GenerateOutputOptions.md#disabled) option to `true` to skip generating this file. A `.did` that declares types but no `service` has nothing to wrap, so it produces the declarations only, as if that option were set.
 
 The generated file exposes:
 

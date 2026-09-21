@@ -46,39 +46,59 @@ describe('generate', () => {
     ).rejects.toThrow(/IDL_/);
   });
 
-  // The name is rejected before anything is read, so these files do not exist — and `?` is
-  // not a legal filename on Windows, so one of them could not be checked out.
-  it.each([
-    'my#backend',
-    'my?backend',
-    'my%backend',
-  ])('refuses a .did name no module specifier can carry: %s', async (serviceName) => {
-    await expect(
-      generate({ didFile: `${TESTS_ASSETS_DIR}/${serviceName}.did`, outDir: OUTPUT_DIR }),
-    ).rejects.toThrow(/module specifier/);
-  });
-
-  // On Windows `\\` is a path separator, so `basename` would strip it before the check.
-  it.runIf(process.platform !== 'win32')('refuses a .did name containing a backslash', async () => {
-    await expect(
-      generate({ didFile: `${TESTS_ASSETS_DIR}/my\\backend.did`, outDir: OUTPUT_DIR }),
-    ).rejects.toThrow(/module specifier/);
-  });
-
-  it('accepts such a name when only the declarations are wanted', async () => {
-    // Nothing the declarations-only output writes carries a module specifier, so the
-    // restriction does not apply to it. The wasm reads the .did from the real filesystem, so
-    // the file is created there rather than committed under a name some tooling dislikes.
+  // The wasm reads the .did from the real filesystem, so a file with such a name is created
+  // there rather than committed under a name some tooling dislikes.
+  const withDidNamed = async (
+    name: string,
+    source: string,
+    run: (didFile: string) => Promise<void>,
+  ) => {
     const dir = mkdtempSync(join(tmpdir(), 'icp-bindgen-'));
-    const didFile = join(dir, 'my#backend.did');
-    writeFileSync(didFile, readFileSync(`${TESTS_ASSETS_DIR}/hello_world.did`));
     try {
-      await generate({ didFile, outDir: OUTPUT_DIR, output: { actor: { disabled: true } } });
-      expect(fileExists(`${OUTPUT_DIR}/declarations/my#backend.did.js`)).toBe(true);
-      expect(fileExists(`${OUTPUT_DIR}/declarations/my#backend.did.d.ts`)).toBe(true);
+      const didFile = join(dir, `${name}.did`);
+      writeFileSync(didFile, readFileSync(`${TESTS_ASSETS_DIR}/${source}.did`));
+      await run(didFile);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  };
+
+  const expectRefusedName = (didFile: string) =>
+    expect(generate({ didFile, outDir: OUTPUT_DIR })).rejects.toThrow(/module specifier/);
+
+  it.each([
+    'my#backend',
+    'my%backend',
+  ])('refuses a .did name no module specifier can carry: %s', async (serviceName) => {
+    await withDidNamed(serviceName, 'hello_world', expectRefusedName);
+  });
+
+  // `?` is not a legal filename on Windows, and `\\` is a path separator there, which
+  // `basename` would strip before the check.
+  it.runIf(process.platform !== 'win32').each(['my?backend', 'my\\backend'])(
+    'refuses a .did name no module specifier can carry: %s',
+    async (serviceName) => {
+      await withDidNamed(serviceName, 'hello_world', expectRefusedName);
+    },
+  );
+
+  it('accepts such a name when only the declarations are wanted', async () => {
+    // Nothing the declarations-only output writes carries a module specifier, so the
+    // restriction does not apply to it.
+    await withDidNamed('my#backend', 'hello_world', async (didFile) => {
+      await generate({ didFile, outDir: OUTPUT_DIR, output: { actor: { disabled: true } } });
+      expect(fileExists(`${OUTPUT_DIR}/declarations/my#backend.did.js`)).toBe(true);
+      expect(fileExists(`${OUTPUT_DIR}/declarations/my#backend.did.d.ts`)).toBe(true);
+    });
+  });
+
+  it('accepts such a name when the .did has no service', async () => {
+    await withDidNamed('my#types', 'type_only', async (didFile) => {
+      await generate({ didFile, outDir: OUTPUT_DIR });
+      expect(fileExists(`${OUTPUT_DIR}/declarations/my#types.did.js`)).toBe(true);
+      expect(fileExists(`${OUTPUT_DIR}/declarations/my#types.did.d.ts`)).toBe(true);
+      expect(fileExists(`${OUTPUT_DIR}/my#types.ts`)).toBe(false);
+    });
   });
   it.each([
     'hello_world',
@@ -145,6 +165,19 @@ describe('generate', () => {
     await expect(interfaceTs).toMatchFileSnapshot(
       `${SNAPSHOTS_DIR}/${serviceName}/${serviceName}.d.ts.snapshot`,
     );
+  });
+
+  it('writes only the declarations for a .did without a service', async () => {
+    const serviceName = 'type_only';
+    await generate({
+      didFile: `${TESTS_ASSETS_DIR}/${serviceName}.did`,
+      outDir: OUTPUT_DIR,
+      output: { actor: { interfaceFile: true } },
+    });
+
+    await expectGeneratedDeclarations(SNAPSHOTS_DIR, serviceName);
+    expect(fileExists(`${OUTPUT_DIR}/${serviceName}.ts`)).toBe(false);
+    expect(fileExists(`${OUTPUT_DIR}/${serviceName}.d.ts`)).toBe(false);
   });
 
   it.each([

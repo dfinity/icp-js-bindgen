@@ -215,7 +215,8 @@ async function writeBindings({
     await writeFileSafe(declarationsJsFile, declarationsJs, force);
   }
 
-  if (output.actor?.disabled) {
+  // No actor output when it is not wanted, or when the `.did` declares no service to wrap.
+  if (output.actor?.disabled || bindings.service_ts === '') {
     return;
   }
 

@@ -1,0 +1,3 @@
+// Types without a service. There is no actor to wrap, so only the declarations are produced.
+type Cfg = record { x : nat };
+type Kind = variant { a; b };

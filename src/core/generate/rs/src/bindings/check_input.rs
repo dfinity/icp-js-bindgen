@@ -31,7 +31,7 @@ pub(crate) fn check_candid_names(env: &TypeEnv, actor: &Option<Type>) -> Result<
 /// does not exist. Percent-encoding fixes the specifier for Node and breaks it for bundlers
 /// that resolve the raw string as a path, so no spelling works everywhere and the file has to
 /// be renamed. Only the actor files carry such a specifier, so this runs only when they are
-/// wanted.
+/// produced.
 pub(crate) fn check_service_name(service_name: &str) -> Result<(), String> {
     let mut offending: Vec<char> = service_name
         .chars()
