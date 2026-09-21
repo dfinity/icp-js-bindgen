@@ -101,6 +101,7 @@ describe('generate', () => {
     'nested_option_fields',
     'option_aliases',
     'nested_option_payloads',
+    'single_tag_variant',
     'import_local_collision',
     'method_arg_names',
     'nested_service_inherited_method',

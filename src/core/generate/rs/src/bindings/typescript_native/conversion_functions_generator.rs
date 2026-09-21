@@ -23,15 +23,23 @@ fn is_unit_variant(fields: &[Field]) -> bool {
             .all(|f| matches!(f.ty.as_ref(), TypeInner::Null))
 }
 
-/// `value as never`, for the arm that cannot be reached once every tag has been tested.
+/// `value as never`, for the arm of a decoder that cannot be reached once every tag has been
+/// tested with `in`.
+///
+/// `in` narrows the input away tag by tag, so the arm is already `never` and needs no help —
+/// except where a tag is named after an inherited member: the own-property conjunction added
+/// for it breaks the narrowing, and the arm is asserted instead.
 fn unreachable_value(value: Expr, fields: &[Field]) -> Expr {
-    // `in` alone narrows the union away, so the arm is already `never` and needs no help.
     if !fields.iter().any(|f| match &*f.id {
         Label::Named(name) => is_inherited_property(name),
         _ => false,
     }) {
         return value;
     }
+    as_never(value)
+}
+
+fn as_never(value: Expr) -> Expr {
     Expr::TsAs(TsAsExpr {
         span: DUMMY_SP,
         expr: Box::new(value),
@@ -928,8 +936,13 @@ impl<'a> TypeConverter<'a> {
             // For variants with different types, check for __kind__ property
             // This is for discriminated union: { __kind__: 'tag1', tag1: value1 } | { __kind__: 'tag2', tag2: value2 }
 
-            // Build a series of conditions to check each tag
-            let mut result = self.create_ident(param_name); // Default fallback
+            // Build a series of conditions to check each tag, ending in the arm no tag matched.
+            // Testing `__kind__` narrows a union to `never` by then; a variant with one tag is
+            // not a union and is never narrowed, so that arm asserts it.
+            let mut result = match fields.len() {
+                1 => as_never(self.create_ident(param_name)),
+                _ => self.create_ident(param_name),
+            };
 
             for field in fields.iter().rev() {
                 let field_name = match &*field.id {
