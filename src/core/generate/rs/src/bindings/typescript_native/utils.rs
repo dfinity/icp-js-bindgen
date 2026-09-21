@@ -1,4 +1,5 @@
 use candid::types::{Field, Label, Type, TypeEnv, TypeInner};
+use std::collections::HashSet;
 use swc_core::common::comments::SingleThreadedComments;
 use swc_core::common::source_map::SourceMap;
 use swc_core::common::sync::Lrc;
@@ -511,6 +512,53 @@ pub fn contains_unicode_characters(name: &str) -> bool {
     name != get_typescript_ident(name, false)
 }
 
+/// Suffixes `_` if `name` is a reserved word or a well-known global, so that it can be
+/// declared without shadowing or being rejected.
+fn escape_reserved(name: String) -> String {
+    if KEYWORDS.contains(&name.as_str()) {
+        format!("{name}_")
+    } else {
+        name
+    }
+}
+
+/// Uppercases the first character, respecting `char` boundaries.
+fn capitalize_first(name: &str) -> String {
+    let mut chars = name.chars();
+    match chars.next() {
+        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+        None => String::new(),
+    }
+}
+
+/// The identifier of the generated actor class, e.g. `hello_world` -> `Hello_world`.
+///
+/// The class declaration, the `createActor` return type and the `new …()` call all resolve
+/// the name through here, so they cannot disagree.
+///
+/// The escape runs after capitalization, since that is what turns a basename into a global.
+/// A candid type can also be named exactly this — `governance.did` holding
+/// `type Governance` — and TypeScript would merge the class with the interface declared for
+/// it, so the class steps aside with `_` while a candid type holds the name, the way it does
+/// for a basename that capitalizes onto a global.
+pub fn service_class_name(service_name: &str, env: &TypeEnv) -> String {
+    let capitalized = capitalize_first(service_name);
+    let mut name = if MODULE_NAMES.contains(&capitalized.as_str()) {
+        format!("{capitalized}_")
+    } else {
+        escape_reserved(capitalized)
+    };
+    let taken: HashSet<String> = env
+        .0
+        .keys()
+        .map(|id| candid_type_ident(id).sym.to_string())
+        .collect();
+    while taken.contains(&name) {
+        name.push('_');
+    }
+    name
+}
+
 /// Names the generated module already occupies — everything it imports, plus the fixed
 /// preamble it declares.
 ///
@@ -604,5 +652,65 @@ mod tests {
     #[test]
     fn candid_import_local_steps_aside_for_the_service_type() {
         assert_eq!(candid_import_local("SERVICE"), "_SERVICE_");
+    }
+
+    /// A candid type can hold the name the class would take; TypeScript would merge the two.
+    #[test]
+    fn service_class_name_steps_aside_for_a_candid_type_of_that_name() {
+        let mut env = TypeEnv::new();
+        env.0
+            .insert("Governance".to_string(), TypeInner::Nat.into());
+        assert_eq!(service_class_name("governance", &env), "Governance_");
+        env.0
+            .insert("Governance_".to_string(), TypeInner::Nat.into());
+        assert_eq!(service_class_name("governance", &env), "Governance__");
+    }
+
+    #[test]
+    fn service_class_name_capitalizes() {
+        assert_eq!(service_class_name("backend", &TypeEnv::new()), "Backend");
+        assert_eq!(
+            service_class_name("hello_world", &TypeEnv::new()),
+            "Hello_world"
+        );
+    }
+
+    /// Capitalization is by `char`: slicing at byte 1 splits a multi-byte boundary.
+    #[test]
+    fn service_class_name_handles_multibyte_leading_character() {
+        assert_eq!(service_class_name("ünicode", &TypeEnv::new()), "Ünicode");
+        assert_eq!(service_class_name("日本語", &TypeEnv::new()), "日本語");
+        assert_eq!(service_class_name("ßx", &TypeEnv::new()), "SSx");
+        assert_eq!(service_class_name("", &TypeEnv::new()), "");
+    }
+
+    /// The escape runs after capitalization, which is what turns a basename into a global.
+    /// The module imports `Actor` and `Agent`, so a `.did` of that basename would collide.
+    #[test]
+    fn service_class_name_escapes_names_the_module_occupies() {
+        assert_eq!(service_class_name("actor", &TypeEnv::new()), "Actor_");
+        assert_eq!(service_class_name("agent", &TypeEnv::new()), "Agent_");
+        assert_eq!(
+            service_class_name("principal", &TypeEnv::new()),
+            "Principal_"
+        );
+    }
+
+    #[test]
+    fn service_class_name_escapes_globals() {
+        assert_eq!(service_class_name("map", &TypeEnv::new()), "Map_");
+        assert_eq!(service_class_name("set", &TypeEnv::new()), "Set_");
+        assert_eq!(service_class_name("error", &TypeEnv::new()), "Error_");
+        // Not a reserved word once capitalized, so left alone.
+        assert_eq!(service_class_name("class", &TypeEnv::new()), "Class");
+    }
+
+    /// A candid type may be named after something the module imports or the preamble declares.
+    #[test]
+    fn candid_type_ident_escapes_names_the_module_occupies() {
+        assert_eq!(&*candid_type_ident("Option").sym, "Option_");
+        assert_eq!(&*candid_type_ident("Agent").sym, "Agent_");
+        assert_eq!(&*candid_type_ident("Principal").sym, "Principal_");
+        assert_eq!(&*candid_type_ident("Status").sym, "Status");
     }
 }
