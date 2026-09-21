@@ -451,6 +451,15 @@ suffixed with `_` while that name is taken as well, so `(arg1 : nat, nat)` gives
 `arg1_`. The wrapper class always names its parameters `argN`. Callers pass arguments positionally,
 so these names are documentation only.
 
+### Field and tag names
+
+Record fields and variant tags are property keys and keep their candid name exactly. A name
+that is not an identifier is written as a string-literal key and accessed with brackets
+(`"my-field": bigint`, `value["my-field"]`); a reserved word such as `new` is legal in both
+positions and stays bare. The one exception is a tag of an all-null variant that reads as a
+number, `"0"` or `"1.5"`: such a variant becomes a string enum, TypeScript refuses a numeric
+enum member, and generation fails.
+
 ### Refused names
 
 A candid name of `__proto__` — as a record field, a variant tag or a method — cannot be
