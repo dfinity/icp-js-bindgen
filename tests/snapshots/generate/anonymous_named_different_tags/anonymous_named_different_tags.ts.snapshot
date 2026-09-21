@@ -63,13 +63,16 @@ export interface anonymous_named_different_tagsInterface {
 }
 import type { Variant_x as _Variant_x } from "./declarations/anonymous_named_different_tags.did";
 export class Anonymous_named_different_tags implements anonymous_named_different_tagsInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async h(): Promise<Variant_x_> {
-        const result = await this.actor.h();
+        const result = await this.#actor.h();
         return from_candid_variant_n1(result);
     }
     async v(): Promise<Variant_x> {
-        const result = await this.actor.v();
+        const result = await this.#actor.v();
         return from_candid_Variant_x_n2(result);
     }
 }

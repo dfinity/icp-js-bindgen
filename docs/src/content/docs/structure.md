@@ -340,7 +340,7 @@ interface hello_worldInterface {
 
 ### `<service-name>` class
 
-This class implements the [`<service-name>Interface` type](#service-nameinterface-type). It can be instantiated with the [`createActor` function](#createactor-function).
+This class implements the [`<service-name>Interface` type](#service-nameinterface-type). It can be instantiated with the [`createActor` function](#createactor-function). It keeps the actor it wraps in a private `#actor` field, so it is erasable-syntax TypeScript — usable under `erasableSyntaxOnly`, Node's type stripping and Deno — and needs a compilation target of ES2015 or later.
 
 For example, a Candid service will be represented as:
 
@@ -364,11 +364,12 @@ service : {
 
 ```typescript title="hello_world.ts"
 class Hello_world implements hello_worldInterface {
-  constructor(
-    private actor: ActorSubclass<_SERVICE>,
-  ) {}
+  readonly #actor: ActorSubclass<_SERVICE>;
+  constructor(actor: ActorSubclass<_SERVICE>) {
+    this.#actor = actor;
+  }
   async greet(arg0: string): Promise<string> {
-    const result = await this.actor.greet(arg0);
+    const result = await this.#actor.greet(arg0);
     return result;
   }
 }
@@ -451,14 +452,30 @@ suffixed with `_` while that name is taken as well, so `(arg1 : nat, nat)` gives
 `arg1_`. The wrapper class always names its parameters `argN`. Callers pass arguments positionally,
 so these names are documentation only.
 
-### Field and tag names
+### Method names
 
-Record fields and variant tags are property keys and keep their candid name exactly. A name
-that is not an identifier is written as a string-literal key and accessed with brackets
-(`"my-field": bigint`, `value["my-field"]`); a reserved word such as `new` is legal in both
-positions and stays bare. The one exception is a tag of an all-null variant that reads as a
-number, `"0"` or `"1.5"`: such a variant becomes a string enum, TypeScript refuses a numeric
-enum member, and generation fails.
+Method names are property keys, not declarations, so they are never escaped: a method keeps
+exactly the name the `.did` gives it, quoted where it has to be. `"my-method"` and `"new"` are
+both fine — the latter is quoted because a bare `new(): T` would declare the interface
+*constructible* rather than declaring a method called `new`.
+
+Three groups are refused on the actor class:
+
+| method name | why |
+| --- | --- |
+| `constructor` | bare or quoted, a class member of that name *is* the constructor; as a computed key it overwrites `prototype.constructor` |
+| `toString`, `valueOf`, `hasOwnProperty`, and the rest of `Object.prototype` | overriding these changes behaviour JavaScript relies on: `String(actor)` would fire a canister call and then throw |
+| `then`, `toJSON` | a class with a `then` method is a thenable, so `await actor` or returning it from an `async` function would call it; `JSON.stringify(actor)` calls `toJSON` |
+
+Only the wrapper class is subject to these. A nested `type S = service { … }` is typed as a
+`Principal` in the wrapper, so its interface never describes a runtime object and its methods
+may carry any name — except `__proto__`, which is refused everywhere (see below).
+
+The first group is unreachable whichever way it is emitted. The other two are a deliberate
+restriction rather than an impossibility: such a method would work if called
+directly, but it overrides a protocol, and a network request should not be a side effect of
+logging, awaiting or serializing the actor. If you need one of these names, the `.did` has to
+rename the method; please open an issue if that is a real constraint for your canister.
 
 ### Refused names
 

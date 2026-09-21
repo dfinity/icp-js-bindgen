@@ -96,32 +96,35 @@ export interface variant_payload_tagsInterface {
 }
 import type { Digit as _Digit, DigitField as _DigitField, Kw as _Kw, Outcome as _Outcome, Rec as _Rec } from "./declarations/variant_payload_tags.did";
 export class Variant_payload_tags implements variant_payload_tagsInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async get_outcome(): Promise<Outcome> {
-        const result = await this.actor.get_outcome();
+        const result = await this.#actor.get_outcome();
         return from_candid_Outcome_n1(result);
     }
     async get_rec(): Promise<Rec> {
-        const result = await this.actor.get_rec();
+        const result = await this.#actor.get_rec();
         return from_candid_Rec_n3(result);
     }
     async put_outcome(arg0: Outcome): Promise<void> {
-        const result = await this.actor.put_outcome(to_candid_Outcome_n6(arg0));
+        const result = await this.#actor.put_outcome(to_candid_Outcome_n6(arg0));
         return result;
     }
     async put_rec(arg0: Rec): Promise<void> {
-        const result = await this.actor.put_rec(to_candid_Rec_n8(arg0));
+        const result = await this.#actor.put_rec(to_candid_Rec_n8(arg0));
         return result;
     }
     async round_trip_digit(arg0: Digit, arg1: DigitField): Promise<[Digit, DigitField]> {
-        const result = await this.actor.round_trip_digit(to_candid_Digit_n10(arg0), to_candid_DigitField_n11(arg1));
+        const result = await this.#actor.round_trip_digit(to_candid_Digit_n10(arg0), to_candid_DigitField_n11(arg1));
         return [
             from_candid_Digit_n13(result[0]),
             from_candid_DigitField_n14(result[1])
         ];
     }
     async round_trip_kw(arg0: Kw): Promise<Kw> {
-        const result = await this.actor.round_trip_kw(to_candid_Kw_n16(arg0));
+        const result = await this.#actor.round_trip_kw(to_candid_Kw_n16(arg0));
         return from_candid_Kw_n18(result);
     }
 }

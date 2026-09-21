@@ -100,29 +100,32 @@ export interface reserved_wordsInterface {
 }
 import type { Collide as _Collide, Mixed as _Mixed, Status as _Status, new_ as _new } from "./declarations/reserved_words.did";
 export class Reserved_words implements reserved_wordsInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async get_inline(): Promise<Variant_new_done> {
-        const result = await this.actor.get_inline();
+        const result = await this.#actor.get_inline();
         return from_candid_variant_n1(result);
     }
     async get_reserved_type(): Promise<new_> {
-        const result = await this.actor.get_reserved_type();
+        const result = await this.#actor.get_reserved_type();
         return from_candid_new_n2(result);
     }
     async get_status(): Promise<Status> {
-        const result = await this.actor.get_status();
+        const result = await this.#actor.get_status();
         return from_candid_Status_n3(result);
     }
     async put_collide(arg0: Collide): Promise<void> {
-        const result = await this.actor.put_collide(to_candid_Collide_n4(arg0));
+        const result = await this.#actor.put_collide(to_candid_Collide_n4(arg0));
         return result;
     }
     async put_status(arg0: Status): Promise<void> {
-        const result = await this.actor.put_status(to_candid_Status_n5(arg0));
+        const result = await this.#actor.put_status(to_candid_Status_n5(arg0));
         return result;
     }
     async round_trip(arg0: Payload, arg1: Mixed): Promise<[Payload, Mixed]> {
-        const result = await this.actor.round_trip(arg0, to_candid_Mixed_n6(arg1));
+        const result = await this.#actor.round_trip(arg0, to_candid_Mixed_n6(arg1));
         return [
             result[0],
             from_candid_Mixed_n8(result[1])

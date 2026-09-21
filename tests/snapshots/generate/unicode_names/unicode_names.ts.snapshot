@@ -74,13 +74,16 @@ export interface unicode_namesInterface {
 }
 import type { R as _R, V as _V } from "./declarations/unicode_names.did";
 export class Unicode_names implements unicode_namesInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async round_trip_record(arg0: R): Promise<R> {
-        const result = await this.actor.round_trip_record(to_candid_R_n1(arg0));
+        const result = await this.#actor.round_trip_record(to_candid_R_n1(arg0));
         return from_candid_R_n3(result);
     }
     async round_trip_variant(arg0: V): Promise<V> {
-        const result = await this.actor.round_trip_variant(to_candid_V_n6(arg0));
+        const result = await this.#actor.round_trip_variant(to_candid_V_n6(arg0));
         return from_candid_V_n8(result);
     }
 }

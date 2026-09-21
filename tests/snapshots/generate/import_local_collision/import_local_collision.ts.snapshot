@@ -71,13 +71,16 @@ export interface import_local_collisionInterface {
 }
 import type { Foo as _Foo__, Foo_ as _Foo___ } from "./declarations/import_local_collision.did";
 export class Import_local_collision implements import_local_collisionInterface {
-    constructor(private actor: ActorSubclass<_SERVICE>){}
+    readonly #actor: ActorSubclass<_SERVICE>;
+    constructor(actor: ActorSubclass<_SERVICE>){
+        this.#actor = actor;
+    }
     async f(arg0: Foo): Promise<_Foo> {
-        const result = await this.actor.f(to_candid_Foo_n1(arg0));
+        const result = await this.#actor.f(to_candid_Foo_n1(arg0));
         return result;
     }
     async g(arg0: Foo_): Promise<_Foo_> {
-        const result = await this.actor.g(to_candid_Foo__n2(arg0));
+        const result = await this.#actor.g(to_candid_Foo__n2(arg0));
         return result;
     }
 }
