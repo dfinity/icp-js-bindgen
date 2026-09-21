@@ -9,6 +9,25 @@ use swc_core::ecma::{
     codegen::{Config, Emitter, text_writer::JsWriter, text_writer::WriteJs},
 };
 
+/// Whether this type is an option once its aliases are resolved.
+///
+/// An `opt` directly inside an `opt` decides both how a value is declared and how it is
+/// converted, and a name hides that nesting from a match on the syntax: with
+/// `type Inner = opt Cfg`, `opt Inner` is the same candid type as `opt opt Cfg`, so the two
+/// have to reach the same declaration and the same converter. An option reaching itself,
+/// `type A = opt A`, resolves to an option as well and takes that same path, which is what
+/// keeps its declaration from circularly referencing itself. A cycle of names carrying no
+/// option at all resolves to nothing and is not one.
+pub fn resolves_to_opt(env: &TypeEnv, ty: &Type) -> bool {
+    match ty.as_ref() {
+        TypeInner::Opt(_) => true,
+        TypeInner::Var(id) => env
+            .rec_find_type(id)
+            .is_ok_and(|resolved| matches!(resolved.as_ref(), TypeInner::Opt(_))),
+        _ => false,
+    }
+}
+
 /// The `enum` declarations lowered from all-null candid variants.
 ///
 /// Entries are distinct per declared name *and* tag list: per name because enums are nominal,

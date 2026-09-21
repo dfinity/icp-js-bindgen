@@ -1,0 +1,19 @@
+// Record fields of nested options. The declared field is the standalone type of the inner
+// option — `a?: Cfg | null`, `c?: Some<Cfg | null> | None` — and the conversions have to
+// agree with it: the outer level alone is `undefined`, `null` is a present-outer,
+// absent-inner value (`[[]]` on the wire), and anything else is present.
+//
+// `d` is `a` with a name standing for the inner option: one candid type, so one declaration
+// and one conversion.
+type Cfg = record { x : nat };
+type Inner = opt Cfg;
+type Settings = record {
+  a : opt opt Cfg;
+  b : opt opt nat;
+  c : opt opt opt Cfg;
+  d : opt Inner;
+};
+
+service : {
+  round_trip : (Settings) -> (Settings);
+}

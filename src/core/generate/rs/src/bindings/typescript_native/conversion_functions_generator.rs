@@ -1,9 +1,9 @@
 use super::comments::PosCursor;
+use super::new_typescript_native_types::convert_type_with_converter;
 use super::new_typescript_native_types::declaring_type_id;
-use super::new_typescript_native_types::{convert_type_with_converter, is_recursive_optional};
 use super::original_typescript_types::OriginalTypescriptTypes;
 use super::utils::{
-    EnumDeclarations, OBJECT_PROTOTYPE_NAMES, candid_member_prop, candid_prop_name,
+    EnumDeclarations, OBJECT_PROTOTYPE_NAMES, candid_member_prop, candid_prop_name, resolves_to_opt,
 };
 use candid::types::{Field, Label, Type, TypeEnv, TypeInner};
 use std::collections::{HashMap, HashSet};
@@ -179,6 +179,57 @@ fn is_present(value: Expr) -> Expr {
             SyntaxContext::empty(),
         )))),
         right: Box::new(not_equal(Expr::Lit(Lit::Null(Null { span: DUMMY_SP })))),
+    })
+}
+
+/// `value !== undefined`: the test for the *outer* level of a nested optional field, whose
+/// declared type carries `null` as a value of its own.
+fn is_defined(value: Expr) -> Expr {
+    Expr::Bin(BinExpr {
+        span: DUMMY_SP,
+        op: BinaryOp::NotEqEq,
+        left: Box::new(value),
+        right: Box::new(Expr::Ident(Ident::new(
+            "undefined".into(),
+            DUMMY_SP,
+            SyntaxContext::empty(),
+        ))),
+    })
+}
+
+/// `value.length === 0`: candid's absent optional on the wire.
+fn is_empty(value: Expr) -> Expr {
+    Expr::Bin(BinExpr {
+        span: DUMMY_SP,
+        op: BinaryOp::EqEqEq,
+        left: Box::new(Expr::Member(MemberExpr {
+            span: DUMMY_SP,
+            obj: Box::new(value),
+            prop: MemberProp::Ident(
+                Ident::new("length".into(), DUMMY_SP, SyntaxContext::empty()).into(),
+            ),
+        })),
+        right: Box::new(Expr::Lit(Lit::Num(Number {
+            span: DUMMY_SP,
+            value: 0.0,
+            raw: None,
+        }))),
+    })
+}
+
+/// `value[0]`: the payload of a present optional on the wire.
+fn first_element(value: Expr) -> Expr {
+    Expr::Member(MemberExpr {
+        span: DUMMY_SP,
+        obj: Box::new(value),
+        prop: MemberProp::Computed(ComputedPropName {
+            span: DUMMY_SP,
+            expr: Box::new(Expr::Lit(Lit::Num(Number {
+                span: DUMMY_SP,
+                value: 0.0,
+                raw: None,
+            }))),
+        }),
     })
 }
 
@@ -495,7 +546,7 @@ impl<'a> TypeConverter<'a> {
 
     fn convert_opt_to_candid_body(&mut self, inner: &Type, param_name: &str) -> Expr {
         // For nested options, we need to handle them recursively
-        if let TypeInner::Opt(_) = inner.as_ref() {
+        if resolves_to_opt(self.env, inner) {
             // Generate a conversion function for the inner option type
             let inner_function_name = self.get_to_candid_function_name(inner);
             self.generate_to_candid_function(inner, &inner_function_name);
@@ -522,61 +573,6 @@ impl<'a> TypeConverter<'a> {
                     ))],
                 )),
             });
-        }
-
-        // Check for recursive option types (Some<T> | None pattern)
-        if let TypeInner::Var(id) = inner.as_ref()
-            && let Ok(inner_type) = self.env.find_type(id)
-        {
-            let mut visited = std::collections::HashSet::new();
-            let is_recursive = is_recursive_optional(self.env, inner_type, &mut visited);
-
-            if is_recursive {
-                // For recursive patterns using Some/None, check for __kind__ property
-                // Generate conversion function for the inner type
-                let inner_function_name = self.get_to_candid_function_name(inner);
-                self.generate_to_candid_function(inner, &inner_function_name);
-
-                return Expr::Cond(CondExpr {
-                    span: DUMMY_SP,
-                    test: Box::new(Expr::Bin(BinExpr {
-                        span: DUMMY_SP,
-                        op: BinaryOp::EqEqEq,
-                        left: Box::new(Expr::Member(MemberExpr {
-                            span: DUMMY_SP,
-                            obj: Box::new(self.create_ident(param_name)),
-                            prop: MemberProp::Ident(
-                                Ident::new("__kind__".into(), DUMMY_SP, SyntaxContext::empty())
-                                    .into(),
-                            ),
-                        })),
-                        right: Box::new(Expr::Lit(Lit::Str(Str {
-                            span: DUMMY_SP,
-                            value: "None".into(),
-                            raw: None,
-                        }))),
-                    })),
-                    cons: Box::new(self.create_call("candid_none", vec![])),
-                    alt: Box::new(self.create_call(
-                        "candid_some",
-                        vec![self.create_arg(self.create_call(
-                            &inner_function_name,
-                            vec![self.create_arg(Expr::Member(MemberExpr {
-                                    span: DUMMY_SP,
-                                    obj: Box::new(self.create_ident(param_name)),
-                                    prop: MemberProp::Ident(
-                                        Ident::new(
-                                            "value".into(),
-                                            DUMMY_SP,
-                                            SyntaxContext::empty(),
-                                        )
-                                        .into(),
-                                    ),
-                                }))],
-                        ))],
-                    )),
-                });
-            }
         }
 
         // For inner types that don't need conversion, we can simplify
@@ -699,6 +695,30 @@ impl<'a> TypeConverter<'a> {
 
                     // Convert the field value based on its type
                     let value = match field.ty.as_ref() {
+                        // A field of `opt X` with `X` itself optional is declared as the
+                        // standalone type of `X` — `Cfg | null` for `opt Cfg` — so only
+                        // `undefined` is the outer absence; `null` belongs to the inner value
+                        // and reaches the standalone converter, which sends it as `[]`.
+                        TypeInner::Opt(inner) if resolves_to_opt(self.env, inner) => {
+                            let inner_function_name = self.get_to_candid_function_name(inner);
+                            self.generate_to_candid_function(inner, &inner_function_name);
+                            Expr::Cond(CondExpr {
+                                span: DUMMY_SP,
+                                test: Box::new(self.field_is_defined(
+                                    param_name,
+                                    &field_name,
+                                    field_access.clone(),
+                                )),
+                                cons: Box::new(self.create_call(
+                                    "candid_some",
+                                    vec![self.create_arg(self.create_call(
+                                        &inner_function_name,
+                                        vec![self.create_arg(field_access.clone())],
+                                    ))],
+                                )),
+                                alt: Box::new(self.create_call("candid_none", vec![])),
+                            })
+                        }
                         TypeInner::Opt(inner) => {
                             // For optional fields, handle undefined/null specially
                             if !self.needs_conversion(inner) {
@@ -809,15 +829,24 @@ impl<'a> TypeConverter<'a> {
     /// `Object.prototype` rather than `undefined`, so presence has to be established against
     /// the object's own properties first.
     fn field_is_present(&self, param_name: &str, field_name: &str, access: Expr) -> Expr {
-        let present = is_present(access);
+        self.own_field_test(param_name, field_name, is_present(access))
+    }
+
+    /// Like [`Self::field_is_present`], but `null` counts as a value: the field's declared
+    /// type carries it.
+    fn field_is_defined(&self, param_name: &str, field_name: &str, access: Expr) -> Expr {
+        self.own_field_test(param_name, field_name, is_defined(access))
+    }
+
+    fn own_field_test(&self, param_name: &str, field_name: &str, test: Expr) -> Expr {
         if !is_inherited_property(field_name) {
-            return present;
+            return test;
         }
         Expr::Bin(BinExpr {
             span: DUMMY_SP,
             op: BinaryOp::LogicalAnd,
             left: Box::new(has_own_property(self.create_ident(param_name), field_name)),
-            right: Box::new(present),
+            right: Box::new(test),
         })
     }
 
@@ -1211,63 +1240,6 @@ impl<'a> TypeConverter<'a> {
     }
 
     fn convert_opt_from_candid_body(&mut self, inner: &Type, param_name: &str) -> Expr {
-        // Check for recursive option types (Some<T> | None pattern)
-        if let TypeInner::Var(id) = inner.as_ref()
-            && let Ok(inner_type) = self.env.find_type(id)
-        {
-            let mut visited = std::collections::HashSet::new();
-            let is_recursive = is_recursive_optional(self.env, inner_type, &mut visited);
-
-            if is_recursive {
-                // Get or create a reference to the inner type conversion function
-                let inner_function_name = self.get_from_candid_function_name(inner);
-                self.generate_from_candid_function(inner, &inner_function_name);
-
-                // For recursive options, convert from [] | [value] to Some/None
-                return Expr::Cond(CondExpr {
-                    span: DUMMY_SP,
-                    test: Box::new(Expr::Bin(BinExpr {
-                        span: DUMMY_SP,
-                        op: BinaryOp::EqEqEq,
-                        left: Box::new(Expr::Member(MemberExpr {
-                            span: DUMMY_SP,
-                            obj: Box::new(self.create_ident(param_name)),
-                            prop: MemberProp::Ident(
-                                Ident::new("length".into(), DUMMY_SP, SyntaxContext::empty())
-                                    .into(),
-                            ),
-                        })),
-                        right: Box::new(Expr::Lit(Lit::Num(Number {
-                            span: DUMMY_SP,
-                            value: 0.0,
-                            raw: None,
-                        }))),
-                    })),
-                    // Return None for empty array
-                    cons: Box::new(self.create_call("none", vec![])),
-                    // Return Some for non-empty array with recursive conversion
-                    alt: Box::new(self.create_call(
-                        "some",
-                        vec![self.create_arg(self.create_call(
-                            &inner_function_name,
-                            vec![self.create_arg(Expr::Member(MemberExpr {
-                                span: DUMMY_SP,
-                                obj: Box::new(self.create_ident(param_name)),
-                                prop: MemberProp::Computed(ComputedPropName {
-                                    span: DUMMY_SP,
-                                    expr: Box::new(Expr::Lit(Lit::Num(Number {
-                                        span: DUMMY_SP,
-                                        value: 0.0,
-                                        raw: None,
-                                    }))),
-                                }),
-                            }))],
-                        ))],
-                    )),
-                });
-            }
-        }
-
         // For inner types that don't need conversion, optimize
         if !self.needs_conversion(inner) {
             return Expr::Cond(CondExpr {
@@ -1308,9 +1280,8 @@ impl<'a> TypeConverter<'a> {
         let inner_function_name = self.get_from_candid_function_name(inner);
         self.generate_from_candid_function(inner, &inner_function_name);
 
-        match &inner.as_ref() {
-            // Types that don't need conversion
-            TypeInner::Opt(_) => Expr::Cond(CondExpr {
+        if resolves_to_opt(self.env, inner) {
+            Expr::Cond(CondExpr {
                 span: DUMMY_SP,
                 test: Box::new(Expr::Bin(BinExpr {
                     span: DUMMY_SP,
@@ -1349,8 +1320,9 @@ impl<'a> TypeConverter<'a> {
                         }))],
                     ))],
                 )),
-            }),
-            _ => Expr::Cond(CondExpr {
+            })
+        } else {
+            Expr::Cond(CondExpr {
                 span: DUMMY_SP,
                 test: Box::new(Expr::Bin(BinExpr {
                     span: DUMMY_SP,
@@ -1386,7 +1358,7 @@ impl<'a> TypeConverter<'a> {
                         }),
                     }))],
                 )),
-            }),
+            })
         }
     }
     fn convert_vec_from_candid_body(&mut self, inner: &Type, param_name: &str) -> Expr {
@@ -1480,6 +1452,22 @@ impl<'a> TypeConverter<'a> {
 
                     // Convert the field value based on its type
                     let value = match field.ty.as_ref() {
+                        // The declared field is the standalone type of the inner `X`, so the
+                        // outer level alone becomes `undefined` and the payload converts as a
+                        // standalone `X`: `[[]]` reads as `null`, `[[v]]` as `v`.
+                        TypeInner::Opt(inner) if resolves_to_opt(self.env, inner) => {
+                            let inner_function_name = self.get_from_candid_function_name(inner);
+                            self.generate_from_candid_function(inner, &inner_function_name);
+                            Expr::Cond(CondExpr {
+                                span: DUMMY_SP,
+                                test: Box::new(is_empty(field_access.clone())),
+                                cons: Box::new(self.create_ident("undefined")),
+                                alt: Box::new(self.create_call(
+                                    &inner_function_name,
+                                    vec![self.create_arg(first_element(field_access.clone()))],
+                                )),
+                            })
+                        }
                         TypeInner::Opt(_) => {
                             // For optional fields, use a utility function
                             Expr::Call(CallExpr {

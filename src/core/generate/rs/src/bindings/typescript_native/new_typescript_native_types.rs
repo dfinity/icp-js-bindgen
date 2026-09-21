@@ -4,48 +4,13 @@ use super::conversion_functions_generator::{TopLevelNodes, TypeConverter};
 use super::original_typescript_types::create_typed_array_type;
 use super::utils::{
     binding_ident_name, candid_enum_member_id, candid_method_key, candid_param_ident,
-    candid_prop_key, candid_type_ident, get_ident,
+    candid_prop_key, candid_type_ident, get_ident, resolves_to_opt,
 };
 use candid::types::{Field, Function, Label, Type, TypeEnv, TypeInner};
 use candid_parser::syntax::{self, IDLMergedProg, IDLType};
 use swc_core::common::Span;
 use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::*;
-
-// Helper function to determine if a type is recursively optional
-pub fn is_recursive_optional(
-    env: &TypeEnv,
-    ty: &Type,
-    visited: &mut std::collections::HashSet<String>,
-) -> bool {
-    use TypeInner::*;
-
-    match ty.as_ref() {
-        Var(id) => {
-            if !visited.insert(id.as_str().to_string()) {
-                // We've seen this type before, it's recursive
-                return true;
-            }
-
-            if let Ok(inner_type) = env.find_type(id) {
-                is_recursive_optional(env, inner_type, visited)
-            } else {
-                false
-            }
-        }
-        Opt(inner) => {
-            // If we have an optional type, check its inner type
-            if let Var(id) = inner.as_ref()
-                && visited.contains(id.as_str())
-            {
-                // Found recursive optional
-                return true;
-            }
-            is_recursive_optional(env, inner, visited)
-        }
-        _ => false,
-    }
-}
 
 // Create TS interface from Candid service
 pub fn create_interface_from_service(
@@ -231,122 +196,54 @@ fn create_opt_type(
     syntax: Option<&IDLType>,
     is_ref: bool,
 ) -> TsType {
-    use TypeInner::*;
     let syntax_inner: Option<&IDLType> = match syntax {
         Some(IDLType::OptT(syntax_inner)) => Some(syntax_inner),
         _ => None,
     };
-    match t.as_ref() {
-        Opt(_) => {
-            // Use Some<T> | None for nested optionals
-            TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
-                span: DUMMY_SP,
-                types: vec![
-                    Box::new(TsType::TsTypeRef(TsTypeRef {
-                        span: DUMMY_SP,
-                        type_name: TsEntityName::Ident(Ident::new(
-                            "Some".into(),
-                            DUMMY_SP,
-                            SyntaxContext::empty(),
-                        )),
-                        type_params: Some(Box::new(TsTypeParamInstantiation {
-                            span: DUMMY_SP,
-                            params: vec![Box::new(convert_type(
-                                top_level_nodes,
-                                env,
-                                t,
-                                syntax_inner,
-                                is_ref,
-                            ))],
-                        })),
-                    })),
-                    Box::new(TsType::TsTypeRef(TsTypeRef {
-                        span: DUMMY_SP,
-                        type_name: TsEntityName::Ident(Ident::new(
-                            "None".into(),
-                            DUMMY_SP,
-                            SyntaxContext::empty(),
-                        )),
-                        type_params: None,
-                    })),
-                ],
-            }))
-        }
-        Var(id) => {
-            // Check for recursion
-            let is_recursive = if let Ok(inner_type) = env.find_type(id) {
-                let mut visited = std::collections::HashSet::new();
-                is_recursive_optional(env, inner_type, &mut visited)
-            } else {
-                false
-            };
+    let inner = Box::new(convert_type(top_level_nodes, env, t, syntax_inner, is_ref));
 
-            if is_recursive {
-                // Use Some<T> | None for recursive optionals
-                TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(
-                    TsUnionType {
-                        span: DUMMY_SP,
-                        types: vec![
-                            Box::new(TsType::TsTypeRef(TsTypeRef {
-                                span: DUMMY_SP,
-                                type_name: TsEntityName::Ident(Ident::new(
-                                    "Some".into(),
-                                    DUMMY_SP,
-                                    SyntaxContext::empty(),
-                                )),
-                                type_params: Some(Box::new(TsTypeParamInstantiation {
-                                    span: DUMMY_SP,
-                                    params: vec![Box::new(convert_type(
-                                        top_level_nodes,
-                                        env,
-                                        t,
-                                        syntax_inner,
-                                        is_ref,
-                                    ))],
-                                })),
-                            })),
-                            Box::new(TsType::TsTypeRef(TsTypeRef {
-                                span: DUMMY_SP,
-                                type_name: TsEntityName::Ident(Ident::new(
-                                    "None".into(),
-                                    DUMMY_SP,
-                                    SyntaxContext::empty(),
-                                )),
-                                type_params: None,
-                            })),
-                        ],
-                    },
-                ))
-            } else {
-                // Use T | null for non-recursive optionals with Var
-                TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(
-                    TsUnionType {
-                        span: DUMMY_SP,
-                        types: vec![
-                            Box::new(convert_type(top_level_nodes, env, t, syntax_inner, is_ref)),
-                            Box::new(TsType::TsKeywordType(TsKeywordType {
-                                span: DUMMY_SP,
-                                kind: TsKeywordTypeKind::TsNullKeyword,
-                            })),
-                        ],
-                    },
-                ))
-            }
-        }
-        _ => {
-            // Use T | null for simple optionals
-            TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
+    // An option of an option carries three states, so it is declared as `Some<T> | None`:
+    // the outer level is the wrapper and the inner one stays inside `T`. `T | null` has room
+    // for two, and would both collapse the absent outer level onto the absent inner value
+    // and, where `T` is the name of the inner option, circularly reference itself.
+    let types = if resolves_to_opt(env, t) {
+        vec![
+            Box::new(TsType::TsTypeRef(TsTypeRef {
                 span: DUMMY_SP,
-                types: vec![
-                    Box::new(convert_type(top_level_nodes, env, t, syntax_inner, is_ref)),
-                    Box::new(TsType::TsKeywordType(TsKeywordType {
-                        span: DUMMY_SP,
-                        kind: TsKeywordTypeKind::TsNullKeyword,
-                    })),
-                ],
-            }))
-        }
-    }
+                type_name: TsEntityName::Ident(Ident::new(
+                    "Some".into(),
+                    DUMMY_SP,
+                    SyntaxContext::empty(),
+                )),
+                type_params: Some(Box::new(TsTypeParamInstantiation {
+                    span: DUMMY_SP,
+                    params: vec![inner],
+                })),
+            })),
+            Box::new(TsType::TsTypeRef(TsTypeRef {
+                span: DUMMY_SP,
+                type_name: TsEntityName::Ident(Ident::new(
+                    "None".into(),
+                    DUMMY_SP,
+                    SyntaxContext::empty(),
+                )),
+                type_params: None,
+            })),
+        ]
+    } else {
+        vec![
+            inner,
+            Box::new(TsType::TsKeywordType(TsKeywordType {
+                span: DUMMY_SP,
+                kind: TsKeywordTypeKind::TsNullKeyword,
+            })),
+        ]
+    };
+
+    TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
+        span: DUMMY_SP,
+        types,
+    }))
 }
 
 fn create_vector_type(

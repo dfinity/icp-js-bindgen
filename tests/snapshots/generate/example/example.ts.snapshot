@@ -74,7 +74,7 @@ export type b = [bigint, bigint];
 export interface brokerInterface {
     find(name: string): Promise<Principal>;
 }
-export type f = (arg0: List, arg1: [Principal, string]) => Promise<[List | null, res]>;
+export type f = (arg0: List, arg1: [Principal, string]) => Promise<[Some<List> | None, res]>;
 export type list = node | null;
 /**
  * Doc comment for prim type
@@ -226,14 +226,14 @@ export interface exampleInterface {
      * Doc comment for f1 method of service
      */
     f1(arg0: list, test: Uint8Array, arg2: boolean | null): Promise<void>;
-    g1(arg0: my_type, arg1: nested_opt, arg2: List, arg3: List | null, arg4: nested): Promise<[bigint, Principal, nested_res]>;
+    g1(arg0: my_type, arg1: nested_opt, arg2: List, arg3: Some<List> | None, arg4: nested): Promise<[bigint, Principal, nested_res]>;
     h(arg0: Array<string | null>, arg1: {
         __kind__: "A";
         A: bigint;
     } | {
         __kind__: "B";
         B: string | null;
-    }, arg2: List | null): Promise<{
+    }, arg2: Some<List> | None): Promise<{
         _42_: {
         };
         id: bigint;
@@ -269,7 +269,7 @@ export class Example implements exampleInterface {
         const result = await this.#actor.f1(to_candid_list_n1(arg0), arg1, to_candid_opt_n5(arg2));
         return result;
     }
-    async g1(arg0: my_type, arg1: nested_opt, arg2: List, arg3: List | null, arg4: nested): Promise<[bigint, Principal, nested_res]> {
+    async g1(arg0: my_type, arg1: nested_opt, arg2: List, arg3: Some<List> | None, arg4: nested): Promise<[bigint, Principal, nested_res]> {
         const result = await this.#actor.g1(arg0, to_candid_nested_opt_n6(arg1), to_candid_List_n9(arg2), to_candid_opt_n12(arg3), to_candid_nested_n13(arg4));
         return [
             result[0],
@@ -283,7 +283,7 @@ export class Example implements exampleInterface {
     } | {
         __kind__: "B";
         B: string | null;
-    }, arg2: List | null): Promise<{
+    }, arg2: Some<List> | None): Promise<{
         _42_: {
         };
         id: bigint;
@@ -291,7 +291,7 @@ export class Example implements exampleInterface {
         const result = await this.#actor.h(to_candid_vec_n20(arg0), to_candid_variant_n22(arg1), to_candid_opt_n12(arg2));
         return result;
     }
-    async i(arg0: List, arg1: [Principal, string]): Promise<[List | null, res]> {
+    async i(arg0: List, arg1: [Principal, string]): Promise<[Some<List> | None, res]> {
         const result = await this.#actor.i(to_candid_List_n9(arg0), arg1);
         return [
             from_candid_opt_n23(result[0]),
@@ -356,8 +356,8 @@ function from_candid_nested_records_n40(value: _nested_records): nested_records 
 function from_candid_nested_res_n16(value: _nested_res): nested_res {
     return from_candid_variant_n17(value);
 }
-function from_candid_opt_n23(value: [] | [_List]): List | null {
-    return value.length === 0 ? null : from_candid_List_n24(value[0]);
+function from_candid_opt_n23(value: [] | [_List]): Some<List> | None {
+    return value.length === 0 ? none() : some(from_candid_List_n24(value[0]));
 }
 function from_candid_opt_n25(value: [] | [{
         head: bigint;
@@ -694,8 +694,8 @@ function to_candid_opt_n10(value: {
     }] {
     return value === undefined || value === null ? candid_none() : candid_some(to_candid_record_n11(value));
 }
-function to_candid_opt_n12(value: List | null): [] | [_List] {
-    return value === undefined || value === null ? candid_none() : candid_some(to_candid_List_n9(value));
+function to_candid_opt_n12(value: Some<List> | None): [] | [_List] {
+    return isNone(value) ? candid_none() : candid_some(to_candid_List_n9(unwrap(value)));
 }
 function to_candid_opt_n2(value: node | null): [] | [_node] {
     return value === undefined || value === null ? candid_none() : candid_some(to_candid_node_n3(value));

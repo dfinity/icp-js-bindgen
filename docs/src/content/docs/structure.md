@@ -195,6 +195,37 @@ type B = Some<A> | None
 
 </div>
 
+##### Through a name
+
+A name standing for the inner option nests just as a spelled-out `opt opt` does — the two are
+one Candid type and carry the same three states:
+
+<div class="code-comparison">
+
+<div class="title-left">Candid</div>
+
+<div class="code-left">
+
+```
+type Inner = opt text;
+type MyType = opt Inner;
+```
+
+</div>
+
+<div class="title-right">TypeScript</div>
+
+<div class="code-right">
+
+```typescript
+type Inner = string | null;
+type MyType = Some<Inner> | None;
+```
+
+</div>
+
+</div>
+
 #### Record Fields with Options
 
 Record fields that have an option type are optional fields in the TypeScript type:
@@ -226,6 +257,12 @@ type MyType = {
 </div>
 
 </div>
+
+A field of `opt opt T` is `my_field?: T | null`: omitting it (or `undefined`) is the outer
+option absent, `null` is present with an absent inner value, and a value is present. Deeper
+nesting keeps the outer level as `?` and represents the rest as `Some` / `None`, as a
+standalone value of that type would be. A field whose inner option is reached through a name
+is the same Candid type as the spelled-out one, and is represented the same way.
 
 #### Variants
 

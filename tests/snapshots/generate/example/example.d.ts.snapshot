@@ -40,7 +40,7 @@ export type b = [bigint, bigint];
 export interface brokerInterface {
     find(name: string): Promise<Principal>;
 }
-export type f = (arg0: List, arg1: [Principal, string]) => Promise<[List | null, res]>;
+export type f = (arg0: List, arg1: [Principal, string]) => Promise<[Some<List> | None, res]>;
 export type list = node | null;
 /**
  * Doc comment for prim type
@@ -192,14 +192,14 @@ export interface exampleInterface {
      * Doc comment for f1 method of service
      */
     f1(arg0: list, test: Uint8Array, arg2: boolean | null): Promise<void>;
-    g1(arg0: my_type, arg1: nested_opt, arg2: List, arg3: List | null, arg4: nested): Promise<[bigint, Principal, nested_res]>;
+    g1(arg0: my_type, arg1: nested_opt, arg2: List, arg3: Some<List> | None, arg4: nested): Promise<[bigint, Principal, nested_res]>;
     h(arg0: Array<string | null>, arg1: {
         __kind__: "A";
         A: bigint;
     } | {
         __kind__: "B";
         B: string | null;
-    }, arg2: List | null): Promise<{
+    }, arg2: Some<List> | None): Promise<{
         _42_: {
         };
         id: bigint;
