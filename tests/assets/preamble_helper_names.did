@@ -1,0 +1,3 @@
+type some = variant { p; q };
+type createActor = record { a : nat };
+service : () -> { g : (some, createActor) -> () }

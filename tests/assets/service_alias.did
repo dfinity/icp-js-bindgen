@@ -1,0 +1,10 @@
+// The main service given as a type reference, through a chain of aliases. The interface is
+// declared for whichever type holds the `service`, so both the alias declarations and the
+// interface the wrapper extends have to name that one rather than an alias.
+type Backend = service {
+  ping : () -> ();
+};
+type Alias = Backend;
+type Alias2 = Alias;
+
+service : Alias2

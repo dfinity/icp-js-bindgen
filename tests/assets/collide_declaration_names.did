@@ -1,0 +1,6 @@
+// Two candid types that escape to one exported name in the declarations files. Those files
+// are printed rather than checked, so TypeScript would merge the two interfaces silently.
+type IDL = record { a : nat };
+type IDL_ = record { b : nat };
+
+service : { f : (IDL, IDL_) -> () }

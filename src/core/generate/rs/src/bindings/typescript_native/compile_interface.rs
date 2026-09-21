@@ -1,16 +1,15 @@
 use super::conversion_functions_generator::TypeConverter;
 use super::new_typescript_native_types::{
-    add_type_definitions, create_interface_from_service, service_interface_ident,
+    add_type_definitions, create_interface_from_service, declaring_type_id, service_interface_ident,
 };
 use super::preamble::imports::interface_imports;
 use super::preamble::options::interface_options_utils;
 use super::utils::EnumDeclarations;
-use super::utils::get_ident_guarded;
+use super::utils::get_ident;
 use super::utils::render_ast;
 use crate::bindings::typescript_native::comments::add_comments;
 use candid::types::{Type, TypeEnv, TypeInner};
 use candid_parser::syntax::{IDLMergedProg, IDLType};
-use std::collections::HashMap;
 use swc_core::common::DUMMY_SP;
 use swc_core::common::Span;
 use swc_core::ecma::ast::*;
@@ -21,7 +20,7 @@ pub fn compile_interface(
     service_name: &str,
     prog: &IDLMergedProg,
 ) -> String {
-    let mut enum_declarations: EnumDeclarations = HashMap::new();
+    let mut enum_declarations = EnumDeclarations::new(env);
 
     let mut module = Module {
         span: DUMMY_SP,
@@ -77,16 +76,13 @@ pub fn compile_interface(
         }
     }
 
-    // Add enum declarations to the module, sorted by name for stability
-    let mut sorted_enums: Vec<_> = enum_declarations.iter().collect();
-    sorted_enums.sort_by_key(|(_, (_, enum_name))| enum_name.clone());
-
-    for (_, enum_decl) in sorted_enums {
+    // `EnumDeclarations` yields these ordered by name, so output is stable.
+    for enum_decl in enum_declarations.declarations() {
         module
             .body
             .push(ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
                 span: DUMMY_SP,
-                decl: Decl::TsEnum(Box::new(enum_decl.0.clone())),
+                decl: Decl::TsEnum(Box::new(enum_decl.clone())),
             })));
     }
 
@@ -114,7 +110,7 @@ fn interface_actor_implementation(
         TypeInner::Service(serv) => {
             interface_actor_service(env, syntax, module, serv, service_name, converter, span)
         }
-        TypeInner::Var(id) => interface_actor_var(module, id.as_str(), service_name, span),
+        TypeInner::Var(id) => interface_actor_var(env, module, id.as_str(), service_name, span),
         TypeInner::Class(_, t) => {
             if let Some(IDLType::ClassT(_, syntax_t)) = syntax {
                 interface_actor_implementation(
@@ -159,7 +155,13 @@ pub fn interface_actor_service(
         })));
 }
 
-pub fn interface_actor_var(module: &mut Module, type_id: &str, service_name: &str, span: Span) {
+pub fn interface_actor_var(
+    env: &TypeEnv,
+    module: &mut Module,
+    type_id: &str,
+    service_name: &str,
+    span: Span,
+) {
     let interface = TsInterfaceDecl {
         span: DUMMY_SP,
         declare: false,
@@ -167,7 +169,9 @@ pub fn interface_actor_var(module: &mut Module, type_id: &str, service_name: &st
         type_params: None,
         extends: vec![TsExprWithTypeArgs {
             span: DUMMY_SP,
-            expr: Box::new(Expr::Ident(service_interface_ident(type_id))),
+            expr: Box::new(Expr::Ident(service_interface_ident(&declaring_type_id(
+                env, type_id,
+            )))),
             type_args: None,
         }],
         body: TsInterfaceBody {
@@ -195,7 +199,7 @@ fn add_create_actor_interface_exports(module: &mut Module, service_name: &str) {
 
     // createActor function declaration (no implementation)
     let create_actor_fn_decl = FnDecl {
-        ident: get_ident_guarded("createActor"),
+        ident: get_ident("createActor"),
         declare: true,
         function: Box::new(swc_core::ecma::ast::Function {
             params: vec![
@@ -203,7 +207,7 @@ fn add_create_actor_interface_exports(module: &mut Module, service_name: &str) {
                     span: DUMMY_SP,
                     decorators: vec![],
                     pat: Pat::Ident(BindingIdent {
-                        id: get_ident_guarded("canisterId"),
+                        id: get_ident("canisterId"),
                         type_ann: Some(Box::new(TsTypeAnn {
                             span: DUMMY_SP,
                             type_ann: Box::new(TsType::TsKeywordType(TsKeywordType {
@@ -219,14 +223,12 @@ fn add_create_actor_interface_exports(module: &mut Module, service_name: &str) {
                     pat: Pat::Assign(AssignPat {
                         span: DUMMY_SP,
                         left: Box::new(Pat::Ident(BindingIdent {
-                            id: get_ident_guarded("options"),
+                            id: get_ident("options"),
                             type_ann: Some(Box::new(TsTypeAnn {
                                 span: DUMMY_SP,
                                 type_ann: Box::new(TsType::TsTypeRef(TsTypeRef {
                                     span: DUMMY_SP,
-                                    type_name: TsEntityName::Ident(get_ident_guarded(
-                                        "CreateActorOptions",
-                                    )),
+                                    type_name: TsEntityName::Ident(get_ident("CreateActorOptions")),
                                     type_params: None,
                                 })),
                             })),

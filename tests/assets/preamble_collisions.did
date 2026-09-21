@@ -1,0 +1,27 @@
+// Candid names that clash with what the generated module already occupies: the types it
+// imports from @icp-sdk/core, and the fixed preamble it declares. The .did is often someone
+// else's canister, so the author cannot be asked to avoid them.
+type Option = record { a : nat };
+type Some = record { b : nat };
+type None = record { c : nat };
+type CreateActorOptions = record { d : nat };
+type Agent = record { e : nat };
+
+// The module imports the service type as `_SERVICE`, which is also the local alias this
+// type's candid shape would take.
+type SERVICE = variant { h; i };
+
+// An empty variant has no tags to become enum members, so it lowers to `never` and needs a
+// type alias rather than an enum declaration.
+type Nothing = variant {};
+
+service : () -> {
+  f : (Option, Some, None, CreateActorOptions, Agent) -> ();
+  h : (SERVICE) -> ();
+  g : (Nothing) -> ();
+  // A *method* of the same name must keep it. Methods are property keys, not declarations,
+  // so they collide with nothing — renaming one would change the client's public API while
+  // the wire call kept the candid name.
+  "None" : (nat) -> ();
+  "Option" : () -> ();
+}

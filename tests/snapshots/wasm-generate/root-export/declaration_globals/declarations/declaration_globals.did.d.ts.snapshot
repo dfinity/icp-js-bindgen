@@ -1,0 +1,33 @@
+import type { ActorMethod } from '@icp-sdk/core/agent';
+import type { IDL } from '@icp-sdk/core/candid';
+import type { Principal } from '@icp-sdk/core/principal';
+
+export interface ActorMethod_ { 'y' : bigint }
+export interface IDL_ {
+  'f' : ActorMethod<
+    [ActorMethod_, _SERVICE_, idlFactory_, init_, idlService_, idlInitArgs_],
+    undefined
+  >,
+  'round_trip' : ActorMethod<[Principal_], Principal_>,
+}
+/**
+ * Names the generated declarations files occupy themselves: the JavaScript factory imports
+ * `IDL` and binds it as its parameter, the TypeScript declarations import `Principal` and
+ * `ActorMethod`, and both export `_SERVICE`, `idlFactory` and `init` — plus `idlService` and
+ * `idlInitArgs` with root exports. The main service is the `IDL` alias so the actor
+ * reference is escaped the same way as the declaration it points at. The variant is here so
+ * the conversion path — which imports the candid shape under the escaped name — is
+ * exercised too.
+ */
+export type Principal_ = { 'a' : null } |
+  { 'b' : null };
+export interface _SERVICE_ { 't' : bigint }
+export interface idlFactory_ { 'p' : bigint }
+export interface idlInitArgs_ { 's' : bigint }
+export interface idlService_ { 'r' : bigint }
+export interface init_ { 'q' : bigint }
+export interface _SERVICE extends IDL_ {}
+export declare const idlService: IDL.ServiceClass;
+export declare const idlInitArgs: IDL.Type[];
+export declare const idlFactory: IDL.InterfaceFactory;
+export declare const init: (args: { IDL: typeof IDL }) => IDL.Type[];
