@@ -25,6 +25,31 @@ pub(crate) fn check_candid_names(env: &TypeEnv, actor: &Option<Type>) -> Result<
     }
 }
 
+/// The wrapper imports the declarations by the `.did` file's name, and a module specifier is
+/// resolved as a URL: `#` and `?` each end the path and start a fragment or a query, a stray
+/// `%` starts an escape, and `\` is a path separator, so the import would name a file that
+/// does not exist. Percent-encoding fixes the specifier for Node and breaks it for bundlers
+/// that resolve the raw string as a path, so no spelling works everywhere and the file has to
+/// be renamed. Only the actor files carry such a specifier, so this runs only when they are
+/// wanted.
+pub(crate) fn check_service_name(service_name: &str) -> Result<(), String> {
+    let mut offending: Vec<char> = service_name
+        .chars()
+        .filter(|c| matches!(c, '#' | '?' | '%' | '\\'))
+        .collect();
+    offending.sort_unstable();
+    offending.dedup();
+    if offending.is_empty() {
+        return Ok(());
+    }
+    let listed: Vec<String> = offending.iter().map(|c| format!("`{c}`")).collect();
+    Err(format!(
+        "`{service_name}.did` contains {}, which a module specifier cannot carry. Rename the \
+         file.",
+        listed.join(" and ")
+    ))
+}
+
 fn names_proto(ty: &Type) -> bool {
     use TypeInner::*;
     let is_proto = |label: &Label| matches!(label, Label::Named(name) if name == "__proto__");
@@ -79,6 +104,15 @@ mod tests {
         )])
         .into();
         assert!(check_candid_names(&TypeEnv::new(), &Some(actor)).is_err());
+    }
+
+    #[test]
+    fn service_name_with_a_specifier_breaking_character_is_reported() {
+        for name in ["my#backend", "my?backend", "my%backend", "my\\backend"] {
+            let error = check_service_name(name).unwrap_err();
+            assert!(error.contains("module specifier"), "{error}");
+        }
+        assert_eq!(check_service_name("my-backend.v2"), Ok(()));
     }
 
     #[test]

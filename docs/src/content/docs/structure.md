@@ -77,6 +77,13 @@ The tool writes the files in the specified output directory with the following s
 
 This file contains the TypeScript wrapper for the Candid JS bindings generated in [`declarations/<service-name>.did.js`](#declarationsservice-namedidjs). It offers a more idiomatic and type-safe TypeScript interface over the Candid JS bindings.
 
+`<service-name>` is the `.did` file name. Characters that are not legal in an identifier are
+replaced with `_` where the name is used as one, so `my-backend.did` and `my.backend.did` both
+yield the same identifiers as `my_backend.did` would. A `#`, `?`, `%` or `\` in the file name is
+refused instead: the wrapper imports the declarations by that name, a module specifier is
+resolved as a URL, and no spelling of it resolves the file in both Node and a bundler. Only
+the actor files carry such an import, so generating `declarations/` alone still works.
+
 Set the [`output.actor.disabled`](./core/api/type-aliases/GenerateOutputOptions.md#disabled) option to `true` to skip generating this file.
 
 The generated file exposes:
@@ -295,6 +302,12 @@ type MyType =
 
 This type is the TypeScript interface for the service. It contains all the methods that are defined in the [Candid service](https://github.com/dfinity/candid/blob/master/spec/Candid.md#services) in the `.did` file.
 
+`<service-name>` is the basename of the `.did` file. Characters that cannot appear in a generated identifier are replaced with a single `_` per run, so `my-backend.did` produces `my_backendInterface` and the `My_backend` class — the same names as if the file had been called `my_backend.did`. The generated declarations are still imported under the original filename.
+
+Accepted characters are ASCII letters, digits, `_` and `$`, the zero-width non-joiner and joiner, plus Unicode characters in `XID_Start`/`XID_Continue`. That is marginally stricter than TypeScript's own identifier grammar, so a small number of uncommon Unicode characters are replaced even though TypeScript would have accepted them.
+
+The class name is additionally suffixed with `_` when capitalizing it would shadow a JavaScript built-in, so `map.did` produces the class `Map_` rather than `Map`.
+
 For example, a Candid service will be represented as:
 
 <div class="code-comparison">
@@ -427,6 +440,16 @@ Two candid names that end up as one generated name — two inline variants whose
 the same `Variant_…`, a type named like the actor class, a type named like a conversion
 function — fail generation, since TypeScript would merge the declarations into a type
 claiming members the value does not have.
+
+### Parameter names
+
+Candid argument names become the parameter names of the interface's method signatures and of
+named `func` types. A name that is not an identifier is sanitized (`my-arg` becomes
+`my_arg`), a reserved word gains a trailing `_` (`new` becomes `new_`), and an argument that is
+unnamed, or whose name another argument already took, is called `argN` after its position —
+suffixed with `_` while that name is taken as well, so `(arg1 : nat, nat)` gives `arg1` and
+`arg1_`. The wrapper class always names its parameters `argN`. Callers pass arguments positionally,
+so these names are documentation only.
 
 ### Refused names
 
