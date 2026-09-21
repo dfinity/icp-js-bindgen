@@ -147,6 +147,54 @@ describe('generated conversions, executed', () => {
     });
   });
 
+  it('round-trips nested optional variant payloads as standalone options', async () => {
+    const { to_candid_Update, from_candid_Update } = await conversionsFor('nested_option_payloads');
+
+    // `p: Some<Cfg | null> | None`: `None` is the absent payload, `Some(null)` is present with
+    // an absent inner value, `Some(cfg)` is present. A single `opt` payload keeps `T | null`.
+    expect(to_candid_Update({ __kind__: 'p', p: { __kind__: 'None' } } as never)).toEqual({
+      p: [],
+    });
+    expect(
+      to_candid_Update({ __kind__: 'p', p: { __kind__: 'Some', value: null } } as never),
+    ).toEqual({ p: [[]] });
+    expect(
+      to_candid_Update({ __kind__: 'p', p: { __kind__: 'Some', value: { x: 1n } } } as never),
+    ).toEqual({ p: [[{ x: 1n }]] });
+    expect(to_candid_Update({ __kind__: 'q', q: null } as never)).toEqual({ q: [] });
+
+    expect(from_candid_Update({ p: [] } as never)).toEqual({
+      __kind__: 'p',
+      p: { __kind__: 'None' },
+    });
+    expect(from_candid_Update({ p: [[]] } as never)).toEqual({
+      __kind__: 'p',
+      p: { __kind__: 'Some', value: null },
+    });
+    expect(from_candid_Update({ d: [[[4n]]] } as never)).toEqual({
+      __kind__: 'd',
+      d: { __kind__: 'Some', value: { __kind__: 'Some', value: 4n } },
+    });
+  });
+
+  // `a : opt Inner` and `p : opt opt Cfg` are one candid type, so one wire value and one
+  // declared value: a name standing for the inner option changes neither.
+  it('round-trips an aliased nested optional payload exactly as the spelled-out one', async () => {
+    const { to_candid_Update, from_candid_Update } = await conversionsFor('nested_option_payloads');
+
+    for (const payload of [
+      { __kind__: 'None' },
+      { __kind__: 'Some', value: null },
+      { __kind__: 'Some', value: { x: 8n } },
+    ]) {
+      const spelled = to_candid_Update({ __kind__: 'p', p: payload } as never) as { p: unknown };
+      const aliased = to_candid_Update({ __kind__: 'a', a: payload } as never) as { a: unknown };
+      expect(aliased.a).toEqual(spelled.p);
+
+      expect(from_candid_Update({ a: aliased.a } as never)).toEqual({ __kind__: 'a', a: payload });
+    }
+  });
+
   it('keeps a present-but-falsy standalone optional', async () => {
     const { to_candid_opt } = await conversionsFor('conversion_encoding');
     expect(to_candid_opt, 'the standalone opt conversion should be extracted').toBeTypeOf(

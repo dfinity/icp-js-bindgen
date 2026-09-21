@@ -964,6 +964,16 @@ impl<'a> TypeConverter<'a> {
                 });
 
                 let field_result = match field.ty.as_ref() {
+                    // A nested optional payload is typed as the standalone `opt X`, so it
+                    // converts as one: `None` is `[]`, `Some(null)` is `[[]]`.
+                    TypeInner::Opt(inner) if resolves_to_opt(self.env, inner) => {
+                        let function_name = self.get_to_candid_function_name(&field.ty);
+                        self.generate_to_candid_function(&field.ty, &function_name);
+                        self.create_call(
+                            &function_name,
+                            vec![self.create_arg(field_access.clone())],
+                        )
+                    }
                     TypeInner::Opt(inner) => {
                         // For optional fields, handle undefined/null specially
                         if !self.needs_conversion(inner) {

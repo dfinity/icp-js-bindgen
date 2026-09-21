@@ -335,6 +335,12 @@ type MyType =
 
 </div>
 
+A payload of `opt T` is `T | null`, `null` being the absent payload. A payload of `opt opt T`
+has no slot of its own for the outer level, so it is typed as a standalone nested option,
+`Some<T | null> | None`, exactly as an `opt opt T` argument or result would be. A payload
+whose inner option is reached through a name is the same Candid type as the spelled-out one,
+and is typed the same way.
+
 ### `<service-name>Interface` type
 
 This type is the TypeScript interface for the service. It contains all the methods that are defined in the [Candid service](https://github.com/dfinity/candid/blob/master/spec/Candid.md#services) in the `.did` file.
