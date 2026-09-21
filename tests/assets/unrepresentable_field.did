@@ -1,0 +1,2 @@
+type P = record { "__proto__" : nat; ok : nat };
+service : () -> { f : (P) -> () }

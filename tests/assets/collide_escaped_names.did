@@ -1,0 +1,6 @@
+// `Map` shadows a global, so it is escaped to `Map_` — which is also a candid type here.
+// Their tag lists differ, so one enum cannot serve both.
+type Map = variant { a; b };
+type Map_ = variant { c; d };
+
+service : () -> { f : (Map) -> (Map_) }

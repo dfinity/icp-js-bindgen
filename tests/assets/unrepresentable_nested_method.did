@@ -1,0 +1,9 @@
+// A candid `service` type nested in the interface becomes a type literal of method
+// signatures rather than a class, and the names in it come from the same `.did`.
+type S = service {
+  "__proto__" : () -> ();
+};
+
+service : {
+  get_s : () -> (S);
+}

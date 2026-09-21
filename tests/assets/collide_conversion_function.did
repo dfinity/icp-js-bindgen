@@ -1,0 +1,10 @@
+// The generator names each conversion function after the type it converts, so a candid type
+// can be named after one of them. An enum declares a value as well as a type, which is what
+// makes this a second binding of the name rather than a merge.
+type foo = variant { a; b };
+type to_candid_foo_n1 = variant { c; d };
+
+service : () -> {
+  one : (foo) -> ();
+  two : (to_candid_foo_n1) -> ();
+}

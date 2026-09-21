@@ -1,3 +1,4 @@
+pub mod check_input;
 mod comments;
 pub mod javascript;
 pub mod typescript;
