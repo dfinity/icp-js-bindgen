@@ -138,7 +138,7 @@ function to_candid_record_n2(value: {
     日本語: bigint;
 } {
     return {
-        $dollar: value.$dollar ? candid_some(value.$dollar) : candid_none(),
+        $dollar: value.$dollar !== undefined && value.$dollar !== null ? candid_some(value.$dollar) : candid_none(),
         日本語: value.日本語
     };
 }
