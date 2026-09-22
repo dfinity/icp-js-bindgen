@@ -1,5 +1,7 @@
 use super::comments::PosCursor;
-use super::new_typescript_native_types::{convert_type_with_converter, is_recursive_optional};
+use super::new_typescript_native_types::{
+    convert_type_with_converter, declaring_type_id, is_recursive_optional,
+};
 use super::original_typescript_types::OriginalTypescriptTypes;
 use super::utils::{EnumDeclarations, contains_unicode_characters, get_ident_guarded_keyword_ok};
 use candid::types::{Field, Label, Type, TypeEnv, TypeInner};
@@ -7,6 +9,18 @@ use std::collections::{HashMap, HashSet};
 use swc_core::common::{DUMMY_SP, SyntaxContext, comments::SingleThreadedComments};
 use swc_core::ecma::ast::*;
 // Type aliases to simplify complex types used throughout this module
+
+/// Whether every tag of a variant carries `null`, which is what makes it an `enum` rather
+/// than a discriminated union.
+///
+/// An empty variant is excluded: `all(..)` is vacuously true for it, but it has no tags to
+/// become members, so there is no enum to resolve.
+fn is_unit_variant(fields: &[Field]) -> bool {
+    !fields.is_empty()
+        && fields
+            .iter()
+            .all(|f| matches!(f.ty.as_ref(), TypeInner::Null))
+}
 
 pub type TopLevelNodes<'a> = (
     &'a mut EnumDeclarations,
@@ -265,7 +279,9 @@ impl<'a> TypeConverter<'a> {
             TypeInner::Opt(inner) => self.convert_opt_to_candid_body(inner, param_name),
             TypeInner::Vec(inner) => self.convert_vec_to_candid_body(inner, param_name),
             TypeInner::Record(fields) => self.convert_record_to_candid_body(fields, param_name),
-            TypeInner::Variant(fields) => self.convert_variant_to_candid_body(fields, param_name),
+            TypeInner::Variant(fields) => {
+                self.convert_variant_to_candid_body(fields, param_name, None)
+            }
             TypeInner::Func(func) => self.convert_func_to_candid_body(func, param_name),
             TypeInner::Service(_) => self.create_ident(param_name), // Pass through as-is
             TypeInner::Var(id) => {
@@ -274,6 +290,22 @@ impl<'a> TypeConverter<'a> {
                     // If the actual type doesn't need conversion, return the expression directly
                     if !self.needs_conversion(actual_ty) {
                         return self.create_ident(param_name);
+                    }
+
+                    // An all-null variant is lowered to an enum named after *this* candid
+                    // type, and TypeScript enums are nominal — so its conversion cannot be
+                    // shared with another type that happens to have the same tags. Build the
+                    // body here rather than delegating to a structurally-keyed function.
+                    if let TypeInner::Variant(variant_fields) = actual_ty.as_ref()
+                        && is_unit_variant(variant_fields)
+                    {
+                        let variant_fields = variant_fields.clone();
+                        let declaring = declaring_type_id(self.env, id);
+                        return self.convert_variant_to_candid_body(
+                            &variant_fields,
+                            param_name,
+                            Some(&declaring),
+                        );
                     }
 
                     // Generate the function for the actual type if needed
@@ -620,7 +652,12 @@ impl<'a> TypeConverter<'a> {
         })
     }
 
-    fn convert_variant_to_candid_body(&mut self, fields: &[Field], param_name: &str) -> Expr {
+    fn convert_variant_to_candid_body(
+        &mut self,
+        fields: &[Field],
+        param_name: &str,
+        type_name: Option<&str>,
+    ) -> Expr {
         // If there are no fields, return the input unchanged
         if fields.is_empty() {
             return self.create_ident(param_name);
@@ -632,12 +669,7 @@ impl<'a> TypeConverter<'a> {
             .all(|f| matches!(f.ty.as_ref(), TypeInner::Null));
         if all_null {
             // For enums, compare against enum members
-            let enum_name = self
-                .enum_declarations
-                .get(&fields.to_vec())
-                .unwrap()
-                .1
-                .clone();
+            let enum_name = self.enum_declarations.referenced_name(type_name, fields);
 
             let mut result = self.create_ident(param_name); // Default fallback
 
@@ -961,7 +993,9 @@ impl<'a> TypeConverter<'a> {
             TypeInner::Opt(inner) => self.convert_opt_from_candid_body(inner, param_name),
             TypeInner::Vec(inner) => self.convert_vec_from_candid_body(inner, param_name),
             TypeInner::Record(fields) => self.convert_record_from_candid_body(fields, param_name),
-            TypeInner::Variant(fields) => self.convert_variant_from_candid_body(fields, param_name),
+            TypeInner::Variant(fields) => {
+                self.convert_variant_from_candid_body(fields, param_name, None)
+            }
             TypeInner::Func(func) => self.convert_func_from_candid_body(func, param_name),
             TypeInner::Service(_) => self.create_ident(param_name), // Pass through as-is
             TypeInner::Var(id) => {
@@ -970,6 +1004,22 @@ impl<'a> TypeConverter<'a> {
                     // If the actual type doesn't need conversion, return directly
                     if !self.needs_conversion(actual_ty) {
                         return self.create_ident(param_name);
+                    }
+
+                    // An all-null variant is lowered to an enum named after *this* candid
+                    // type, and TypeScript enums are nominal — so its conversion cannot be
+                    // shared with another type that happens to have the same tags. Build the
+                    // body here rather than delegating to a structurally-keyed function.
+                    if let TypeInner::Variant(variant_fields) = actual_ty.as_ref()
+                        && is_unit_variant(variant_fields)
+                    {
+                        let variant_fields = variant_fields.clone();
+                        let declaring = declaring_type_id(self.env, id);
+                        return self.convert_variant_from_candid_body(
+                            &variant_fields,
+                            param_name,
+                            Some(&declaring),
+                        );
                     }
 
                     // Generate the function for the actual type if needed
@@ -1361,7 +1411,12 @@ impl<'a> TypeConverter<'a> {
         })
     }
 
-    fn convert_variant_from_candid_body(&mut self, fields: &[Field], param_name: &str) -> Expr {
+    fn convert_variant_from_candid_body(
+        &mut self,
+        fields: &[Field],
+        param_name: &str,
+        type_name: Option<&str>,
+    ) -> Expr {
         if fields.is_empty() {
             return self.create_ident(param_name);
         }
@@ -1373,12 +1428,7 @@ impl<'a> TypeConverter<'a> {
         // For variants with all null or same simple type, return the enum member
         if all_null {
             // Determine the enum name based on whether this is a named type or anonymous
-            let enum_name = self
-                .enum_declarations
-                .get(&fields.to_vec())
-                .unwrap()
-                .1
-                .clone();
+            let enum_name = self.enum_declarations.referenced_name(type_name, fields);
 
             let mut conditions = Vec::new();
 

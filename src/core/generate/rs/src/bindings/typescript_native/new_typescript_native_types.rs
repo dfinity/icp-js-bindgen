@@ -2,7 +2,9 @@ use super::super::javascript::is_tuple;
 use super::comments::add_comments;
 use super::conversion_functions_generator::{TopLevelNodes, TypeConverter};
 use super::original_typescript_types::create_typed_array_type;
-use super::utils::{get_ident, get_ident_guarded, get_ident_guarded_keyword_ok};
+use super::utils::{
+    anonymous_enum_name, get_ident, get_ident_guarded, get_ident_guarded_keyword_ok,
+};
 use candid::types::{Field, Function, Label, Type, TypeEnv, TypeInner};
 use candid_parser::syntax::{self, IDLMergedProg, IDLType};
 use swc_core::common::Span;
@@ -481,54 +483,58 @@ fn create_variant_type(
                 })
                 .collect();
 
-            // Only create enum if it doesn't already exist
             let (enum_declarations, _, _) = top_level_nodes;
-            enum_declarations.entry(fs.to_vec()).or_insert_with(|| {
-                let enum_name = if let Some(name) = type_name {
-                    name.to_string()
-                } else {
-                    // Generate stable name based on field names for inline variants
-                    let field_names: Vec<String> =
-                        field_info.iter().map(|(name, _)| name.clone()).collect();
-                    format!("Variant_{}", field_names.join("_"))
-                };
-                // Create enum members.
-                // Reserved words are valid enum member names and valid in member-access
-                // position (`Status.new`), so they must NOT be escaped here: the
-                // `from_candid_*`/`to_candid_*` functions reference members by their candid
-                // tag, and escaping the declaration alone made those references dangle.
-                let members = field_info
-                    .into_iter()
-                    .map(|(member_name, span)| TsEnumMember {
-                        span,
-                        id: TsEnumMemberId::Ident(get_ident_guarded_keyword_ok(&member_name)),
-                        init: Some(Box::new(Expr::Lit(Lit::Str(Str {
+
+            // A named candid type gets an enum of its own, keyed by the candid name, so two
+            // named types with identical tags never share one — TypeScript enums are nominal,
+            // and the second type was otherwise referenced but never declared. Anonymous
+            // variants have no name to be declared under and reuse whichever enum was
+            // interned for their tag list.
+            let enum_name = match enum_declarations.declared_name(type_name, fs) {
+                Some(existing) => existing,
+                None => {
+                    // Create enum members.
+                    // Reserved words are valid enum member names and valid in member-access
+                    // position (`Status.new`), so they must NOT be escaped here: the
+                    // `from_candid_*`/`to_candid_*` functions reference members by their candid
+                    // tag, and escaping the declaration alone made those references dangle.
+                    let members = field_info
+                        .into_iter()
+                        .map(|(member_name, span)| TsEnumMember {
+                            span,
+                            id: TsEnumMemberId::Ident(get_ident_guarded_keyword_ok(&member_name)),
+                            init: Some(Box::new(Expr::Lit(Lit::Str(Str {
+                                span: DUMMY_SP,
+                                value: member_name.into(),
+                                raw: None,
+                            })))),
+                        })
+                        .collect();
+                    // Unlike its members, the enum *type* name must be escaped: an identifier
+                    // cannot be a reserved word. The escaped identifier is stored alongside the
+                    // declaration so every reference to it (type refs, conversion functions) uses
+                    // exactly the name that was declared, instead of re-deriving the escaping and
+                    // risking divergence.
+                    let enum_ident = match type_name {
+                        Some(name) => get_ident_guarded(name),
+                        None => get_ident(&anonymous_enum_name(fs)),
+                    };
+                    let declared = enum_ident.sym.to_string();
+                    enum_declarations.insert(
+                        type_name,
+                        declared.clone(),
+                        fs,
+                        TsEnumDecl {
                             span: DUMMY_SP,
-                            value: member_name.into(),
-                            raw: None,
-                        })))),
-                    })
-                    .collect();
-                // Create the enum declaration.
-                // Unlike its members, the enum *type* name must be escaped: an identifier
-                // cannot be a reserved word. The escaped identifier is stored alongside the
-                // declaration so every reference to it (type refs, conversion functions) uses
-                // exactly the name that was declared, instead of re-deriving the escaping and
-                // risking divergence.
-                let enum_ident = get_ident_guarded(&enum_name);
-                let enum_decl = TsEnumDecl {
-                    span: DUMMY_SP,
-                    declare: false,
-                    is_const: false,
-                    id: enum_ident.clone(),
-                    members,
-                };
-
-                // Store the enum declaration with its declared name
-                (enum_decl, enum_ident.sym.to_string())
-            });
-
-            let enum_name = enum_declarations.get(&fs.to_vec()).unwrap().1.clone();
+                            declare: false,
+                            is_const: false,
+                            id: enum_ident,
+                            members,
+                        },
+                    );
+                    declared
+                }
+            };
 
             // Return a reference to the enum type. `enum_name` is already the declared
             // (escaped) identifier, so it must not be escaped again.
@@ -1108,6 +1114,23 @@ fn create_function_type_ref() -> TsType {
         })
         .collect(),
     })
+}
+
+/// The candid type an alias chain ends at.
+///
+/// Candid resolves `type B = A` transitively, so the name reaching a conversion can be an
+/// alias — and an alias declares no enum of its own. Following the chain finds the type the
+/// enum was declared for, which is the only way to pick the right one when another type
+/// happens to share the same tags.
+pub fn declaring_type_id(env: &TypeEnv, type_id: &str) -> String {
+    let mut current = type_id.to_string();
+    // Bounded by the number of declarations; candid rejects cyclic aliases.
+    while let Ok(ty) = env.find_type(&current)
+        && let TypeInner::Var(next) = ty.as_ref()
+    {
+        current = next.to_string();
+    }
+    current
 }
 
 pub fn service_interface_ident(service_name: &str) -> Ident {
