@@ -2,6 +2,7 @@
 
 ### Fix
 
+- **generate**: declare an enum for every named unit variant (#191)
 - resolve fast-uri and vitest audit advisories (#166)
 - **generate**: reserved-word candid tags broke enum references (#152)
 - resolve 16 audit vulnerabilities via pnpm overrides (#153)
