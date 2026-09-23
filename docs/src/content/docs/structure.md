@@ -224,6 +224,8 @@ type MyType = {
 
 Candid [variants](https://github.com/dfinity/candid/blob/master/spec/Candid.md#variants) without type parameters are represented as TypeScript enums:
 
+Each named candid type gets an enum of its own, even where two of them carry the same tags: TypeScript enums are nominal, so one declaration could not stand for both. Anonymous inline variants share whichever enum matches their tags.
+
 <div class="code-comparison">
 
 <div class="title-left">Candid</div>

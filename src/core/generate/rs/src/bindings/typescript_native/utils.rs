@@ -1,5 +1,4 @@
-use candid::types::Field;
-use std::collections::HashMap;
+use candid::types::{Field, Label};
 use swc_core::common::comments::SingleThreadedComments;
 use swc_core::common::source_map::SourceMap;
 use swc_core::common::sync::Lrc;
@@ -9,7 +8,124 @@ use swc_core::ecma::{
     codegen::{Config, Emitter, text_writer::JsWriter, text_writer::WriteJs},
 };
 
-pub type EnumDeclarations = HashMap<Vec<Field>, (TsEnumDecl, String)>;
+/// The `enum` declarations lowered from all-null candid variants.
+///
+/// A *named* candid type gets an entry of its own, keyed by that name: TypeScript enums are
+/// nominal, so two named types with identical tags cannot share one declaration without the
+/// second going undeclared. Anonymous inline variants have no name to be declared under and
+/// reuse whichever enum was interned for their tag list.
+#[derive(Default, Clone)]
+pub struct EnumDeclarations {
+    declared: Vec<DeclaredEnum>,
+}
+
+#[derive(Clone)]
+struct DeclaredEnum {
+    /// The candid type the enum was declared for; absent for an anonymous variant.
+    candid_name: Option<String>,
+    /// The identifier it is declared under.
+    name: String,
+    fields: Vec<Field>,
+    decl: TsEnumDecl,
+}
+
+impl EnumDeclarations {
+    /// The name this variant is declared under, if it has been interned.
+    ///
+    /// A named type matches on its *candid* name, so it never adopts another named type's
+    /// enum; an anonymous one falls back to the tag list, as before.
+    pub fn declared_name(&self, type_name: Option<&str>, fields: &[Field]) -> Option<String> {
+        match type_name {
+            Some(name) => self
+                .declared
+                .iter()
+                .find(|e| e.candid_name.as_deref() == Some(name))
+                .map(|e| e.name.clone()),
+            None => self.first_for_tags(fields),
+        }
+    }
+
+    /// The enum a reference to this variant resolves to.
+    ///
+    /// Falls back to the tag list, since a type the caller could not name — an inline variant
+    /// — has no entry of its own; then to the name the declaration path would choose, so a
+    /// missing enum surfaces as a dangling reference rather than a panic.
+    pub fn referenced_name(&self, type_name: Option<&str>, fields: &[Field]) -> String {
+        self.declared_name(type_name, fields)
+            .or_else(|| self.first_for_tags(fields))
+            .unwrap_or_else(|| anonymous_enum_name(fields))
+    }
+
+    /// Whichever enum was declared for this tag list first — what an anonymous variant reuses.
+    fn first_for_tags(&self, fields: &[Field]) -> Option<String> {
+        self.declared
+            .iter()
+            .find(|e| e.fields == fields)
+            .map(|e| e.name.clone())
+    }
+
+    pub fn insert(
+        &mut self,
+        candid_name: Option<&str>,
+        name: String,
+        fields: &[Field],
+        decl: TsEnumDecl,
+    ) {
+        let already_declared = match candid_name {
+            Some(candid_name) => self
+                .declared
+                .iter()
+                .any(|e| e.candid_name.as_deref() == Some(candid_name)),
+            None => self
+                .declared
+                .iter()
+                .any(|e| e.name == name && e.fields == fields),
+        };
+        if already_declared {
+            return;
+        }
+        // An inline variant with these tags may already be declared under exactly this
+        // identifier. That is the same enum, so the named type takes it over rather than
+        // declaring a second one, and the module reads the same whichever came first.
+        if let Some(candid_name) = candid_name
+            && let Some(entry) = self
+                .declared
+                .iter_mut()
+                .find(|e| e.candid_name.is_none() && e.name == name && e.fields == fields)
+        {
+            entry.candid_name = Some(candid_name.to_string());
+            entry.decl = decl;
+            return;
+        }
+        self.declared.push(DeclaredEnum {
+            candid_name: candid_name.map(str::to_string),
+            name,
+            fields: fields.to_vec(),
+            decl,
+        });
+    }
+
+    /// Every declaration, ordered by name so output is stable.
+    pub fn declarations(&self) -> Vec<&TsEnumDecl> {
+        let mut entries: Vec<&DeclaredEnum> = self.declared.iter().collect();
+        entries.sort_by(|a, b| a.name.cmp(&b.name));
+        entries.into_iter().map(|e| &e.decl).collect()
+    }
+}
+
+/// The identifier an anonymous inline variant is declared under, derived from its tags.
+pub fn anonymous_enum_name(fields: &[Field]) -> String {
+    let tags: Vec<String> = fields
+        .iter()
+        .map(|f| match &*f.id {
+            Label::Named(name) => name.clone(),
+            Label::Id(n) | Label::Unnamed(n) => format!("_{}_", n),
+        })
+        .collect();
+    get_ident_guarded(&format!("Variant_{}", tags.join("_")))
+        .sym
+        .to_string()
+}
 
 pub fn render_ast(module: &Module, comments: &SingleThreadedComments) -> String {
     let mut buf = vec![];
