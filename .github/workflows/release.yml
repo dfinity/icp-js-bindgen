@@ -30,26 +30,26 @@ jobs:
           fetch-tags: true
 
       - name: Setup Python
-        uses: dfinity/ci-tools/actions/setup-python@bdfe993db468e7df927f424be4338c03c5538bc4 # main
+        uses: dfinity/ci-tools/actions/setup-python@a98f5d0198719ad41ded2f02fa0f5e426102f369 # main
 
       - name: Setup Commitizen
-        uses: dfinity/ci-tools/actions/setup-commitizen@bdfe993db468e7df927f424be4338c03c5538bc4 # main
+        uses: dfinity/ci-tools/actions/setup-commitizen@a98f5d0198719ad41ded2f02fa0f5e426102f369 # main
 
       - name: Setup PNPM
-        uses: dfinity/ci-tools/actions/setup-pnpm@bdfe993db468e7df927f424be4338c03c5538bc4 # main
+        uses: dfinity/ci-tools/actions/setup-pnpm@a98f5d0198719ad41ded2f02fa0f5e426102f369 # main
 
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # v0.0.9
 
       - name: Determine if Beta Release
         id: is_beta
-        uses: dfinity/ci-tools/actions/is-beta-tag@bdfe993db468e7df927f424be4338c03c5538bc4 # main
+        uses: dfinity/ci-tools/actions/is-beta-tag@a98f5d0198719ad41ded2f02fa0f5e426102f369 # main
 
       - name: Build NPM package
         run: pnpm build
 
       - name: Generate release notes
-        uses: dfinity/ci-tools/actions/generate-release-notes@bdfe993db468e7df927f424be4338c03c5538bc4 # main
+        uses: dfinity/ci-tools/actions/generate-release-notes@a98f5d0198719ad41ded2f02fa0f5e426102f369 # main
 
       - name: Publish to npm
         env:
