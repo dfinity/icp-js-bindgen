@@ -1,0 +1,16 @@
+// A record field of type `opt opt T` has three states: absent, present but empty, and set.
+// Real interfaces use it to keep, clear or set a stored value.
+type Cfg = record { url : opt text };
+type Inner = opt text;
+
+type Fields = record {
+  text_field : opt opt text;
+  cfg_field : opt opt Cfg;
+  named_field : opt Inner;
+  deep_field : opt opt opt text;
+};
+
+service : {
+  send_fields : (Fields) -> ();
+  get_fields : () -> (Fields) query;
+}

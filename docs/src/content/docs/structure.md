@@ -220,6 +220,44 @@ type MyType = {
 
 </div>
 
+The field's type is the TypeScript type of what the option holds, so an omitted field (`undefined`) is the absent state. When the option holds another option, the field gets that option's type, and the inner option's absent state is `null`:
+
+<div class="code-comparison">
+
+<div class="title-left">Candid</div>
+
+<div class="code-left">
+
+```
+type MyType = record {
+  my_field : opt opt text;
+}
+```
+
+</div>
+
+<div class="title-right">TypeScript</div>
+
+<div class="code-right">
+
+```typescript
+type MyType = {
+  my_field?: string | null;
+};
+```
+
+</div>
+
+</div>
+
+| Candid value | TypeScript value |
+| --- | --- |
+| `null` (absent) | `undefined`, or the field omitted |
+| `opt null` | `null` |
+| `opt opt "text"` | `"text"` |
+
+A deeper option continues with the nested representation: `opt opt opt text` is `my_field?: Some<string | null> | None`.
+
 #### Variants
 
 Candid [variants](https://github.com/dfinity/candid/blob/master/spec/Candid.md#variants) without type parameters are represented as TypeScript enums:
