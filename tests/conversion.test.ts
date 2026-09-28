@@ -88,6 +88,7 @@ describe('nested optional record fields', () => {
       text_field: [[]],
       cfg_field: [[{ url: ['https://example.org'] }]],
       named_field: [],
+      deep_field: [],
     });
   });
 
@@ -96,13 +97,30 @@ describe('nested optional record fields', () => {
       text_field: [[]],
       cfg_field: [[{ url: ['https://example.org'] }]],
       named_field: [],
+      deep_field: [],
     });
 
     expect(received).toEqual({
       text_field: null,
       cfg_field: { url: 'https://example.org' },
       named_field: undefined,
+      deep_field: undefined,
     });
+  });
+
+  it('keeps a deeper option in the nested representation', async () => {
+    const [fields] = await sentBy('nested_option_fields', 'send_fields', {
+      deep_field: { __kind__: 'Some', value: null },
+    });
+    expect(fields).toMatchObject({ deep_field: [[[]]] });
+
+    const received = await receivedBy('nested_option_fields', 'get_fields', {
+      text_field: [],
+      cfg_field: [],
+      named_field: [],
+      deep_field: [[[]]],
+    });
+    expect(received).toMatchObject({ deep_field: { __kind__: 'Some', value: null } });
   });
 
   it('round-trips a field declared through a named option', async () => {
@@ -113,6 +131,7 @@ describe('nested optional record fields', () => {
       text_field: [],
       cfg_field: [],
       named_field: [['set']],
+      deep_field: [],
     });
     expect(received).toMatchObject({ named_field: 'set' });
   });

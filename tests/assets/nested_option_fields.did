@@ -7,6 +7,7 @@ type Fields = record {
   text_field : opt opt text;
   cfg_field : opt opt Cfg;
   named_field : opt Inner;
+  deep_field : opt opt opt text;
 };
 
 service : {
