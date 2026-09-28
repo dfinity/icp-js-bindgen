@@ -262,6 +262,25 @@ impl<'a> TypeConverter<'a> {
         })
     }
 
+    /// `value !== undefined`: whether an optional record field whose type is itself an option
+    /// is present. There `null` is a value: the inner option's empty state.
+    fn is_defined(&self, value: Expr) -> Expr {
+        Expr::Bin(BinExpr {
+            span: DUMMY_SP,
+            op: BinaryOp::NotEqEq,
+            left: Box::new(value),
+            right: Box::new(self.create_ident("undefined")),
+        })
+    }
+
+    /// Whether `ty` is an option, directly or through a name. A record field `opt ty` is then
+    /// declared `field?: <ty>`, so `undefined` is its only absent state.
+    fn is_opt(&self, ty: &Type) -> bool {
+        self.env
+            .trace_type(ty)
+            .is_ok_and(|t| matches!(t.as_ref(), TypeInner::Opt(_)))
+    }
+
     /// Generate the body of a TypeScript -> Candid conversion function
     fn generate_to_candid_body(&mut self, ty: &Type, param_name: &str) -> Expr {
         match ty.as_ref() {
@@ -568,10 +587,15 @@ impl<'a> TypeConverter<'a> {
                     let value = match field.ty.as_ref() {
                         TypeInner::Opt(inner) => {
                             // For optional fields, handle undefined/null specially
+                            let present = if self.is_opt(inner) {
+                                self.is_defined(field_access.clone())
+                            } else {
+                                self.is_present(field_access.clone())
+                            };
                             if !self.needs_conversion(inner) {
                                 Expr::Cond(CondExpr {
                                     span: DUMMY_SP,
-                                    test: Box::new(self.is_present(field_access.clone())),
+                                    test: Box::new(present.clone()),
                                     cons: Box::new(self.create_call(
                                         "candid_some",
                                         vec![self.create_arg(field_access.clone())],
@@ -584,7 +608,7 @@ impl<'a> TypeConverter<'a> {
 
                                 Expr::Cond(CondExpr {
                                     span: DUMMY_SP,
-                                    test: Box::new(self.is_present(field_access.clone())),
+                                    test: Box::new(present),
                                     cons: Box::new(self.create_call(
                                         "candid_some",
                                         vec![self.create_arg(self.create_call(
@@ -1336,6 +1360,47 @@ impl<'a> TypeConverter<'a> {
 
                     // Convert the field value based on its type
                     let value = match field.ty.as_ref() {
+                        TypeInner::Opt(inner) if self.is_opt(inner) => {
+                            // field.length === 0 ? undefined : from_candid_inner(field[0])
+                            let first = Expr::Member(MemberExpr {
+                                span: DUMMY_SP,
+                                obj: Box::new(field_access.clone()),
+                                prop: MemberProp::Computed(ComputedPropName {
+                                    span: DUMMY_SP,
+                                    expr: Box::new(Expr::Lit(Lit::Num(Number {
+                                        span: DUMMY_SP,
+                                        value: 0.0,
+                                        raw: None,
+                                    }))),
+                                }),
+                            });
+                            Expr::Cond(CondExpr {
+                                span: DUMMY_SP,
+                                test: Box::new(Expr::Bin(BinExpr {
+                                    span: DUMMY_SP,
+                                    op: BinaryOp::EqEqEq,
+                                    left: Box::new(Expr::Member(MemberExpr {
+                                        span: DUMMY_SP,
+                                        obj: Box::new(field_access.clone()),
+                                        prop: MemberProp::Ident(
+                                            Ident::new(
+                                                "length".into(),
+                                                DUMMY_SP,
+                                                SyntaxContext::empty(),
+                                            )
+                                            .into(),
+                                        ),
+                                    })),
+                                    right: Box::new(Expr::Lit(Lit::Num(Number {
+                                        span: DUMMY_SP,
+                                        value: 0.0,
+                                        raw: None,
+                                    }))),
+                                })),
+                                cons: Box::new(self.create_ident("undefined")),
+                                alt: Box::new(self.convert_from_candid(&first, inner)),
+                            })
+                        }
                         TypeInner::Opt(_) => {
                             // For optional fields, use a utility function
                             Expr::Call(CallExpr {
