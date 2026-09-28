@@ -5,15 +5,15 @@ import { loadWrapper, type RawActor } from './utils/wrapper.ts';
 // Runs the generated wrapper against a stub actor and checks what reaches the wire.
 // Snapshots and typechecks cannot catch conversion code that is valid but wrong.
 
-let cleanup: (() => void) | undefined;
+// Every wrapper a test loads, removed after the test.
+const cleanups: (() => void)[] = [];
 
 beforeAll(async () => {
   await testWasmInit();
 });
 
 afterEach(() => {
-  cleanup?.();
-  cleanup = undefined;
+  for (const cleanup of cleanups.splice(0)) cleanup();
 });
 
 async function sentBy(serviceName: string, method: string, ...args: unknown[]) {
@@ -29,7 +29,7 @@ async function sentBy(serviceName: string, method: string, ...args: unknown[]) {
     },
   );
   const loaded = await loadWrapper(serviceName, actor);
-  cleanup = loaded.cleanup;
+  cleanups.push(loaded.cleanup);
   await loaded.wrapper[method](...args);
   return calls[0];
 }
