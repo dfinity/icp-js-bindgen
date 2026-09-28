@@ -37,7 +37,7 @@ async function sentBy(serviceName: string, method: string, ...args: unknown[]) {
 async function receivedBy(serviceName: string, method: string, returned: unknown) {
   const actor: RawActor = new Proxy({}, { get: () => async () => returned });
   const loaded = await loadWrapper(serviceName, actor);
-  cleanup = loaded.cleanup;
+  cleanups.push(loaded.cleanup);
   return loaded.wrapper[method]();
 }
 
