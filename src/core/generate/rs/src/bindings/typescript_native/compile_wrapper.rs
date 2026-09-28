@@ -1,5 +1,8 @@
 use super::conversion_functions_generator::TypeConverter;
-use super::utils::{contains_unicode_characters, get_ident_guarded, get_ident_guarded_keyword_ok};
+use super::utils::{
+    contains_unicode_characters, get_ident, get_ident_guarded, get_ident_guarded_keyword_ok,
+    get_typescript_ident,
+};
 use candid::types::{Function, Type, TypeEnv, TypeInner};
 use candid_parser::syntax::IDLMergedProg;
 use swc_core::common::{DUMMY_SP, SyntaxContext};
@@ -94,7 +97,7 @@ pub fn compile_wrapper(
 
     // Add CreateActorOptions interface and createActor function if actor exists
     if actor.is_some() {
-        add_create_actor_exports(&mut module, service_name);
+        add_create_actor_exports(&mut module, env, service_name);
     }
 
     // Generate code from the AST
@@ -135,11 +138,7 @@ fn wrapper_actor_service(
     interface_actor_service(env, syntax, module, serv, service_name, converter, span);
 
     // Create a single TypeConverter instance
-    let capitalized_service_name = service_name
-        .chars()
-        .next()
-        .map_or(String::new(), |c| c.to_uppercase().collect::<String>())
-        + &service_name[1..];
+    let capitalized_service_name = service_class_name(env, service_name);
 
     // Pass the converter to create_actor_class
     let class_decl = create_actor_class(
@@ -183,11 +182,7 @@ fn wrapper_actor_var(
         }
         _ => return,
     };
-    let capitalized_service_name = service_name
-        .chars()
-        .next()
-        .map_or(String::new(), |c| c.to_uppercase().collect::<String>())
-        + &service_name[1..];
+    let capitalized_service_name = service_class_name(env, service_name);
     let class_decl = create_actor_class(
         env,
         service_name,
@@ -290,7 +285,7 @@ fn create_actor_class(
     class_body_members.extend(methods);
 
     ClassDecl {
-        ident: get_ident_guarded(capitalized_service_name),
+        ident: get_ident(capitalized_service_name),
         declare: false,
         class: Box::new(Class {
             span: DUMMY_SP,
@@ -517,7 +512,7 @@ fn create_actor_method(
     })
 }
 
-fn add_create_actor_exports(module: &mut Module, service_name: &str) {
+fn add_create_actor_exports(module: &mut Module, env: &TypeEnv, service_name: &str) {
     // CreateActorOptions interface
     let create_actor_options_interface = super::preamble::actor::create_actor_options_interface();
 
@@ -529,7 +524,7 @@ fn add_create_actor_exports(module: &mut Module, service_name: &str) {
         })));
 
     // createActor function
-    let create_actor_function = create_actor_function(service_name);
+    let create_actor_function = create_actor_function(env, service_name);
 
     module
         .body
@@ -539,14 +534,32 @@ fn add_create_actor_exports(module: &mut Module, service_name: &str) {
         })));
 }
 
-fn create_actor_function(service_name: &str) -> FnDecl {
+/// The actor class name, used by its declaration, `createActor`'s return type and `new`.
+///
+/// It is the capitalized file name, escaped like a candid type name, and it steps aside from
+/// every candid type: TypeScript would merge a class and an interface of one name, so the
+/// class would claim the type's fields.
+fn service_class_name(env: &TypeEnv, service_name: &str) -> String {
+    let mut chars = service_name.chars();
+    let capitalized: String = match chars.next() {
+        Some(first) => first.to_uppercase().chain(chars).collect(),
+        None => String::new(),
+    };
+    let mut name = get_typescript_ident(&capitalized, true);
+    while env
+        .0
+        .keys()
+        .any(|id| get_typescript_ident(id, true) == name)
+    {
+        name.push('_');
+    }
+    name
+}
+
+fn create_actor_function(env: &TypeEnv, service_name: &str) -> FnDecl {
     let span = DUMMY_SP;
 
-    let capitalized_service_name = service_name
-        .chars()
-        .next()
-        .map_or(String::new(), |c| c.to_uppercase().collect::<String>())
-        + &service_name[1..];
+    let capitalized_service_name = service_class_name(env, service_name);
 
     FnDecl {
         ident: Ident::new("createActor".into(), span, SyntaxContext::empty()),

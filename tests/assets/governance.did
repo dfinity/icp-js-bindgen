@@ -1,0 +1,6 @@
+// The actor class is named after the file, and a candid type here has that name.
+type Governance = record { total : nat };
+
+service : {
+  get : () -> (Governance) query;
+}
