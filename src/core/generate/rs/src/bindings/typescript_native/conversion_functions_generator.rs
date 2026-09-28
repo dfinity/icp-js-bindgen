@@ -252,6 +252,16 @@ impl<'a> TypeConverter<'a> {
         }
     }
 
+    /// `value != null`: whether an optional value is present. `0`, `false` and `""` are.
+    fn is_present(&self, value: Expr) -> Expr {
+        Expr::Bin(BinExpr {
+            span: DUMMY_SP,
+            op: BinaryOp::NotEq,
+            left: Box::new(value),
+            right: Box::new(Expr::Lit(Lit::Null(Null { span: DUMMY_SP }))),
+        })
+    }
+
     /// Generate the body of a TypeScript -> Candid conversion function
     fn generate_to_candid_body(&mut self, ty: &Type, param_name: &str) -> Expr {
         match ty.as_ref() {
@@ -561,7 +571,7 @@ impl<'a> TypeConverter<'a> {
                             if !self.needs_conversion(inner) {
                                 Expr::Cond(CondExpr {
                                     span: DUMMY_SP,
-                                    test: Box::new(field_access.clone()),
+                                    test: Box::new(self.is_present(field_access.clone())),
                                     cons: Box::new(self.create_call(
                                         "candid_some",
                                         vec![self.create_arg(field_access.clone())],
@@ -574,7 +584,7 @@ impl<'a> TypeConverter<'a> {
 
                                 Expr::Cond(CondExpr {
                                     span: DUMMY_SP,
-                                    test: Box::new(field_access.clone()),
+                                    test: Box::new(self.is_present(field_access.clone())),
                                     cons: Box::new(self.create_call(
                                         "candid_some",
                                         vec![self.create_arg(self.create_call(
@@ -785,7 +795,7 @@ impl<'a> TypeConverter<'a> {
                         if !self.needs_conversion(inner) {
                             Expr::Cond(CondExpr {
                                 span: DUMMY_SP,
-                                test: Box::new(field_access.clone()),
+                                test: Box::new(self.is_present(field_access.clone())),
                                 cons: Box::new(self.create_call(
                                     "candid_some",
                                     vec![self.create_arg(field_access.clone())],
@@ -798,7 +808,7 @@ impl<'a> TypeConverter<'a> {
 
                             Expr::Cond(CondExpr {
                                 span: DUMMY_SP,
-                                test: Box::new(field_access.clone()),
+                                test: Box::new(self.is_present(field_access.clone())),
                                 cons: Box::new(self.create_call(
                                     "candid_some",
                                     vec![self.create_arg(self.create_call(

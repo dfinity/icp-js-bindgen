@@ -1,0 +1,15 @@
+// Optional values whose JavaScript value is falsy: `0`, `false` and `""` are present.
+type Fields = record {
+  zero : opt nat;
+  no : opt bool;
+  empty : opt text;
+  missing : opt nat;
+};
+
+type Payload = variant { count : opt nat; other : text };
+
+service : {
+  send_fields : (Fields) -> ();
+  send_payload : (Payload) -> ();
+  send_opt : (opt nat) -> ();
+}

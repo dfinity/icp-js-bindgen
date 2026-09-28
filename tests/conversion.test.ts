@@ -1,0 +1,70 @@
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { testWasmInit } from './utils/wasm.ts';
+import { loadWrapper, type RawActor } from './utils/wrapper.ts';
+
+// Runs the generated wrapper against a stub actor and checks what reaches the wire.
+// Snapshots and typechecks cannot catch conversion code that is valid but wrong.
+
+let cleanup: (() => void) | undefined;
+
+beforeAll(async () => {
+  await testWasmInit();
+});
+
+afterEach(() => {
+  cleanup?.();
+  cleanup = undefined;
+});
+
+async function sentBy(serviceName: string, method: string, ...args: unknown[]) {
+  const calls: unknown[][] = [];
+  const actor: RawActor = new Proxy(
+    {},
+    {
+      get:
+        () =>
+        async (...received: unknown[]) => {
+          calls.push(received);
+        },
+    },
+  );
+  const loaded = await loadWrapper(serviceName, actor);
+  cleanup = loaded.cleanup;
+  await loaded.wrapper[method](...args);
+  return calls[0];
+}
+
+describe('optional values', () => {
+  it('sends present but falsy record fields as present', async () => {
+    const [fields] = await sentBy('optional_presence', 'send_fields', {
+      zero: 0n,
+      no: false,
+      empty: '',
+    });
+
+    expect(fields).toEqual({ zero: [0n], no: [false], empty: [''], missing: [] });
+  });
+
+  it('sends a present but falsy variant payload as present', async () => {
+    const [payload] = await sentBy('optional_presence', 'send_payload', {
+      __kind__: 'count',
+      count: 0n,
+    });
+
+    expect(payload).toEqual({ count: [0n] });
+  });
+
+  it('sends a null variant payload as absent', async () => {
+    const [payload] = await sentBy('optional_presence', 'send_payload', {
+      __kind__: 'count',
+      count: null,
+    });
+
+    expect(payload).toEqual({ count: [] });
+  });
+
+  it('sends a present but falsy optional argument as present', async () => {
+    expect(await sentBy('optional_presence', 'send_opt', 0n)).toEqual([[0n]]);
+    expect(await sentBy('optional_presence', 'send_opt', null)).toEqual([[]]);
+  });
+});
