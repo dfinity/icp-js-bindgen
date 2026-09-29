@@ -1,7 +1,0 @@
-// An alias to a service type is declared under its own name: `type Alias = FooInterface`.
-type Foo = service { get : () -> (nat) query };
-type Alias = Foo;
-
-service : {
-  foo : () -> (Alias) query;
-}

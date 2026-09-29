@@ -53,13 +53,6 @@ pub fn generate(options: GenerateOptions) -> Result<GenerateResult, JsError> {
     let input_path = PathBuf::from(options.did_file_path);
     let (env, actor, prog) = parser::check_file(input_path.as_path()).map_err(JsError::from)?;
 
-    if !options.actor_disabled
-        && let Some(collision) =
-            typescript_native::compile::actor_class_collision(&env, &actor, &options.service_name)
-    {
-        return Err(JsError::new(&collision));
-    }
-
     let declarations_js = javascript::compile(&env, &actor, options.declarations.root_exports);
     let declarations_ts =
         typescript::compile(&env, &actor, &prog, options.declarations.root_exports);
@@ -76,10 +69,21 @@ pub fn generate(options: GenerateOptions) -> Result<GenerateResult, JsError> {
         &options.service_name,
         "interface",
         &prog,
-    );
+    )
+    .map_err(|e| JsError::new(&e))?;
 
-    let service_ts =
-        typescript_native::compile::compile(&env, &actor, &options.service_name, "wrapper", &prog);
+    // A wrapper that cannot be generated only matters when it is written.
+    let service_ts = match typescript_native::compile::compile(
+        &env,
+        &actor,
+        &options.service_name,
+        "wrapper",
+        &prog,
+    ) {
+        Ok(service_ts) => service_ts,
+        Err(_) if options.actor_disabled => String::new(),
+        Err(e) => return Err(JsError::new(&e)),
+    };
 
     Ok(GenerateResult {
         declarations_js,

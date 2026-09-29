@@ -1,0 +1,13 @@
+// Its wrapper binds every kind of name: candid types, names derived from them (`_Rec`,
+// `Variant_a_b`, `SvcInterface`), and the names the wrapper declares or imports for itself.
+type Rec = record { v : opt nat };
+type Alias = text;
+type Svc = service { get : () -> (nat) query };
+type SvcAlias = Svc;
+
+service : {
+  get : () -> (Rec) query;
+  pick : () -> (variant { a; b }) query;
+  name : () -> (Alias) query;
+  svc : () -> (SvcAlias) query;
+}

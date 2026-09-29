@@ -1,6 +1,0 @@
-// A candid service type `Foo` is declared as `interface FooInterface`.
-type Foo = service { get : () -> (nat) query };
-
-service : {
-  foo : () -> (Foo) query;
-}

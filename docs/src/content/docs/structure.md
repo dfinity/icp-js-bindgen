@@ -331,8 +331,6 @@ interface helloWorldInterface = {
 
 This class implements the [`<service-name>Interface` type](#service-nameinterface-type). It can be instantiated with the [`createActor` function](#createactor-function).
 
-The class is named after the `.did` file, capitalized. If the wrapper declares anything else under that name, such as a candid type in `governance.did` named `Governance` or a name the wrapper itself uses (`Option`, `Agent`, `Principal`, …), generation fails: the class would merge with it or lose its type. A candid service type does not count, since it is declared as `<name>Interface`. Rename the `.did` file (for example to `nns_governance.did`), or disable the actor output to generate only the declarations.
-
 For example, a Candid service will be represented as:
 
 <div class="code-comparison">
@@ -370,6 +368,16 @@ class HelloWorld implements helloWorldInterface {
 </div>
 
 Where the `_SERVICE` type is imported from the [`declarations/<service-name>.did.d.ts`](#declarationsservice-namediddts) file and the [`ActorSubclass`](https://js.icp.build/core/latest/libs/agent/api/type-aliases/actorsubclass/) type is imported from the [`@icp-sdk/core/agent`](https://js.icp.build/core/latest/libs/agent/) module.
+
+#### Naming
+
+The class is named after the `.did` file, with its first letter capitalized. If anything else in the generated module has that name, generation fails, because the class would merge with it, lose its type, or stop the module from loading. That includes:
+
+- a candid type: `governance.did` with a `Governance` record. A candid service type is declared as `<name>Interface`, so `foo.did` with `type Foo = service { … }` is fine;
+- a name derived from a candid type, such as the `_<Type>` alias a candid type is imported under, or the `Variant_<tags>` enum of an inline variant;
+- a name the wrapper declares or imports for itself, such as `Option`, `Agent`, `Principal` or `_SERVICE`.
+
+Rename the `.did` file (for example to `nns_governance.did`), or disable the actor output to generate only the declarations.
 
 ### `createActor` function
 

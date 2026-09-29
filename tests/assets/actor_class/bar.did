@@ -1,6 +1,0 @@
-// A type alias `Bar` would replace the type of `class Bar`.
-type Bar = text;
-
-service : {
-  get : () -> (Bar) query;
-}
