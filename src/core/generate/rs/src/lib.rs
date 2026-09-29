@@ -34,6 +34,9 @@ pub struct GenerateOptions {
     pub did_file_path: String,
     pub service_name: String,
     pub declarations: GenerateDeclarationsOptions,
+    /// Whether the actor files are left out. They are checked only when generated.
+    #[serde(default)]
+    pub actor_disabled: bool,
 }
 
 #[wasm_bindgen(getter_with_clone)]
@@ -49,6 +52,13 @@ pub struct GenerateResult {
 pub fn generate(options: GenerateOptions) -> Result<GenerateResult, JsError> {
     let input_path = PathBuf::from(options.did_file_path);
     let (env, actor, prog) = parser::check_file(input_path.as_path()).map_err(JsError::from)?;
+
+    if !options.actor_disabled
+        && let Some(collision) =
+            typescript_native::compile::actor_class_collision(&env, &actor, &options.service_name)
+    {
+        return Err(JsError::new(&collision));
+    }
 
     let declarations_js = javascript::compile(&env, &actor, options.declarations.root_exports);
     let declarations_ts =

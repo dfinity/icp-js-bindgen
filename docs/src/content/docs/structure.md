@@ -331,6 +331,8 @@ interface helloWorldInterface = {
 
 This class implements the [`<service-name>Interface` type](#service-nameinterface-type). It can be instantiated with the [`createActor` function](#createactor-function).
 
+The class is named after the `.did` file, capitalized. If that name is taken by an interface the file also declares, such as a candid type in `governance.did` named `Governance`, generation fails: TypeScript would merge the two. Rename the `.did` file (for example to `nns_governance.did`), or disable the actor output to generate only the declarations.
+
 For example, a Candid service will be represented as:
 
 <div class="code-comparison">

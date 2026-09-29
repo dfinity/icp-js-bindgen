@@ -1,0 +1,7 @@
+// NNS governance under its upstream file name: the actor class `Governance` would merge
+// with the candid record of that name.
+type Governance = record { total : nat };
+
+service : {
+  get : () -> (Governance) query;
+}
