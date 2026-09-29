@@ -30,8 +30,8 @@ export type GenerateOutputOptions = {
     | {
         disabled?: false;
         /**
-         * If `true`, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file.
-         * Useful to add to LLMs' contexts' to give knowledge about what types are available in the service.
+         * If `true`, generates a `<service-name>.d.ts` file that declares the types of the `<service-name>.ts` file without the `<service-name>` class: its `createActor` returns the `<service-name>Interface` type.
+         * Useful to add to LLMs' contexts to give knowledge about what types are available in the service.
          *
          * Has no effect if `disabled` is `true`.
          *

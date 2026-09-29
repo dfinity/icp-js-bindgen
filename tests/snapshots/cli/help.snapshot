@@ -9,9 +9,11 @@ Options:
   --actor-disabled             If set, skips generating the actor file
                                (<service-name>.ts). (default: false)
   --actor-interface-file       If set, generates a `<service-name>.d.ts` file
-                               that contains the same types of the
-                               `<service-name>.ts` file. Has no effect if
-                               `--actor-disabled` is set. (default: false)
+                               that declares the types of the
+                               `<service-name>.ts` file without the
+                               `<service-name>` class: its `createActor` returns
+                               the `<service-name>Interface` type. Has no effect
+                               if `--actor-disabled` is set. (default: false)
   --declarations-root-exports  If set, exports root types in the declarations
                                file. (default: false)
   --declarations-typescript    If set, generates a single `.did.ts` TypeScript
