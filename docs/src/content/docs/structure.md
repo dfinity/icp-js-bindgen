@@ -632,4 +632,6 @@ This type is the same types that the [`init` function](#init-function-1) returns
 
 ### `<service-name>.d.ts`
 
-This file contains the same TypeScript types as [`<service-name>.ts`](#service-namets). It is typically used to add to LLMs' contexts' to give knowledge about what types are available in the service. Set the [`output.actor.interfaceFile`](./core/api/type-aliases/GenerateOutputOptions.md#interfaceFile) option to `true` to generate this file.
+This file declares the types of [`<service-name>.ts`](#service-namets): the candid types, the `Some`, `None` and `Option` types, the [`<service-name>Interface` type](#service-nameinterface-type), `CreateActorOptions` and the [`createActor` function](#createactor-function). It leaves out the [`<service-name>` class](#service-name-class), so `createActor` is declared to return `<service-name>Interface` instead. The class implements that interface, so code written against this file also compiles against `<service-name>.ts`.
+
+The file is a reference, typically added to LLMs' contexts to give knowledge about what types are available in the service. It is not meant to be imported: it is only generated next to `<service-name>.ts`, and an import of `./<service-name>` resolves to that file. Set the [`output.actor.interfaceFile`](./core/api/type-aliases/GenerateOutputOptions.md#interfaceFile) option to `true` to generate it.

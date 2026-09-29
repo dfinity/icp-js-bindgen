@@ -39,7 +39,7 @@
  *
  * - `--did-file <path>`: Path to the `.did` file to generate bindings from
  * - `--out-dir <dir>`: Directory where the bindings will be written
- * - `--actor-interface-file`: If set, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file. Has no effect if `--actor-disabled` is set. (default: `false`)
+ * - `--actor-interface-file`: If set, generates a `<service-name>.d.ts` file that declares the types of the `<service-name>.ts` file without the `<service-name>` class: its `createActor` returns the `<service-name>Interface` type. Has no effect if `--actor-disabled` is set. (default: `false`)
  * - `--actor-disabled`: If set, skips generating the actor file (`<service-name>.ts`). (default: `false`)
  * - `--declarations-flat`: If set, generates declaration files directly in the output directory instead of in a `declarations/` subfolder. (default: `false`)
  * - `--force`: If set, overwrite existing files instead of aborting. (default: `false`)
@@ -108,7 +108,7 @@ program
   .option('--actor-disabled', 'If set, skips generating the actor file (<service-name>.ts).', false)
   .option(
     '--actor-interface-file',
-    'If set, generates a `<service-name>.d.ts` file that contains the same types of the `<service-name>.ts` file. Has no effect if `--actor-disabled` is set.',
+    'If set, generates a `<service-name>.d.ts` file that declares the types of the `<service-name>.ts` file without the `<service-name>` class: its `createActor` returns the `<service-name>Interface` type. Has no effect if `--actor-disabled` is set.',
     false,
   )
   .option(
