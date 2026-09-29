@@ -369,6 +369,16 @@ class HelloWorld implements helloWorldInterface {
 
 Where the `_SERVICE` type is imported from the [`declarations/<service-name>.did.d.ts`](#declarationsservice-namediddts) file and the [`ActorSubclass`](https://js.icp.build/core/latest/libs/agent/api/type-aliases/actorsubclass/) type is imported from the [`@icp-sdk/core/agent`](https://js.icp.build/core/latest/libs/agent/) module.
 
+#### Naming
+
+The class is named after the `.did` file, with its first letter capitalized. If anything else in the generated module has that name, generation fails, because the class would merge with it, lose its type, or stop the module from loading. That includes:
+
+- a candid type: `governance.did` with a `Governance` record. A candid service type is declared as `<name>Interface`, so `foo.did` with `type Foo = service { … }` is fine;
+- a name derived from a candid type, such as the `_<Type>` alias a candid type is imported under, or the `Variant_<tags>` enum of an inline variant;
+- a name the wrapper declares or imports for itself, such as `Option`, `Agent`, `Principal` or `_SERVICE`.
+
+Rename the `.did` file (for example to `nns_governance.did`), or disable the actor output to generate only the declarations.
+
 ### `createActor` function
 
 Creates an instance of the [`<service-name>` class](#service-name-class).

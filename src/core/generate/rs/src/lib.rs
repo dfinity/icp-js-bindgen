@@ -34,6 +34,9 @@ pub struct GenerateOptions {
     pub did_file_path: String,
     pub service_name: String,
     pub declarations: GenerateDeclarationsOptions,
+    /// Whether the actor files are left out. They are checked only when generated.
+    #[serde(default)]
+    pub actor_disabled: bool,
 }
 
 #[wasm_bindgen(getter_with_clone)]
@@ -66,10 +69,21 @@ pub fn generate(options: GenerateOptions) -> Result<GenerateResult, JsError> {
         &options.service_name,
         "interface",
         &prog,
-    );
+    )
+    .map_err(|e| JsError::new(&e))?;
 
-    let service_ts =
-        typescript_native::compile::compile(&env, &actor, &options.service_name, "wrapper", &prog);
+    // A wrapper that cannot be generated only matters when it is written.
+    let service_ts = match typescript_native::compile::compile(
+        &env,
+        &actor,
+        &options.service_name,
+        "wrapper",
+        &prog,
+    ) {
+        Ok(service_ts) => service_ts,
+        Err(_) if options.actor_disabled => String::new(),
+        Err(e) => return Err(JsError::new(&e)),
+    };
 
     Ok(GenerateResult {
         declarations_js,

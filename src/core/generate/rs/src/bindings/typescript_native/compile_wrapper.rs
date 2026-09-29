@@ -23,7 +23,7 @@ pub fn compile_wrapper(
     actor: &Option<Type>,
     service_name: &str,
     prog: &IDLMergedProg,
-) -> String {
+) -> Result<String, String> {
     let mut enum_declarations = EnumDeclarations::default();
 
     let mut module = Module {
@@ -97,8 +97,71 @@ pub fn compile_wrapper(
         add_create_actor_exports(&mut module, service_name);
     }
 
+    if let Some(collision) = actor_class_collision(&module, service_name) {
+        return Err(collision);
+    }
+
     // Generate code from the AST
-    render_ast(&module, &comments)
+    Ok(render_ast(&module, &comments))
+}
+
+/// Describes another top-level binding of the actor class's name, if there is one.
+///
+/// The class is named after the `.did` file, so any name the module binds can take it: a
+/// candid type, a name derived from one, or one the wrapper declares or imports for itself.
+/// An interface of that name merges with the class without an error, a type alias replaces
+/// its type, and anything else stops the module from loading.
+fn actor_class_collision(module: &Module, service_name: &str) -> Option<String> {
+    let bindings: Vec<(String, &str)> = module.body.iter().flat_map(top_level_bindings).collect();
+    let (class, _) = bindings.iter().find(|(_, kind)| *kind == "the class")?;
+    let (_, kind) = bindings
+        .iter()
+        .find(|(name, kind)| name == class && *kind != "the class")?;
+    Some(format!(
+        "The actor class `{class}`, named after {service_name}.did, has the same name as \
+         {kind} in the generated wrapper. Rename the .did file, or disable the actor output to \
+         generate only the declarations."
+    ))
+}
+
+/// The names a module item binds at the top level, with what binds them.
+fn top_level_bindings(item: &ModuleItem) -> Vec<(String, &'static str)> {
+    match item {
+        ModuleItem::ModuleDecl(ModuleDecl::Import(import)) => import
+            .specifiers
+            .iter()
+            .map(|specifier| {
+                let local = match specifier {
+                    ImportSpecifier::Named(named) => &named.local,
+                    ImportSpecifier::Default(default) => &default.local,
+                    ImportSpecifier::Namespace(namespace) => &namespace.local,
+                };
+                (local.sym.to_string(), "an import")
+            })
+            .collect(),
+        ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(export)) => decl_bindings(&export.decl),
+        ModuleItem::Stmt(Stmt::Decl(decl)) => decl_bindings(decl),
+        _ => vec![],
+    }
+}
+
+fn decl_bindings(decl: &Decl) -> Vec<(String, &'static str)> {
+    match decl {
+        Decl::Class(class) => vec![(class.ident.sym.to_string(), "the class")],
+        Decl::Fn(function) => vec![(function.ident.sym.to_string(), "a function")],
+        Decl::TsInterface(interface) => vec![(interface.id.sym.to_string(), "an interface")],
+        Decl::TsTypeAlias(alias) => vec![(alias.id.sym.to_string(), "a type alias")],
+        Decl::TsEnum(enum_decl) => vec![(enum_decl.id.sym.to_string(), "an enum")],
+        Decl::Var(var) => var
+            .decls
+            .iter()
+            .filter_map(|declarator| match &declarator.name {
+                Pat::Ident(ident) => Some((ident.id.sym.to_string(), "a variable")),
+                _ => None,
+            })
+            .collect(),
+        _ => vec![],
+    }
 }
 
 // Add actor implementation
