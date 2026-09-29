@@ -1,4 +1,0 @@
-// The wrapper declares `interface Some` for nested options.
-service : {
-  get : () -> (nat) query;
-}

@@ -20,8 +20,23 @@ pub fn compile(
     }
 }
 
-/// The interfaces the wrapper declares beside the actor class, other than the candid types.
-const PREAMBLE_INTERFACES: [&str; 3] = ["Some", "None", "CreateActorOptions"];
+/// The names the wrapper imports or declares for itself, beside the candid types. Only
+/// capitalized ones are listed, since the class name is capitalized.
+const PREAMBLE_NAMES: [&str; 11] = [
+    // imported from @icp-sdk/core
+    "Actor",
+    "HttpAgent",
+    "HttpAgentOptions",
+    "ActorConfig",
+    "Agent",
+    "ActorSubclass",
+    "Principal",
+    // declared by the preamble
+    "Some",
+    "None",
+    "Option",
+    "CreateActorOptions",
+];
 
 /// Describes a collision between the actor class and another declaration in the wrapper.
 ///
@@ -55,9 +70,9 @@ pub fn actor_class_collision(
             }
         })
         .or_else(|| {
-            PREAMBLE_INTERFACES
+            PREAMBLE_NAMES
                 .contains(&class.as_str())
-                .then(|| format!("the generated `{class}` interface"))
+                .then(|| format!("`{class}`, which the generated wrapper declares"))
         })?;
 
     Some(format!(
